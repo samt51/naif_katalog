@@ -1,0 +1,154 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giriş - Yönetim Paneli</title>
+    <!-- Bootstrap CSS for Modal -->
+    <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/admin.css" />
+    <style>
+        .login-body {
+            /* Keep original login body styles intact despite bootstrap */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
+            margin: 0;
+        }
+        .login-container h2 {
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .register-link {
+            display: block;
+            margin-top: 20px;
+            color: #9ca3af;
+            font-size: 14px;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .register-link:hover {
+            color: #fff;
+        }
+        .register-link span {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        /* Modal overrides to match the dark theme */
+        .modal-content {
+            background: #1f2937;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+        }
+        .modal-header {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .modal-footer {
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        .form-control {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .form-control:focus {
+            background: rgba(0,0,0,0.3);
+            border-color: #3b82f6;
+            color: #fff;
+            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+        }
+        .form-label {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <!-- Logo from earlier feature -->
+        <div class="mb-4 text-center">
+            <img src="/images/logo_white.png" alt="Logo" style="height: 60px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));" onerror="this.style.display='none'">
+        </div>
+        
+        <h2>Giriş</h2>
+        <form method="post" action="/Account/Login">
+            <div class="form-group">
+                <label>E-Posta</label>
+                <input type="email" name="email" placeholder="E-Posta adresinizi girin" required style="width: 100%; padding: 12px; border-radius: 8px; border: none; margin-bottom: 15px;" />
+            </div>
+            <div class="form-group">
+                <label>Şifre</label>
+                <input type="password" name="password" placeholder="Şifrenizi girin" required style="width: 100%; padding: 12px; border-radius: 8px; border: none; margin-bottom: 20px;" />
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; border-radius: 8px; border: none; background: #3b82f6; color: white; font-weight: 600; cursor: pointer;">Giriş Yap</button>
+            
+            @if(ViewBag.Error != null)
+            {
+                <div style="color:#ef4444; margin-top:15px; font-size:14px;">@ViewBag.Error</div>
+            }
+        </form>
+        
+        <a href="#" class="register-link" data-bs-toggle="modal" data-bs-target="#registerModal">
+            Üye değil misiniz? <span>Lütfen üye olun</span>
+        </a>
+    </div>
+
+    <!-- Registration Modal -->
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="registerModalLabel"><i class="fas fa-user-plus me-2 text-primary"></i> Müşteri Kaydı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="/Account/Register" autocomplete="off">
+                    <div class="modal-body text-start p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Ad Soyad <span class="text-danger">*</span></label>
+                                <input type="text" name="FullName" class="form-control" placeholder="Örn: Ahmet Yılmaz" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Firma Adı</label>
+                                <input type="text" name="CompanyName" class="form-control" placeholder="Örn: Yılmaz Kuyumculuk" />
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">E-Posta <span class="text-danger">*</span></label>
+                                <input type="email" name="Email" class="form-control" placeholder="E-Posta adresiniz" autocomplete="off" data-lpignore="true" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefon <span class="text-danger">*</span></label>
+                                <input type="text" name="Phone" class="form-control" placeholder="05XX XXX XX XX" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Şifre <span class="text-danger">*</span></label>
+                                <input type="password" name="Password" class="form-control" placeholder="Şifre belirleyin" autocomplete="new-password" data-lpignore="true" required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pb-4 px-4">
+                        <button type="button" class="btn btn-secondary w-100 mb-2" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-primary w-100 m-0">Kayıt Ol</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

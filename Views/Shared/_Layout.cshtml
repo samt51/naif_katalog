@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Naif Jewellery</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/naif_katalog.styles.css" asp-append-version="true" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <header class="sticky-top bg-white" style="z-index: 1030;">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow">
+            <div class="container-fluid">
+                <!-- Logo -->
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <img src="https://static.wixstatic.com/media/3afb87_01283146a20c43eda2fa6ba343107de9~mv2.png/v1/fill/w_299,h_95,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/1730592442899-7c4af1dc-40ee-4adf-80ba-dd9cd7379dee_1-Photoroom.png" alt="Naif Jewellery" height="40" />
+                </a>
+                <!-- Always-visible: search + catalog button -->
+                
+                  <div class="d-flex align-items-center gap-2 navbar-always-visible order-1 ms-auto">
+                      <form class="search-form me-4" action="@Url.Action("Index", "Home")" method="get" id="searchForm">
+                          <div class="search-wrapper">
+                              <input type="text" name="search" id="searchInput" class="search-input" placeholder="Ürün ara..." autocomplete="off"
+                                     value="@(ViewBag.SearchQuery ?? "")" />
+                              <button type="button" class="search-clear-btn" id="searchClearBtn" title="Temizle">&times;</button>
+                              <button type="submit" class="btn-search-submit" id="searchSubmitBtn" title="Ara">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                      <circle cx="11" cy="11" r="8"></circle>
+                                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                  </svg>
+                              </button>
+                          </div>
+                      </form>
+
+                      <!-- Language Dropdown -->
+                      <div class="dropdown me-3">
+                          <a href="#" class="text-dark text-decoration-none dropdown-toggle fw-medium d-flex align-items-center" data-bs-toggle="dropdown" style="font-size: 14px;">
+                              <img id="currentLangFlag" src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-1" style="border-radius:2px;"> 
+                              <span id="currentLangText">TR</span>
+                          </a>
+                          <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="min-width: 120px; z-index: 1050;">
+                              <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('tr')"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</a></li>
+                              <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('en')"><img src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-2" style="border-radius:2px;"> English</a></li>
+                          </ul>
+                      </div>
+
+
+                      <div class="d-flex align-items-center gap-2">
+                          <button class="btn btn-outline-primary btn-catalog-main" id="myCatalogBtn" type="button" data-bs-toggle="offcanvas" data-bs-target="#catalogOffcanvas">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1">
+                                  <path d="M6 2L3 5v15a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5l-3-3z"></path>
+                                  <line x1="3" y1="5" x2="21" y2="5"></line>
+                                  <path d="M16 9a4 4 0 0 1-8 0"></path>
+                              </svg>
+                              Kataloğum (<span id="catalogCount">0</span>)
+                          </button>
+
+                          @if (User.Identity?.IsAuthenticated == true)
+                          {
+                              @if(User.IsInRole("1") || User.IsInRole("2"))
+                              {
+                                  <a href="/Admin/Dashboard" class="btn btn-outline-secondary d-flex align-items-center justify-content-center" title="Yönetim Paneli" style="width: 38px; height: 38px; padding: 0;">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                  </a>
+                              }
+                              <a href="/Account/Logout" class="btn btn-outline-danger d-flex align-items-center justify-content-center" title="Logout" style="width: 38px; height: 38px; padding: 0;">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                              </a>
+                          }
+                          else
+                          {
+                              <a href="/Account/Login" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-medium"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg> Giriş Yap</a>
+                          }
+                      </div>
+                  </div>
+<!-- Hamburger toggler -->
+                <button class="navbar-toggler order-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCategories" aria-controls="navbarCategories"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <!-- Collapsible category nav -->
+                <div class="navbar-collapse collapse order-3" id="navbarCategories">
+                    <ul class="navbar-nav mx-auto nav-categories" style="gap: 5px;">
+                                                @using MediatR
+                        @using naif_katalog.Core.Features.CategoryFeature.Queries
+                        @inject IMediator Mediator
+                        <style>
+                            
+                            .dropdown-hover:hover > .dropdown-menu {
+                                display: block;
+                            }
+                            .dropdown-hover > .dropdown-menu {
+                                margin-top: 0 !important;
+                                border-radius: 0 !important;
+                                box-shadow: 0 10px 30px rgba(0,0,0,0.05) !important;
+                                padding: 30px 40px !important;
+                            }
+                            .mega-link {
+                                display: block;
+                                color: #333;
+                                text-decoration: none;
+                                font-size: 0.9rem;
+                                padding: 6px 0;
+                                transition: all 0.2s;
+                                opacity: 0.75;
+                            }
+                            .mega-link:hover, .mega-link.active {
+                                opacity: 1;
+                                color: #000;
+                            }
+                            .mega-title {
+                                font-family: 'Times New Roman', Times, serif;
+                                font-size: 1.25rem;
+                                font-weight: normal;
+                                color: #111;
+                                margin-bottom: 15px;
+                                padding-bottom: 10px;
+                                border-bottom: 1px solid #eee;
+                            }
+
+                        </style>
+                        @{
+                            var categoriesResponse = await Mediator.Send(new GetAllCategoriesQueryRequest());
+                            var categoriesList = categoriesResponse.isSuccess ? categoriesResponse.data : new List<naif_katalog.Models.CategoryDto>();
+                            var currentCategoryId = ViewBag.CurrentCategoryId as int?;
+                            var currentCategory = ViewBag.CurrentCategory as string;
+                            
+                            var mainCategories = categoriesList.Where(c => c.ParentId == 0 || c.ParentId == null).OrderBy(c => c.OrderIndex).ToList();
+                            
+                            foreach(var cat in mainCategories)
+                            {
+                                var subCats = categoriesList.Where(c => c.ParentId == cat.Id).OrderBy(c => c.OrderIndex).ToList();
+                                var isCatActive = currentCategoryId == cat.Id || subCats.Any(s => s.Id == currentCategoryId) ? "fw-bold border-bottom border-dark border-2" : "";
+                                
+                                if (subCats.Any())
+                                {
+                                    <li class="nav-item dropdown dropdown-hover">
+                                        <a class="nav-link text-dark fw-medium px-3 @isCatActive" asp-area="" asp-controller="Home" asp-action="Index" asp-route-categoryId="@cat.Id">
+                                            @cat.Name
+                                        </a>
+                                        <div class="dropdown-menu border-0" style="min-width: 250px;">
+                                            <h4 class="mega-title">@cat.Name</h4>
+                                            <div style="column-count: @(subCats.Count > 8 ? 2 : 1); column-gap: 40px;">
+                                                @foreach(var sub in subCats)
+                                                {
+                                                    <a class="mega-link @(currentCategoryId == sub.Id ? "active fw-bold" : "")" asp-area="" asp-controller="Home" asp-action="Index" asp-route-categoryId="@sub.Id">@sub.Name</a>
+                                                }
+                                            </div>
+                                        </div>
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link text-dark fw-medium px-3 @isCatActive" asp-area="" asp-controller="Home" asp-action="Index" asp-route-categoryId="@cat.Id">@cat.Name</a>
+                                    </li>
+                                }
+                            }
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link text-dark fw-medium" href="https://www.naifjewellery.com/hakkımızda" target="_blank">Hakkımızda</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- Offcanvas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="catalogOffcanvas">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">Kataloğum</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column">
+            <div id="catalogItemsOffcanvas" class="flex-grow-1 overflow-auto mb-3"></div>
+            <div class="d-flex gap-2 mt-auto">
+                <button class="btn btn-outline-danger w-50" id="clearCatalogBtn">Temizle</button>
+                <button class="btn btn-success w-50" data-bs-toggle="modal" data-bs-target="#customerModal">Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="customerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Müşteri Bilgileri</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Firma Adı</label>
+                        <input type="text" id="companyName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Ad</label>
+                        <input type="text" id="firstName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Soyad</label>
+                        <input type="text" id="lastName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Telefon Numarası</label>
+                        <input type="text" id="phoneNumber" class="form-control" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary w-100" id="completePdfBtn">Tamam (PDF İndir)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2026 - Naif Jewellery
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index: 9999; flex-direction:column; align-items:center; justify-content:center; color:white;">
+        <div class="spinner-border text-light mb-3" style="width: 4rem; height: 4rem;" role="status"></div>
+        <h4 id="loadingText" class="mb-4">PDF Oluşturuluyor, Lütfen Bekleyiniz...</h4>
+        <p class="text-muted mb-4">(Resimlerin çözünürlüğü yüksekse işlem birkaç dakika sürebilir)</p>
+        <button class="btn btn-danger px-5" id="cancelPdfBtn">İptal Et</button>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div class="modal fade" id="imageLightbox" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-transparent border-0 shadow-none">
+                <div class="modal-body p-0 text-center">
+                    <div class="d-inline-block position-relative">
+                        <img id="lightboxImage" src="" alt="Ürün" class="img-fluid rounded" style="max-height: 85vh; object-fit: contain; background: #fff; box-shadow: 0 8px 40px rgba(0,0,0,0.5);" />
+                        <button type="button" class="position-absolute border-0" data-bs-dismiss="modal" aria-label="Kapat" style="top: 8px; right: 8px; z-index:10; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; font-size: 18px; line-height: 32px; text-align: center; cursor: pointer;">&times;</button>
+                        <button type="button" id="lightboxAddCart" class="btn btn-dark btn-sm position-absolute rounded-pill px-3 py-1" style="bottom: 12px; right: 12px; z-index:10; border: 1px solid #aaa; font-size: 13px; opacity: 0.9;">Kataloğa Ekle</button>
+                        <button type="button" id="lightboxPrev" class="position-absolute border-0" style="top: 50%; left: 8px; transform: translateY(-50%); z-index:10; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff; font-size: 20px; line-height: 36px; text-align: center; cursor: pointer;">&#10094;</button>
+                        <button type="button" id="lightboxNext" class="position-absolute border-0" style="top: 50%; right: 8px; transform: translateY(-50%); z-index:10; width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,0.5); color: #fff; font-size: 20px; line-height: 36px; text-align: center; cursor: pointer;">&#10095;</button>
+
+                        <span id="lightboxCounter" class="position-absolute" style="bottom: 14px; left: 50%; transform: translateX(-50%); z-index:10; background: rgba(0,0,0,0.5); color: #fff; font-size: 13px; padding: 3px 12px; border-radius: 12px;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Global Error Modal -->
+    <div class="modal fade" id="globalErrorModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <i class="fas fa-exclamation-circle text-danger mb-3" style="font-size: 3rem;"></i>
+                    <h5 class="mb-3" id="globalErrorTitle">Hata</h5>
+                    <p class="text-muted mb-4" id="globalErrorMessage">Bir sorun oluştu.</p>
+                    <button type="button" class="btn btn-dark w-100 rounded-pill" data-bs-dismiss="modal">Tamam</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Clear Catalog Modal -->
+    <div class="modal fade" id="confirmClearModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <i class="fas fa-trash-alt text-danger mb-3" style="font-size: 3rem;"></i>
+                    <h5 class="mb-3">Emin misiniz?</h5>
+                    <p class="text-muted mb-4">Kataloğunuz tamamen sıfırlanacak ve eklediğiniz tüm ürünler silinecek.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-light rounded-pill w-50" data-bs-dismiss="modal">İptal</button>
+                        <button type="button" class="btn btn-danger rounded-pill w-50" id="confirmClearCatalogActionBtn">Evet, Temizle</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Google Translate Setup -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'tr', includedLanguages: 'tr,en', autoDisplay: false}, 'google_translate_element');
+        }
+        
+        function changeLanguage(lang) {
+            var selectField = document.querySelector(".goog-te-combo");
+            if(selectField) {
+                selectField.value = lang;
+                selectField.dispatchEvent(new Event('change'));
+            }
+            
+            if(lang == 'en') {
+                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/us.png';
+                document.getElementById('currentLangText').innerText = 'EN';
+            } else {
+                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/tr.png';
+                document.getElementById('currentLangText').innerText = 'TR';
+            }
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    
+    <!-- Floating WhatsApp Button -->
+    <a href="https://wa.me/905555555555?text=Merhaba,%20ürünleriniz%20hakkında%20bilgi%20almak%20istiyorum." 
+       class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="WhatsApp ile İletişime Geçin">
+        <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+        </svg>
+    </a>
+
+    <style>
+        .whatsapp-float {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            bottom: 40px;
+            right: 40px;
+            background-color: #25d366;
+            color: #FFF;
+            border-radius: 50px;
+            text-align: center;
+            font-size: 34px;
+            box-shadow: 2px 2px 15px rgba(37, 211, 102, 0.4);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: all 0.3s ease-in-out;
+            animation: pulse-green 2s infinite;
+        }
+
+        .whatsapp-float:hover {
+            background-color: #128C7E;
+            color: #FFF;
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        @@keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 20px rgba(37, 211, 102, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+            }
+        }
+        
+        /* Mobile adjust */
+        @@media (max-width: 768px) {
+            .whatsapp-float {
+                width: 50px;
+                height: 50px;
+                bottom: 20px;
+                right: 20px;
+                font-size: 28px;
+            }
+        }
+
+        body { top: 0 !important; }
+        .skiptranslate, .goog-te-banner-frame { display: none !important; }
+    </style>
+</body>
+
+</html>

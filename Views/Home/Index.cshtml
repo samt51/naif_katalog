@@ -1,0 +1,239 @@
+@model List<naif_katalog.Models.Product>
+@{
+    var currentCategory = ViewBag.CurrentCategory as string;
+    var searchQuery = ViewBag.SearchQuery as string;
+    var isSearchActive = !string.IsNullOrEmpty(searchQuery);
+    ViewData["Title"] = string.IsNullOrEmpty(currentCategory) ? "Tüm Ürünler" : currentCategory;
+    var groupedProducts = Model.GroupBy(p => p.Category).Where(g => !string.IsNullOrEmpty(g.Key)).ToList();
+    
+    bool isLoggedIn = User.Identity?.IsAuthenticated == true;
+    string adminWhatsAppPhone = "905551234567"; // Replace with real admin phone
+}
+
+<style>
+    /* Cart Offcanvas styling */
+    .cart-offcanvas {
+        position: fixed; top: 0; right: -400px; width: 400px; height: 100vh;
+        background: #fff; z-index: 1050; transition: 0.3s ease-in-out;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column;
+    }
+    .cart-offcanvas.open { right: 0; }
+    .cart-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+        background: rgba(0,0,0,0.5); z-index: 1040; display: none;
+    }
+    .cart-overlay.open { display: block; }
+    .cart-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .cart-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .cart-footer { padding: 20px; border-top: 1px solid #eee; }
+    
+    .cart-item { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid #f5f5f5; padding-bottom: 10px; }
+    .cart-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+    .cart-item-details { flex: 1; }
+    .cart-item-details h6 { margin: 0 0 5px 0; font-weight: bold; }
+    .cart-item-details p { margin: 0; font-size: 13px; color: #666; }
+    .btn-remove { background: none; border: none; color: #ef4444; cursor: pointer; }
+</style>
+
+
+
+
+
+<div class="container mt-4">
+    @if (!isLoggedIn)
+    {
+        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-info-circle me-3 fs-4"></i>
+            <div>
+                Fiyatları görüntülemek için lütfen <strong>Giriş Yapın</strong>. Hesabınız yoksa, admin ile iletişime geçerek hesap oluşturabilirsiniz.
+            </div>
+            <a href="https://wa.me/@adminWhatsAppPhone" target="_blank" class="btn btn-success ms-auto rounded-pill text-nowrap">
+                <i class="fab fa-whatsapp"></i> Hesap İste
+            </a>
+        </div>
+    }
+
+    @if (isSearchActive)
+    {
+        <div class="search-results-header mb-4 p-3 rounded d-flex align-items-center justify-content-between">
+            <div>
+                <span class="text-muted">Arama:</span>
+                <strong class="ms-1">"@searchQuery"</strong>
+                <span class="badge bg-secondary ms-2">@Model.Count sonuç</span>
+            </div>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                <span>&times;</span> Aramayı Temizle
+            </a>
+        </div>
+    }
+
+    @if (groupedProducts.Count > 0)
+    {
+        foreach (var group in groupedProducts)
+        {
+            <div class="mb-5 p-4 border rounded bg-light">
+                <div id="categoryHeader" class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 border-secondary border-opacity-25">
+                    <h5 class="m-0 text-uppercase" style="letter-spacing: 1px;">
+                        <a href="@Url.Action("Index", "Home", new { category = group.Key })" class="text-dark text-decoration-none">@group.Key</a>
+                        @if (isSearchActive)
+                        {
+                            <span class="badge bg-secondary ms-2" style="font-size: 0.7rem; vertical-align: middle;">@group.Count()</span>
+                        }
+                    </h5>
+                    @if (!isSearchActive && string.IsNullOrEmpty(currentCategory) && group.Count() > 3)
+                    {
+                        <a href="@Url.Action("Index", "Home", new { category = group.Key })" class="btn btn-sm btn-outline-secondary btn-glow">Tümünü Gör (@group.Count()) &rarr;</a>
+                    }
+                </div>
+                <div class="row">
+                    @{
+                        var displayProducts = (isSearchActive || !string.IsNullOrEmpty(currentCategory)) ? group.ToList() : group.Take(3).ToList();
+                    }
+                    @foreach (var p in displayProducts)
+                    {
+                        // Mock Price Calculation
+                        decimal mockPrice = (p.Gram * 85m) + (p.DiamondCarat * 600m) + 150m;
+                        
+                        <div class="col-md-4 mb-4">
+                            <div class="card shadow-sm h-100 border-0 bg-white">
+                                @if (p.Images.Count > 0)
+                                {
+                                    <div id="carousel-@p.Code" class="carousel slide" data-bs-interval="false">
+                                        <div class="carousel-inner rounded-top">
+                                            @for (int i = 0; i < p.Images.Count; i++)
+                                            {
+                                                <div class="carousel-item @(i == 0 ? "active" : "")">
+                                                    <div class="img-zoom-container">
+                                                        <img src="@p.Images[i]" class="d-block zoom-img" alt="@p.Code">
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                        @if (p.Images.Count > 1)
+                                        {
+                                            <button class="carousel-control-prev" type="button" data-bs-target="#carousel-@p.Code" data-bs-slide="prev">
+                                                <span class="carousel-control-prev-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
+                                            </button>
+                                            <button class="carousel-control-next" type="button" data-bs-target="#carousel-@p.Code" data-bs-slide="next">
+                                                <span class="carousel-control-next-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="bg-light d-flex align-items-center justify-content-center rounded-top" style="height:300px;">
+                                        <span class="text-muted">Resim Yok</span>
+                                    </div>
+                                }
+
+                                <div class="card-body text-center d-flex flex-column justify-content-end p-4">
+                                    <h5 class="card-title fw-bold text-uppercase letter-spacing-1 mb-2">@p.Code</h5>
+                                    <p class="text-muted small mb-3">@(p.Gram)g | @(p.Karat ?? "14K") | @(p.DiamondCarat)ct</p>
+                                    
+                                    <a href="/Home/Detail/@p.Id" class="btn btn-outline-dark rounded-pill px-4 py-2 mt-2 w-100 fw-bold" style="letter-spacing: 1px;">
+                                        Detayları İncele <i class="fas fa-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12 text-center mt-5 py-5">
+            <h4 class="text-muted mb-3">Kategori veya Ürün Bulunamadı.</h4>
+        </div>
+    }
+</div>
+
+<!-- Cart Offcanvas -->
+<div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+<div class="cart-offcanvas" id="cartOffcanvas">
+    <div class="cart-header">
+        <h4 class="m-0"><i class="fas fa-gem text-primary"></i> Kataloğum</h4>
+        <button class="btn-close" onclick="toggleCart()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="cart-body" id="cartItems">
+        <p class="text-muted text-center mt-5">Kataloğunuz şu an boş.</p>
+    </div>
+    <div class="cart-footer">
+        @if(isLoggedIn) {
+            <button class="btn btn-dark w-100 rounded-pill py-2" onclick="sendCatalogToWhatsapp()"><i class="fab fa-whatsapp"></i> Sipariş Ver / Teklif İste</button>
+        } else {
+            <button class="btn btn-success w-100 rounded-pill py-2" onclick="sendCatalogToWhatsapp()"><i class="fab fa-whatsapp"></i> Seçili Ürünleri Sor</button>
+        }
+    </div>
+</div>
+
+<script>
+    let catalog = JSON.parse(localStorage.getItem('myCatalog')) || [];
+    
+    function updateCartUI() {
+        document.getElementById('cartCount').innerText = catalog.length;
+        const container = document.getElementById('cartItems');
+        
+        if (catalog.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center mt-5">Kataloğunuz şu an boş.</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        catalog.forEach((item, index) => {
+            container.innerHTML += 
+                <div class="cart-item">
+                    <img src=" + (item.img ? item.img : '/images/no-image.png') + " alt="img" />
+                    <div class="cart-item-details">
+                        <h6> + item.code + </h6>
+                        <p> + item.category +   + (item.price ? '| ' + item.price : '') + </p>
+                    </div>
+                    <button class="btn-remove" onclick="removeFromCatalog( + index + )"><i class="fas fa-trash"></i></button>
+                </div>
+            ;
+        });
+    }
+
+    function addToCatalog(code, category, price, img) {
+        if (!catalog.find(x => x.code === code)) {
+            catalog.push({ code, category, price, img });
+            localStorage.setItem('myCatalog', JSON.stringify(catalog));
+            updateCartUI();
+            
+            // Show offcanvas automatically on first add
+            const offcanvas = document.getElementById('cartOffcanvas');
+            if(!offcanvas.classList.contains('open')) toggleCart();
+        } else {
+            alert('Bu ürün zaten kataloğunuzda!');
+        }
+    }
+
+    function removeFromCatalog(index) {
+        catalog.splice(index, 1);
+        localStorage.setItem('myCatalog', JSON.stringify(catalog));
+        updateCartUI();
+    }
+
+    function toggleCart() {
+        document.getElementById('cartOffcanvas').classList.toggle('open');
+        document.getElementById('cartOverlay').classList.toggle('open');
+    }
+
+    function sendCatalogToWhatsapp() {
+        if (catalog.length === 0) return alert('Kataloğunuz boş!');
+        let text = "Merhaba, aşağıdaki ürünler hakkında bilgi almak istiyorum:\n\n";
+        catalog.forEach(item => {
+            text += "- " + item.code + " (" + item.category + ")\n";
+        });
+        
+        const phone = '@adminWhatsAppPhone';
+        window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank');
+    }
+
+    // Initialize UI
+    updateCartUI();
+</script>
+
+

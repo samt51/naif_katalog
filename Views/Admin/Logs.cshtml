@@ -1,0 +1,84 @@
+@model List<naif_katalog.Models.UserActionLogDto>
+@{
+    ViewData["Title"] = "Müşteri Hareketleri";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h2>Müşteri Hareketleri (Logları)</h2>
+</div>
+
+<div class="card" style="background:white; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); overflow:hidden;">
+    <div class="table-responsive">
+        <table class="table" style="margin-bottom:0;">
+            <thead style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                <tr>
+                    <th style="padding:15px; font-weight:600; color:#475569;">Tarih</th>
+                    <th style="padding:15px; font-weight:600; color:#475569;">Kullanıcı</th>
+                    <th style="padding:15px; font-weight:600; color:#475569;">Aksiyon</th>
+                    <th style="padding:15px; font-weight:600; color:#475569;">Ürün/Detay</th>
+                    <th style="padding:15px; font-weight:600; color:#475569;">IP / Tarayıcı</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var log in Model.OrderByDescending(x => x.CreatedAt))
+                    {
+                        <tr style="border-bottom:1px solid #e2e8f0;">
+                            <td style="padding:15px; color:#64748b;">@log.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                            <td style="padding:15px;">
+                                @(log.User != null ? log.User.Name + " " + log.User.Surname : $"User ID: {log.UserId}")
+                            </td>
+                            <td style="padding:15px;">
+                                @if (log.ActionType == "Login")
+                                {
+                                    <span class="badge bg-success">Giriş Yapıldı</span>
+                                }
+                                else if (log.ActionType == "ViewProduct")
+                                {
+                                    <span class="badge bg-info text-dark">Ürün İncelendi</span>
+                                }
+                                else if (log.ActionType == "AddProduct")
+                                {
+                                    <span class="badge bg-primary">Ürün Eklendi</span>
+                                }
+                                else if (log.ActionType == "RemoveProduct")
+                                {
+                                    <span class="badge bg-danger">Ürün Silindi</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@log.ActionType</span>
+                                }
+                            </td>
+                            <td style="padding:15px;">
+                                @if (log.Product != null)
+                                {
+                                    <strong>@log.Product.Name</strong><br/>
+                                    <small style="color:#64748b;">Kod: @log.Product.Code</small>
+                                }
+                                @if (!string.IsNullOrEmpty(log.Details))
+                                {
+                                    <div style="font-size:0.85em; color:#64748b; margin-top:4px;">@log.Details</div>
+                                }
+                            </td>
+                            <td style="padding:15px; font-size:0.85em; color:#64748b;">
+                                <div>@log.IpAddress</div>
+                                <div style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="@log.UserAgent">
+                                    @log.UserAgent
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center" style="padding:20px; color:#64748b;">Henüz log kaydı bulunmamaktadır.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,539 @@
+@model dynamic
+@{
+    ViewData["Title"] = "Genel Tanımlamalar";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<!-- CSS for Modal -->
+<style>
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none; justify-content: center; align-items: center; z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-content {
+        background: var(--card-bg); padding: 24px; border-radius: 12px;
+        width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { margin: 0; font-size: 18px; }
+    .btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
+    .form-group input:focus { border-color: var(--primary); }
+    .def-item {
+        background:#f1f5f9; padding:4px 10px; border-radius:12px; font-size:13px; border:1px solid #e2e8f0;
+        cursor: pointer; user-select: none; transition: all 0.2s; display: inline-block;
+    }
+    .def-item:hover { background: #e2e8f0; }
+</style>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px;">
+    <!-- TAŞ TANIMLARI -->
+    <div class="card">
+        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+            <i class="fas fa-gem" style="color:var(--primary);"></i> Taş & Kesim Tanımları
+        </h3>
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Taş Tipleri</h4>
+                <button onclick="openModal('StoneType', 'Taş Tipi Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.StoneTypes != null) {
+                    foreach(var item in Model.StoneTypes) {
+                        <span class="def-item" onclick="openModal('StoneType', 'Taş Tipi Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Taş Ayarları (Boyut)</h4>
+                <button onclick="openModal('StoneScale', 'Taş Ayarı Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.StoneScales != null) {
+                    foreach(var item in Model.StoneScales) {
+                        <span class="def-item" onclick="openModal('StoneScale', 'Taş Ayarı Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+
+
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Taş Kesimleri</h4>
+                <button onclick="openModal('StoneCut', 'Taş Kesimi Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.StoneCuts != null) {
+                    foreach(var item in Model.StoneCuts) {
+                        <span class="def-item" onclick="openModal('StoneCut', 'Taş Kesimi Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Taş Berraklığı</h4>
+                <button onclick="openModal('StoneClarity', 'Taş Berraklığı Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.StoneClarities != null) {
+                    foreach(var item in Model.StoneClarities) {
+                        <span class="def-item" onclick="openModal('StoneClarity', 'Taş Berraklığı Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Renkler (Taş Rengi)</h4>
+                <button onclick="openModal('Color', 'Renk Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.Colors != null) {
+                    foreach(var item in Model.Colors) {
+                        <span class="def-item" onclick="openModal('Color', 'Renk Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MADEN TANIMLARI -->
+    <div class="card">
+        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+            <i class="fas fa-ring" style="color:var(--primary);"></i> Maden Tanımları
+        </h3>
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Maden Tipleri</h4>
+                <button onclick="openModal('MetalType', 'Maden Tipi Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.MetalTypes != null) {
+                    foreach(var item in Model.MetalTypes) {
+                        <span class="def-item" onclick="openModal('MetalType', 'Maden Tipi Güncelle', @item.Id, '@item.Name')" style="background:#fef3c7; color:#92400e; border-color:#fde68a;">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Maden Ayarları</h4>
+                <button onclick="openModal('MetalPurity', 'Maden Ayarı Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.MetalPurities != null) {
+                    foreach(var item in Model.MetalPurities) {
+                        <span class="def-item" onclick="openModal('MetalPurity', 'Maden Ayarı Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <!-- CİLA / RODAJ MALİYETLERİ -->
+    <div class="card">
+        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+            <i class="fas fa-paint-brush" style="color:var(--primary);"></i> Cila/Rodaj Maliyetleri
+        </h3>
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Kategoriye Göre Maliyetler</h4>
+                <button onclick="openPolishingModal()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.PolishingCosts != null) {
+                    foreach(var item in Model.PolishingCosts) {
+                        <span class="def-item" onclick="openPolishingModal(@item.Id, @item.CategoryId, @item.CostPrice.ToString(System.Globalization.CultureInfo.InvariantCulture))" style="background:#fce7f3; color:#9d174d; border-color:#fbcfe8;">@item.CategoryName (Ü: $@item.CostPrice.ToString("N2", new System.Globalization.CultureInfo("tr-TR")))</span>
+                    }
+                }
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Mıhlama Tipleri ve Fiyatları</h4>
+                <button onclick="openStoneSettingModal()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.StoneSettings != null) {
+                    foreach(var item in Model.StoneSettings) {
+                        <span class="def-item" onclick="openStoneSettingModal(@item.Id, @item.UnitId, @item.SettingPrice.ToString(System.Globalization.CultureInfo.InvariantCulture))" style="background:#e0e7ff; color:#3730a3; border-color:#c7d2fe;">@item.SettingType ($@item.SettingPrice.ToString("N2", new System.Globalization.CultureInfo("tr-TR")))</span>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- SİSTEM TANIMLARI -->
+    <div class="card">
+        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+            <i class="fas fa-users-cog" style="color:var(--primary);"></i> Sistem Tanımları
+        </h3>
+
+        <div style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="font-size:14px; color:var(--text-muted);">Birimler</h4>
+                <button onclick="openModal('Unit', 'Birim Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                @if(Model.Units != null) {
+                    foreach(var item in Model.Units) {
+                        <span class="def-item" onclick="openModal('Unit', 'Birim Güncelle', @item.Id, '@item.Name')" style="background:#dcfce7; color:#166534; border-color:#bbf7d0;">@item.Name</span>
+                    }
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Stone Setting Modal -->
+<div class="modal-overlay" id="stoneSettingModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="stoneSettingModalTitle">Mıhlama Tipi Ekle</h3>
+            <button class="btn-close" onclick="closeStoneSettingModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="stoneSettingForm">
+            <input type="hidden" id="settingId" value="0" />
+            <div class="form-group">
+                <label>Birim / Mıhlama Tipi</label>
+                <select id="settingType" required style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                    <option value="">Seçiniz</option>
+                    @if(Model.Units != null) {
+                        foreach(var item in Model.Units) {
+                            <option value="@item.Id">@item.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Mıhlama Fiyatı ($)</label>
+                <input type="number" step="0.01" id="settingPrice" required placeholder="0.00" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color);"/>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button type="button" class="btn-danger" id="btnDelStoneSetting" style="display:none; width:100%;" onclick="deleteStoneSetting()">Sil</button>
+                <button type="submit" class="btn-primary" id="btnSaveStoneSetting" style="width:100%;">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Polishing Cost Modal -->
+<div class="modal-overlay" id="polishingModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="polishingModalTitle">Cila/Rodaj Ekle</h3>
+            <button class="btn-close" onclick="closePolishingModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="polishingForm">
+            <input type="hidden" id="polId" value="0" />
+            <div class="form-group">
+                <label>Kategori</label>
+                <select id="polCategoryId" required style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                    <option value="">Seçiniz</option>
+                    @if(Model.Categories != null) {
+                        foreach(var cat in Model.Categories) {
+                            <option value="@cat.Id">@cat.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Ürün Maliyeti ($)</label>
+                <input type="number" step="0.01" id="polCostPrice" required placeholder="0.00" />
+            </div>
+            
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn-danger" id="btnDelPolishing" style="display:none; width:100%;" onclick="deletePolishing()">Sil</button>
+                <button type="submit" class="btn-primary" id="btnSavePolishing" style="width:100%;">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Dynamic Modal -->
+<div class="modal-overlay" id="defModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Tanım Ekle</h3>
+            <button class="btn-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="defForm">
+            <input type="hidden" id="defType" name="type" />
+            <input type="hidden" id="defId" name="id" value="0" />
+            <div class="form-group">
+                <label>Tanım Adı</label>
+                <input type="text" id="defName" name="name" required placeholder="Değer giriniz..." />
+            </div>
+            <div class="form-group" id="discountGroup" style="display:none;">
+                <label>İndirim / Yüzdelik Dilim (%)</label>
+                <input type="number" step="0.01" id="defDiscountRate" name="discountRate" value="0" placeholder="0.00" />
+            </div>
+            <div style="display:flex; gap:10px;"><button type="button" class="btn-danger" id="btnDel" style="display:none; width:100%;" onclick="deleteDefinition()">Sil</button><button type="submit" class="btn-primary" id="btnSave" style="width:100%;">Kaydet</button></div>
+        </form>
+    </div>
+</div>
+
+
+<!-- Info Modal -->
+<div class="modal-overlay" id="infoModal" style="z-index: 2000;">
+    <div class="modal-content" style="max-width: 320px; text-align: center; padding: 30px 20px;">
+        <div style="margin-bottom: 15px;">
+            <i class="fas fa-info-circle" style="font-size: 48px; color: var(--primary);"></i>
+        </div>
+        <h3 id="infoModalTitle" style="margin-bottom: 10px; font-size: 18px;">Bilgi</h3>
+        <p id="infoModalMessage" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;"></p>
+        <button class="btn-primary" onclick="closeInfoModal()" style="width: 100%;">Tamam</button>
+    </div>
+</div>
+
+<script>
+    function showInfoModal(title, message) {
+        document.getElementById('infoModalTitle').innerText = title;
+        document.getElementById('infoModalMessage').innerText = message;
+        document.getElementById('infoModal').classList.add('active');
+    }
+
+    function closeInfoModal() {
+        document.getElementById('infoModal').classList.remove('active');
+    }
+
+    function openModal(type, title, id = 0, currentName = '', currentDiscount = 0) {
+        document.getElementById('defType').value = type;
+        document.getElementById('defId').value = id;
+        document.getElementById('btnDel').style.display = id > 0 ? "block" : "none";
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('defName').value = currentName;
+        
+        if(type === 'CustomerGroup') {
+            document.getElementById('discountGroup').style.display = 'block';
+            document.getElementById('defDiscountRate').value = currentDiscount;
+        } else {
+            document.getElementById('discountGroup').style.display = 'none';
+        }
+
+        document.getElementById('defModal').classList.add('active');
+        document.getElementById('defName').focus();
+    }
+
+    function closeModal() {
+        document.getElementById('defModal').classList.remove('active');
+    }
+
+            function deleteDefinition() {
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: "Bu tanımı silmek istediğinize emin misiniz?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Evet, Sil',
+            cancelButtonText: 'İptal'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const id = document.getElementById('defId').value;
+                const type = document.getElementById('defType').value;
+                try {
+                    const res = await fetch(`https://localhost:3434/api/${type}/${id}`, { method: 'DELETE' });
+                    if (res.ok) location.reload();
+                    else Swal.fire('Hata!', 'Silme işlemi başarısız oldu.', 'error');
+                } catch(e) {
+                    Swal.fire('Hata!', 'Sistem hatası.', 'error');
+                }
+            }
+        });
+    }
+
+    document.getElementById('defForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const type = document.getElementById('defType').value;
+        const id = parseInt(document.getElementById('defId').value);
+        const name = document.getElementById('defName').value;
+        const btn = document.getElementById('btnSave');
+        
+        btn.disabled = true;
+        btn.innerText = "Kaydediliyor...";
+
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('name', name);
+        
+        if (type === 'CustomerGroup') {
+            const dr = document.getElementById('defDiscountRate').value;
+            formData.append('discountRate', dr ? dr : 0);
+        }
+        
+        let url = '/Definition/Create';
+        if (id > 0) {
+            url = '/Definition/Update';
+            formData.append('id', id);
+        }
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await res.json();
+            
+            if (result && result.isSuccess) {
+                location.reload(); // Refresh to show new data
+            } else {
+                showInfoModal('İşlem Başarısız', result.errors ? result.errors.join(', ') : 'İşlem başarısız');
+            }
+        } catch (err) {
+            showInfoModal('Sistem Hatası', err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Kaydet";
+        }
+    });
+
+        function openStoneSettingModal(id = 0, type = '', price = '') {
+        document.getElementById('settingId').value = id;
+        document.getElementById('settingType').value = type;
+        document.getElementById('settingPrice').value = price;
+        
+        document.getElementById('stoneSettingModalTitle').innerText = id > 0 ? "Mıhlama Tipi Güncelle" : "Mıhlama Tipi Ekle";
+        document.getElementById('btnDelStoneSetting').style.display = id > 0 ? "block" : "none";
+        
+        document.getElementById('stoneSettingModal').classList.add('active');
+    }
+
+    function closeStoneSettingModal() {
+        document.getElementById('stoneSettingModal').classList.remove('active');
+    }
+
+    document.getElementById('stoneSettingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = parseInt(document.getElementById('settingId').value);
+        const req = {
+            unitId: parseInt(document.getElementById('settingType').value),
+            settingPrice: parseFloat(document.getElementById('settingPrice').value)
+        };
+        const url = id > 0 ? '/Admin/UpdateStoneSetting' : '/Admin/CreateStoneSetting';
+        const method = id > 0 ? 'PUT' : 'POST';
+        if (id > 0) req.id = id;
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(req)
+            });
+            if (res.ok) { location.reload(); } else { showInfoModal('Hata', 'İşlem başarısız oldu.'); }
+        } catch (err) { showInfoModal('İşlem Başarısız', err.message); }
+    });
+
+    function deleteStoneSetting() {
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: "Bu mıhlama tipini silmek istediğinize emin misiniz?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Evet, Sil',
+            cancelButtonText: 'İptal'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const id = parseInt(document.getElementById('settingId').value);
+                try {
+                    const res = await fetch('/Admin/DeleteStoneSetting', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ Id: id })
+                    });
+                    const resJson = await res.json();
+                    if (resJson && resJson.isSuccess && resJson.isSuccess.isSuccess) location.reload();
+                    else Swal.fire('Hata!', 'Silme işlemi başarısız oldu. ' + (resJson.isSuccess && resJson.isSuccess.errors ? resJson.isSuccess.errors.join(', ') : ''), 'error');
+                } catch(e) {
+                    Swal.fire('Hata!', 'Sistem hatası.', 'error');
+                }
+            }
+        });
+    }
+
+    // --- Polishing / Rhodium Modal Functions ---
+    function openPolishingModal(id = 0, categoryId = '', costPrice = '') {
+        document.getElementById('polId').value = id;
+        document.getElementById('polCategoryId').value = categoryId;
+        document.getElementById('polCostPrice').value = costPrice;
+        
+        document.getElementById('polishingModalTitle').innerText = id > 0 ? "Cila/Rodaj Güncelle" : "Cila/Rodaj Ekle";
+        document.getElementById('btnDelPolishing').style.display = id > 0 ? "block" : "none";
+        
+        document.getElementById('polishingModal').classList.add('active');
+    }
+
+    function closePolishingModal() {
+        document.getElementById('polishingModal').classList.remove('active');
+    }
+
+    document.getElementById('polishingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = parseInt(document.getElementById('polId').value);
+        const req = {
+            categoryId: parseInt(document.getElementById('polCategoryId').value),
+            costPrice: parseFloat(document.getElementById('polCostPrice').value)
+        };
+        const url = 'https://localhost:3434/api/PolishingCost';
+        const method = id > 0 ? 'PUT' : 'POST';
+        if (id > 0) req.id = id;
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(req)
+            });
+            if (res.ok) { location.reload(); } else { showInfoModal('Hata', 'İşlem başarısız oldu.'); }
+        } catch (err) { showInfoModal('İşlem Başarısız', err.message); }
+    });
+
+    function deletePolishing() {
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: "Bu maliyeti silmek istediğinize emin misiniz?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Evet, Sil',
+            cancelButtonText: 'İptal'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const id = parseInt(document.getElementById('polId').value);
+                try {
+                    const res = await fetch(`https://localhost:3434/api/PolishingCost/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (res.ok) location.reload();
+                    else Swal.fire('Hata!', 'Silme işlemi başarısız oldu.', 'error');
+                } catch(e) {
+                    Swal.fire('Hata!', 'Sistem hatası.', 'error');
+                }
+            }
+        });
+    }
+</script>

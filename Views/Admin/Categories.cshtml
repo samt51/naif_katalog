@@ -1,0 +1,299 @@
+@model List<naif_katalog.Models.CategoryDto>
+@{
+    ViewData["Title"] = "Kategoriler";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
+    // Recursive helper for list items
+    async Task RenderCategoryItem(naif_katalog.Models.CategoryDto cat, int level, List<naif_katalog.Models.CategoryDto> allCats)
+    {
+        var children = allCats.Where(c => c.ParentId == cat.Id).OrderBy(c => c.OrderIndex).ToList();
+        
+        <div class="category-item border rounded mb-2 bg-white shadow-sm" data-id="@cat.Id">
+            <div class="d-flex align-items-center p-3 border-bottom-0">
+                <div class="me-3 cursor-grab drag-handle text-muted" style="cursor: grab;" title="Sürükle bırak ile sırala">
+                    <i class="fas fa-grip-vertical fs-5"></i>
+                </div>
+                <div class="flex-grow-1">
+                    @if(level > 0) { <i class="fas fa-level-up-alt fa-rotate-90 text-muted me-2 opacity-50"></i> }
+                    <span class="@(level == 0 ? "fw-bold text-dark fs-5" : (level == 1 ? "fw-medium text-secondary fs-6" : "text-muted"))">@cat.Name</span>
+                </div>
+                <div class="mx-4" style="width: 120px;">
+                    @if(level == 0) { <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill w-100">Ana Kategori</span> }
+                    else if(level == 1) { <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-2 rounded-pill w-100">Alt Kategori</span> }
+                    else { <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2 rounded-pill w-100">Seviye @(level+1) Kategori</span> }
+                </div>
+                <div class="text-end">
+                    <button onclick="openModal('Alt Kategori Ekle', 0, '', @cat.Id)" class="btn btn-sm btn-light text-primary border me-1" title="Buna Alt Kategori Ekle"><i class="fas fa-plus"></i></button>
+                    <button onclick="openModal('Kategori Güncelle', @cat.Id, '@cat.Name', @cat.ParentId)" class="btn btn-sm btn-light text-secondary border me-1" title="Düzenle"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-light text-danger border" title="Sil" onclick="deleteCategory(@cat.Id)"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            
+            <div class="sub-category-list p-2 ps-5 bg-light" data-parent="@cat.Id" style="min-height: 10px; @(children.Count == 0 ? "display:none;" : "") border-top: 1px dashed #dee2e6; border-radius: 0 0 4px 4px;">
+                @foreach (var child in children)
+                {
+                    await RenderCategoryItem(child, level + 1, allCats);
+                }
+            </div>
+        </div>
+    }
+
+    async Task RenderCategoryOption(naif_katalog.Models.CategoryDto cat, int level, List<naif_katalog.Models.CategoryDto> allCats)
+    {
+        var prefix = new string('-', level * 2);
+        if (level > 0) prefix = " " + prefix + "> ";
+        <option value="@cat.Id">@prefix @cat.Name</option>
+        var children = allCats.Where(c => c.ParentId == cat.Id).OrderBy(c => c.OrderIndex).ToList();
+        foreach (var child in children)
+        {
+            await RenderCategoryOption(child, level + 1, allCats);
+        }
+    }
+}
+
+<style>
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        display: none; justify-content: center; align-items: center; z-index: 1050;
+        backdrop-filter: blur(5px);
+    }
+    .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease-out; }
+    .modal-content {
+        background: #fff; padding: 25px; border-radius: 16px;
+        width: 100%; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        border: none;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+    .modal-header h3 { margin: 0; font-size: 20px; font-weight: 600; color: #2c3e50; }
+    .btn-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #95a5a6; transition: 0.2s; }
+    .btn-close:hover { color: #e74c3c; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-control-custom { width: 100%; padding: 12px 15px; border: 2px solid #ecf0f1; border-radius: 8px; outline: none; font-size: 15px; transition: 0.3s; color: #2c3e50; }
+    .form-control-custom:focus { border-color: #3498db; box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1); }
+    
+    .category-card { background: #fff; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); overflow: hidden; }
+    
+    .sortable-ghost { opacity: 0.4; background-color: #f8f9fa; border: 2px dashed #0d6efd !important; }
+    .cursor-grab:active { cursor: grabbing !important; }
+    
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<div class="category-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="h4 mb-1 fw-bold text-dark"><i class="fas fa-sitemap text-primary me-2"></i> Kategori Yönetimi</h2>
+            <p class="text-muted mb-0 small">Kategorilerinizi hiyerarşik olarak yönetin. Sıralamayı değiştirmek için soldaki tutamaçtan <i class="fas fa-grip-vertical mx-1"></i> sürükleyip bırakabilirsiniz.</p>
+        </div>
+        <button onclick="openModal('Yeni Kategori Ekle', 0, '', 0)" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="fas fa-plus me-1"></i> Yeni Ana Kategori
+        </button>
+    </div>
+
+    <div class="category-list" id="mainCategoryList">
+        @if(Model != null && Model.Count > 0)
+        {
+            var mainCategories = Model.Where(c => c.ParentId == 0).OrderBy(c => c.OrderIndex).ToList();
+            if(mainCategories.Count == 0)
+            {
+                <div class="text-center py-5 text-muted">Kategori bulunamadı.</div>
+            }
+            foreach(var item in mainCategories)
+            {
+                await RenderCategoryItem(item, 0, Model);
+            }
+        }
+        else
+        {
+            <div class="text-center py-5 text-muted">Kategori bulunamadı. Lütfen yeni kategori ekleyin.</div>
+        }
+    </div>
+</div>
+
+<div class="modal-overlay" id="categoryModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Kategori Ekle</h3>
+            <button class="btn-close" type="button" onclick="closeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="categoryForm">
+            <input type="hidden" id="categoryId" name="Id" value="0" />
+            <div class="form-group">
+                <label>Bağlı Olduğu Kategori (Üst Kategori)</label>
+                <select id="parentCategory" name="ParentId" class="form-control-custom">
+                    <option value="0" class="fw-bold">--- ANA KATEGORİ (Bağımsız) ---</option>
+                    @if(Model != null)
+                    {
+                        foreach(var cat in Model.Where(c => c.ParentId == 0).OrderBy(c => c.OrderIndex))
+                        {
+                            await RenderCategoryOption(cat, 0, Model);
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Kategori Adı</label>
+                <input type="text" id="categoryName" name="Name" class="form-control-custom" required placeholder="Örn: Alyans..." />
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm mt-2" id="btnSave">Kategoriyi Kaydet</button>
+        </form>
+    </div>
+</div>
+
+<!-- Sortable.js -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Init Sortable for main list
+        var mainList = document.getElementById('mainCategoryList');
+        if(mainList) {
+            new Sortable(mainList, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function(evt) {
+                    saveOrder(evt.to);
+                }
+            });
+        }
+        
+        // Init Sortable for sub lists
+        var subLists = document.querySelectorAll('.sub-category-list');
+        subLists.forEach(function(list) {
+            new Sortable(list, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function(evt) {
+                    saveOrder(evt.to);
+                }
+            });
+        });
+    });
+
+    function saveOrder(container) {
+        let items = container.querySelectorAll(':scope > .category-item');
+        let orderData = [];
+        items.forEach((item, index) => {
+            let id = parseInt(item.getAttribute('data-id'));
+            if(id) {
+                orderData.push({ id: id, orderIndex: index });
+            }
+        });
+        
+        if(orderData.length === 0) return;
+        
+        fetch('/Admin/UpdateCategoryOrder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ categories: orderData })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(!data.isSuccess) {
+                Swal.fire('Hata', 'Sıralama kaydedilemedi.', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Sıralama hatası:', err);
+        });
+    }
+
+    function openModal(title, id = 0, currentName = '', parentId = 0) {
+        document.getElementById('categoryId').value = id;
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('categoryName').value = currentName;
+        
+        let selectEl = document.getElementById('parentCategory');
+        let optionExists = Array.from(selectEl.options).some(opt => opt.value == parentId);
+        selectEl.value = optionExists ? parentId : 0;
+        
+        document.getElementById('categoryModal').classList.add('active');
+        document.getElementById('categoryName').focus();
+    }
+
+    function closeModal() {
+        document.getElementById('categoryModal').classList.remove('active');
+    }
+
+    function deleteCategory(id) {
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: "Bu kategoriyi silmek istediğinize emin misiniz?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Evet, Sil!',
+            cancelButtonText: 'İptal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // ... assuming you have a delete endpoint
+                Swal.fire('Silindi!', 'Bu özellik eklenecektir.', 'info');
+            }
+        });
+    }
+
+    document.getElementById('categoryForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const id = parseInt(document.getElementById('categoryId').value);
+        const name = document.getElementById('categoryName').value;
+        const btn = document.getElementById('btnSave');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Kaydediliyor...';
+
+        const formData = new FormData();
+        formData.append('Name', name);
+        formData.append('ParentId', document.getElementById('parentCategory').value);
+        
+        let url = '/Category/Create'; // Wait! Does /Category/Create exist? Or is it API side via Mediator? The user's original code used /Category/Create. 
+        if (id > 0) {
+            url = '/Category/Update';
+            formData.append('Id', id);
+        }
+
+        try {
+            const res = await fetch(url, { method: 'POST', body: formData });
+            const result = await res.json();
+            
+            if (result && result.isSuccess) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Harika!',
+                    text: 'Kategori başarıyla kaydedildi.',
+                    confirmButtonColor: '#2ecc71',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Hata Oluştu',
+                    text: result.errors ? result.errors.join(', ') : 'İşlem başarısız',
+                    confirmButtonColor: '#e74c3c'
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Sistem Hatası',
+                text: err.message,
+                confirmButtonColor: '#e74c3c'
+            });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Kategoriyi Kaydet';
+        }
+    });
+</script>

@@ -1,0 +1,292 @@
+﻿<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        const tabBtn = document.querySelector(.modal-tab[onclick*=" + tabId + "]);
+        if (tabBtn) tabBtn.classList.add('active');
+        
+        document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    let tempStones = [];
+    let tempMetals = [];
+    let tempImages = [];
+
+    // Live Calculation Logic
+    const allPurities = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MetalPurities ?? new List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalPurityDto>()));
+    let globalStonesCost = 0; 
+
+    function calculateLiveCost() {
+        const hasPrice = parseFloat(document.getElementById('LiveHasPrice').value) || 0;
+        const gram = parseFloat(document.getElementById('Gram').value.replace(',', '.')) || 0;
+        const laborMult = parseFloat(document.getElementById('LaborMultiplier').value.replace(',', '.')) || 0;
+        const polishCost = parseFloat(document.getElementById('PolishingCost').value.replace(',', '.')) || 0;
+        const karatVal = document.getElementById('Karat').value;
+        const multiplier = parseFloat(document.getElementById('SalesMultiplier').value.replace(',', '.')) || 1;
+
+        let milyem = 0.585; 
+        if (karatVal) {
+            const purityObj = allPurities.find(p => p.Name === karatVal);
+            if (purityObj && purityObj.Milyem) {
+                milyem = parseFloat(purityObj.Milyem);
+            }
+        }
+
+        const goldCost = gram * milyem * hasPrice;
+        const laborCost = gram * laborMult * hasPrice;
+        
+        const totalCost = goldCost + laborCost + polishCost + globalStonesCost;
+        const salesPrice = totalCost * multiplier;
+
+        document.getElementById('summaryGoldCost').innerText = '$' + goldCost.toFixed(2);
+        document.getElementById('summaryLaborCost').innerText = '$' + laborCost.toFixed(2);
+        document.getElementById('summaryStoneCost').innerText = '$' + globalStonesCost.toFixed(2);
+        document.getElementById('summaryPolishingCost').innerText = '$' + polishCost.toFixed(2);
+        document.getElementById('summaryTotalCost').innerText = '$' + totalCost.toFixed(2);
+        document.getElementById('summarySalesPrice').innerText = '$' + salesPrice.toFixed(2);
+    }
+
+    document.getElementById('Gram').addEventListener('input', calculateLiveCost);
+    document.getElementById('LaborMultiplier').addEventListener('input', calculateLiveCost);
+    document.getElementById('PolishingCost').addEventListener('input', calculateLiveCost);
+    document.getElementById('Karat').addEventListener('change', calculateLiveCost);
+
+    function closeModal() {
+        document.getElementById('productModal').classList.remove('active');
+    }
+
+    async function openModal(id = 0, preserveTab = false) {
+        document.getElementById('productId').value = id;
+        document.getElementById('modalTitle').innerText = id === 0 ? "Yeni Urun Ekle" : "Urunu Duzenle";
+        
+        tempStones = [];
+        tempMetals = [];
+        tempImages = [];
+        document.getElementById('imageInput').value = '';
+
+        if (!preserveTab) switchTab('genel');
+
+        try {
+            const r = await fetch('/api/ExchangeRate/HasAltin');
+            const data = await r.json();
+            if(data && data.price) {
+                document.getElementById('LiveHasPrice').value = data.price.toFixed(2);
+            }
+        } catch(e) { console.log(e); }
+
+        if (id === 0) {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = "0";
+            document.getElementById('imageGallery').innerHTML = "";
+            renderStones();
+            renderMetals();
+            calculateLiveCost();
+        } else {
+            fetch('/Product/Details/' + id)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.isSuccess && res.data) {
+                        const p = res.data;
+                        document.getElementById('Code').value = p.code || '';
+                        document.getElementById('Name').value = p.name || '';
+                        document.getElementById('Description').value = p.description || '';
+                        document.getElementById('CategoryId').value = p.categoryId || '';
+                        document.getElementById('ColorId').value = p.colorId || '';
+                        document.getElementById('Gram').value = p.gram || 0;
+                        document.getElementById('DiamondCarat').value = p.diamondCarat || 0;
+                        document.getElementById('Karat').value = p.karat || '';
+                        document.getElementById('LaborMultiplier').value = p.laborMultiplier || 0;
+                        document.getElementById('PolishingCost').value = p.polishingCost || 0;
+
+                        const imageGallery = document.getElementById('imageGallery');
+                        imageGallery.innerHTML = '';
+                        if(p.images) {
+                            p.images.forEach(img => {
+                                imageGallery.innerHTML += <div style="width:100px; height:100px; border-radius:8px; background:url('+img+') center/cover; position:relative; box-shadow:0 2px 4px rgba(0,0,0,0.1);"></div>;
+                            });
+                        }
+
+                        tempStones = p.productStones ? p.productStones.map(s => ({
+                            Id: s.id, StoneId: s.stoneId, StoneName: s.stoneName, Quantity: s.quantity, Carat: s.carat, TotalCarat: s.totalCarat
+                        })) : [];
+                        
+                        tempMetals = p.productMetals ? p.productMetals.map(m => ({
+                            Id: m.id, MetalTypeId: m.metalTypeId, MetalTypeName: m.metalTypeName, Weight: m.gram
+                        })) : [];
+
+                        renderStones();
+                        renderMetals();
+                        calculateLiveCost();
+                    }
+                });
+        }
+
+        document.getElementById('productModal').classList.add('active');
+    }
+
+    function addStone() {
+        const sId = document.getElementById('StoneId').value;
+        const selObj = document.getElementById('StoneId');
+        const sName = selObj.options[selObj.selectedIndex].text;
+        const qty = parseInt(document.getElementById('StoneQuantity').value) || 1;
+        const car = parseFloat(document.getElementById('StoneCarat').value) || 0;
+        const tcar = parseFloat(document.getElementById('StoneTotalCarat').value) || 0;
+
+        if(!sId) { alert("Lutfen tas seciniz"); return; }
+
+        tempStones.push({
+            Id: 0, 
+            StoneId: parseInt(sId),
+            StoneName: sName,
+            Quantity: qty,
+            Carat: car,
+            TotalCarat: tcar
+        });
+        
+        renderStones();
+        alert('Tas eklendi (Kaydet butonuna basinca kaydedilecek)');
+    }
+
+    function deleteStoneLocal(index) {
+        tempStones.splice(index, 1);
+        renderStones();
+    }
+
+    function addMetal() {
+        const mId = document.getElementById('MetalTypeId').value;
+        const selObj = document.getElementById('MetalTypeId');
+        const mName = selObj.options[selObj.selectedIndex].text;
+        const gram = parseFloat(document.getElementById('MetalGram').value) || 0;
+
+        if(!mId) { alert("Lutfen maden seciniz"); return; }
+
+        tempMetals.push({
+            Id: 0,
+            MetalTypeId: parseInt(mId),
+            MetalTypeName: mName,
+            Weight: gram
+        });
+
+        renderMetals();
+        alert('Maden eklendi (Kaydet butonuna basinca kaydedilecek)');
+    }
+
+    function deleteMetalLocal(index) {
+        tempMetals.splice(index, 1);
+        renderMetals();
+    }
+
+    function renderStones() {
+        globalStonesCost = 0;
+        const stoneBody = document.getElementById('stoneTableBody');
+        if(!tempStones || tempStones.length === 0) {
+            stoneBody.innerHTML = <tr><td colspan="5" class="text-center text-muted">Henuz tas eklenmemis</td></tr>;
+            calculateLiveCost();
+            return;
+        }
+
+        const stonesArray = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Stones ?? new List<naif_katalog.Models.StoneDto>()));
+
+        let html = '';
+        tempStones.forEach((s, index) => {
+            const st = stonesArray.find(x => x.Id === s.StoneId);
+            if(st) {
+                globalStonesCost += (s.Carat * (st.PricePerCarat || 0));
+                if(st.SettingType && (st.SettingType.toLowerCase().includes('adet') || st.SettingType.toLowerCase() === 'piece')) {
+                    globalStonesCost += (s.Quantity * (st.SettingPrice || 0));
+                } else if(st.SettingType && (st.SettingType.toLowerCase().includes('karat') || st.SettingType.toLowerCase() === 'carat')) {
+                    globalStonesCost += (s.Carat * (st.SettingPrice || 0));
+                }
+            }
+
+            html += <tr>
+                <td>+s.StoneName+</td>
+                <td>+s.Quantity+</td>
+                <td>+s.Carat+</td>
+                <td>+s.TotalCarat+</td>
+                <td><button type="button" class="btn btn-sm btn-danger" onclick="deleteStoneLocal(+index+)"><i class="fas fa-trash"></i></button></td>
+            </tr>;
+        });
+        stoneBody.innerHTML = html;
+        calculateLiveCost();
+    }
+
+    function renderMetals() {
+        const metalBody = document.getElementById('productMetalsContainer');
+        if(!tempMetals || tempMetals.length === 0) {
+            metalBody.innerHTML = <table class="table table-striped" style="font-size:13px; width:100%;"><thead><tr><th>Maden</th><th>Gram</th><th>Islem</th></tr></thead><tbody><tr><td colspan="3" class="text-center text-muted">Maden eklenmemis</td></tr></tbody></table>;
+            return;
+        }
+
+        let html = '<table class="table table-striped" style="font-size:13px; width:100%;"><thead><tr><th>Maden</th><th>Gram</th><th>Islem</th></tr></thead><tbody>';
+        tempMetals.forEach((m, index) => {
+            html += <tr>
+                <td>+m.MetalTypeName+</td>
+                <td>+m.Weight+ gr</td>
+                <td><button type="button" class="btn btn-sm btn-danger" onclick="deleteMetalLocal(+index+)"><i class="fas fa-trash"></i></button></td>
+            </tr>;
+        });
+        html += '</tbody></table>';
+        metalBody.innerHTML = html;
+    }
+
+    document.getElementById('uploadArea').addEventListener('click', () => {
+        document.getElementById('imageInput').click();
+    });
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+        const files = e.target.files;
+        if(files.length === 0) return;
+        
+        for(let i=0; i<files.length; i++) {
+            tempImages.push(files[i]);
+            const objectUrl = URL.createObjectURL(files[i]);
+            const imageGallery = document.getElementById('imageGallery');
+            imageGallery.innerHTML += <div style="width:100px; height:100px; border-radius:8px; background:url('+objectUrl+') center/cover; position:relative; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <span style="position:absolute; top:2px; right:2px; background:rgba(255,255,255,0.8); border-radius:4px; font-size:10px; padding:2px;">Yeni</span>
+            </div>;
+        }
+    });
+
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSave');
+        btn.disabled = true;
+        btn.innerText = "Kaydediliyor...";
+
+        const formData = new FormData(e.target);
+        const id = parseInt(formData.get('Id'));
+        
+        ['Gram', 'DiamondCarat', 'LaborMultiplier', 'PolishingCost'].forEach(field => {
+            let val = formData.get(field);
+            if (val) formData.set(field, val.replace(',', '.'));
+        });
+
+        formData.append('stonesJson', JSON.stringify(tempStones));
+        formData.append('metalsJson', JSON.stringify(tempMetals));
+
+        tempImages.forEach(file => {
+            formData.append('imageFiles', file);
+        });
+
+        const url = id > 0 ? '/Admin/UpdateProduct' : '/Admin/CreateProduct';
+
+        try {
+            const res = await fetch(url, { method: 'POST', body: formData });
+            const result = await res.json();
+            
+            if (result && result.isSuccess) {
+                alert('Urun basariyla kaydedildi!');
+                location.reload();
+            } else {
+                alert('Hata: ' + (result.errors ? result.errors.join(', ') : 'Islem basarisiz'));
+            }
+        } catch (err) {
+            alert('Hata: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Kaydet";
+        }
+    });
+</script>

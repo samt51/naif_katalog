@@ -1,0 +1,324 @@
+@model dynamic
+@{
+    ViewData["Title"] = "Taş Partileri";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<style>
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none; justify-content: center; align-items: center; z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-content {
+        background: var(--card-bg); padding: 24px; border-radius: 12px;
+        width: 100%; max-width: 600px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { margin: 0; font-size: 18px; }
+    .btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+    .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+    .form-group { flex: 1; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+</style>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="margin:0;"><i class="fas fa-gem" style="color:var(--primary); margin-right:10px;"></i> Taş Partileri</h2>
+        <button onclick="openModal('Yeni Taş Partisi')" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;">
+            <i class="fas fa-plus"></i> Yeni Parti
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped" id="stonesTable" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Parti Adı</th>
+                    <th>Taş Türü</th>
+                    <th>Birim</th>
+                    <th>Berraklık</th>
+                    <th>Ürün Fiyat ($)</th>
+                    <th>Mıhlama Fiyatı</th>
+                                                                                                    <th>İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if(Model.Stones != null)
+                {
+                    foreach(var stone in Model.Stones)
+                    {
+                        var stoneTypeName = "Bilinmiyor";
+                        if (Model.StoneTypes != null) {
+                            foreach(var t in Model.StoneTypes) {
+                                if(t.Id == stone.StoneTypeId) { stoneTypeName = t.Name; break; }
+                            }
+                        }
+                        var unitName = "Bilinmiyor";
+                        if (Model.Units != null) {
+                            foreach(var u in Model.Units) {
+                                if(u.Id == stone.UnitId) { unitName = u.Name; break; }
+                            }
+                        }
+                        var clarityName = "Belirtilmedi";
+                        if (Model.StoneClarities != null && stone.StoneClarityId != null) {
+                            foreach(var c in Model.StoneClarities) {
+                                if(c.Id == stone.StoneClarityId) { clarityName = c.Name; break; }
+                            }
+                        }
+
+                        <tr>
+                            <td>
+                                @stone.StoneScale?.Name
+                            </td>
+                            <td>@stoneTypeName</td>
+                            <td>@unitName</td>
+                            <td>@clarityName</td>
+                            <td>$@stone.CostPrice.ToString("N2")</td>
+                            <td>@(stone.StoneSetting != null ? "$" + stone.StoneSetting.SettingPrice.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " (" + stone.StoneSetting.SettingType + ")" : "-")</td>
+                            
+                            <td>
+                                <div style="display:flex; gap:8px;">
+                                    <button onclick="openModal('Parti Güncelle', @stone.Id, '', @stone.StoneTypeId, @stone.UnitId, @(stone.StoneClarityId ?? 0), @stone.CostPrice.ToString().Replace(',','.'), @(stone.StoneSettingId ?? 0), @(stone.StoneScaleId ?? 0))" 
+                                            style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);" 
+                                            title="Düzenle">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteStone(@stone.Id)" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #ef4444; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(239,68,68,0.2);" 
+                                            title="Sil">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal-overlay" id="stoneModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Taş Partisi Ekle</h3>
+            <button class="btn-close" type="button" onclick="closeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div id="modalError" style="display:none; color: white; background: #ef4444; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;"></div>
+
+        <form id="stoneForm">
+            <input type="hidden" id="stoneId" name="Id" value="0" />
+            
+            <input type="hidden" id="Name" name="Name" />
+            
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Taş Ayarı (Boyutu)</label>
+                <select id="StoneScaleId" name="StoneScaleId" required>
+                    <option value="">Seçiniz...</option>
+                    @if(Model.StoneScales != null) {
+                        foreach(var s in Model.StoneScales) {
+                            <option value="@s.Id">@s.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Taş Türü</label>
+                    <select id="StoneTypeId" name="StoneTypeId" required>
+                        @if(Model.StoneTypes != null) {
+                            foreach(var t in Model.StoneTypes) {
+                                <option value="@t.Id">@t.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ağırlık Birimi</label>
+                    <select id="UnitId" name="UnitId" required>
+                        @if(Model.Units != null) {
+                            foreach(var u in Model.Units) {
+                                <option value="@u.Id">@u.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Berraklık</label>
+                    <select id="StoneClarityId" name="StoneClarityId">
+                        <option value="0">Belirtilmedi</option>
+                        @if(Model.StoneClarities != null) {
+                            foreach(var c in Model.StoneClarities) {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+
+                        <div class="form-row">
+                <div class="form-group">
+                    <label>Mıhlama Adeti / Tipi</label>
+                    <select id="StoneSettingId" name="StoneSettingId" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                        <option value="">Seçiniz</option>
+                        @if(Model.StoneSettings != null) {
+                            foreach(var setting in Model.StoneSettings) {
+                                <option value="@setting.Id">@setting.SettingType ($@setting.SettingPrice)</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ürün Fiyatı ($ / Karat)</label>
+                    <input type="number" step="0.01" id="CostPrice" name="CostPrice" required />
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="btnSave" style="width:100%">Kaydet</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openModal(title, id = 0, name = '', typeId = '', unitId = '', clarityId = 0, costPrice = '', settingId = '', scaleId = '') {
+        document.getElementById('modalError').style.display = 'none';
+        document.getElementById('stoneId').value = id;
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('Name').value = name;
+        if(typeId) document.getElementById('StoneTypeId').value = typeId;
+        if(unitId) document.getElementById('UnitId').value = unitId;
+        
+        document.getElementById('CostPrice').value = costPrice;
+        document.getElementById('StoneClarityId').value = clarityId;
+        if(scaleId) document.getElementById('StoneScaleId').value = scaleId;
+        if(settingId) document.getElementById('StoneSettingId').value = settingId; else document.getElementById('StoneSettingId').value = '';
+
+        document.getElementById('stoneModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('stoneModal').classList.remove('active');
+    }
+
+    function deleteStone(id) {
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: "Bu taş partisini silmek istediğinize emin misiniz?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Evet, Sil',
+            cancelButtonText: 'İptal'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch('/Admin/DeleteStone', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ Id: id })
+                    });
+                    const resultJson = await res.json();
+                    
+                    if (resultJson && resultJson.isSuccess) {
+                        location.reload();
+                    } else {
+                        Swal.fire('Hata!', resultJson.errors ? resultJson.errors.join(', ') : 'Silme işlemi başarısız.', 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Sistem Hatası', err.message, 'error');
+                }
+            }
+        });
+    }
+
+    document.getElementById('stoneForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        
+        
+        const id = parseInt(document.getElementById('stoneId').value);
+        const btn = document.getElementById('btnSave');
+        const errDiv = document.getElementById('modalError');
+        
+        btn.disabled = true;
+        btn.innerText = "Kaydediliyor...";
+        errDiv.style.display = 'none';
+
+        const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+        for (let key in data) {
+            if (data[key] === "") data[key] = null;
+        }
+        data.Id = parseInt(data.Id);
+        data.StoneTypeId = parseInt(data.StoneTypeId);
+        data.StoneScaleId = parseInt(data.StoneScaleId);
+        data.UnitId = parseInt(data.UnitId);
+        data.StoneClarityId = data.StoneClarityId && data.StoneClarityId != "0" ? parseInt(data.StoneClarityId) : null;
+        data.CostPrice = data.CostPrice ? parseFloat(data.CostPrice.toString().replace(',','.')) : 0;
+        
+        let url = id > 0 ? '/Admin/UpdateStone' : '/Admin/CreateStone';
+        let method = id > 0 ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, { 
+                method: method, 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            
+            if (result && result.isSuccess) {
+                location.reload();
+            } else {
+                Swal.fire('Hata!', result.errors ? result.errors.join(', ') : 'İşlem başarısız', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Sistem Hatası', err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Kaydet";
+        }
+    });
+</script>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/rowgroup/1.4.0/js/dataTables.rowGroup.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#stonesTable').DataTable({
+            pageLength: 50,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tümü"]],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
+            },
+            rowGroup: {
+                dataSrc: 3, // 3rd column is 'Berraklık'
+                startRender: function ( rows, group ) {
+                    return $( '<tr/>' )
+                        .append( '<td colspan="7" style="background-color: #f1f5f9; font-weight: bold; color: var(--primary);"><i class="fas fa-layer-group"></i> Berraklık: ' + group + ' (' + rows.count() + ' taş)</td>' );
+                }
+            },
+            columnDefs: [
+                { "visible": false, "targets": 3 },
+                { "orderable": false, "targets": 5 }
+            ],
+            order: [[3, 'asc']]
+        });
+    });
+</script>
+
+
+

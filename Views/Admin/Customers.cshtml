@@ -1,0 +1,761 @@
+@model List<naif_katalog.Models.UsersDto>
+@using System.Linq
+@{
+    ViewData["Title"] = "Müşteriler";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<style>
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none; justify-content: center; align-items: center; z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-content { max-width: 1200px !important; width: 90%;
+        background: var(--card-bg); padding: 24px; border-radius: 12px;
+        width: 100%; max-width: 600px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { margin: 0; font-size: 18px; }
+    .btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); }
+    .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+    .form-group { flex: 1; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+    .modal-tabs { 
+        display: flex; gap: 10px; margin: 0 24px 15px 24px; padding: 10px; 
+        background: #f1f5f9; border-radius: 12px; 
+    }
+    .modal-tab { 
+        flex: 1; text-align: center; padding: 12px 24px; cursor: pointer; 
+        font-weight: 600; font-size: 14px; color: #64748b; 
+        border-radius: 8px; transition: all 0.3s ease; 
+    }
+    .modal-tab:hover { background: #e2e8f0; color: #334155; }
+    .modal-tab.active { 
+        background: var(--primary); color: white; 
+        box-shadow: 0 4px 12px rgba(var(--primary-rgb, 59, 130, 246), 0.3); 
+    }
+    .modal-body-scroll { padding: 24px; overflow-y: auto; flex: 1; max-height: 60vh; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .pricing-section { border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .pricing-section h4 { margin-top: 0; margin-bottom: 20px; font-size: 16px; font-weight: 600; color: #1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .pricing-section h4 i { color: var(--primary); }
+    .data-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; }
+    .data-table th { background: #f8fafc; padding: 12px; font-weight: 600; font-size: 13px; color: #64748b; border-bottom: 1px solid #e2e8f0; text-align: left; }
+    .data-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .btn-secondary { background: #f1f5f9; color: #334155; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-secondary:hover { background: #e2e8f0; color: #0f172a; }
+    .btn-danger { background: #fee2e2; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .btn-danger:hover { background: #fecaca; }
+</style>
+
+<div class="card">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="margin:0;"><i class="fas fa-users" style="color:var(--primary); margin-right:10px;"></i> Müşteriler</h2>
+        <button onclick="openModal('Müşteri Ekle')" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;">
+            <i class="fas fa-plus"></i> Yeni Müşteri
+        </button>
+    </div>
+
+    <!-- Müşteri Listesi Sekmeleri -->
+    <div style="display:flex; gap:10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+        <button id="tabAllCustomers" onclick="filterCustomers(false)" class="btn-primary" style="padding: 8px 16px; border-radius: 6px;">Tüm Müşteriler</button>
+        <button id="tabCustomPriced" onclick="filterCustomers(true)" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px;">Özel Fiyatlı Müşteriler</button>
+    </div>
+
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="display:flex; gap:15px; align-items:center;">
+            
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped" id="customersTable" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Ad Soyad</th>
+                    <th>Firma Adı</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+      
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+        <tbody>
+            @if(Model != null)
+            {
+                
+                
+                foreach(var user in Model)
+                {
+                    bool hasCustomPricing = (user.PricingProfile != null && (user.PricingProfile.CustomMilyem.HasValue || (user.PricingProfile.SalesMultiplier.HasValue && user.PricingProfile.SalesMultiplier.Value != 1m))) || 
+                                            (user.CustomStonePrices != null && user.CustomStonePrices.Count > 0) || 
+                                            (user.CustomPolishingCosts != null && user.CustomPolishingCosts.Count > 0) || 
+                                            (user.CustomSettingPrices != null && user.CustomSettingPrices.Count > 0);
+                    <tr data-has-custom-pricing="@hasCustomPricing.ToString().ToLower()">
+
+
+                        <td>@user.Name @user.Surname
+                            @if(user.IsLocked) { <span class="badge bg-danger" style="margin-left:5px; font-size:10px;">Kilitli</span> }
+                        </td>
+                        <td>@user.CompanyName</td>
+                        <td>@user.Email</td>
+                        <td>@user.Phone</td>
+                                                
+                        <td>
+                            <div style="display:flex; gap:8px;">
+                                <button onclick="openModal('Müşteri Güncelle', @user.Id, '@user.Name', '@user.Surname', '@Html.Raw((user.CompanyName ?? "").Replace("'", "\\'"))', '@user.Email', '@user.Phone', @user.RoleId, '@(user.MembershipExpiryDate?.ToString("yyyy-MM-dd"))', '@Html.Raw((user.Address ?? "").Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))', @user.IsLocked.ToString().ToLower(), '@(user.PricingProfile?.CustomMilyem)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomStonePrices ?? new List<naif_katalog.Models.UserStonePriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomPolishingCosts ?? new List<naif_katalog.Models.UserPolishingCostDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@(user.PricingProfile?.SalesMultiplier ?? 1)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomSettingPrices ?? new List<naif_katalog.Models.UserSettingPriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))')" 
+                                        style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);" 
+                                        title="Düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #ef4444; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(239,68,68,0.2);" 
+                                        title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal-overlay" id="userModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Müşteri Ekle</h3>
+            <button class="btn-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div class="modal-tabs">
+            <div class="modal-tab active" onclick="switchTab('genel')">Genel Bilgiler</div>
+            <div class="modal-tab" onclick="switchTab('fiyatlandirma')">Özel Fiyatlandırma</div>
+        </div>
+        
+        <div id="modalError" style="display:none; color: white; background: #ef4444; padding: 10px; border-radius: 6px; margin: 15px 24px 0 24px; font-size: 14px;"></div>
+
+        
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+        <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+        <script>
+            let tempSettingPricing = [];
+            var availableStones = @Html.Raw(Json.Serialize(ViewBag.Stones));
+            var availableCategories = @Html.Raw(Json.Serialize(ViewBag.Categories));
+            var availablePolishingCosts = @Html.Raw(Json.Serialize(ViewBag.PolishingCosts ?? new object[] {}));
+            var availableClarities = @Html.Raw(Json.Serialize(ViewBag.Clarities ?? new object[] {}));
+            var availableSettings = @Html.Raw(Json.Serialize(ViewBag.Settings ?? new object[] {}));
+            
+            
+            function filterDropdown(type) {
+                var claritySelect = document.getElementById(type + 'ClaritySelect');
+                var clarityId = claritySelect ? claritySelect.value : null;
+                var selectEl = document.getElementById(type + 'Select');
+                if(!selectEl) return;
+                
+                selectEl.innerHTML = '<option value="">' + (type === 'Setting' ? 'Mıhlama Seçiniz...' : 'Taş Seçiniz...') + '</option>';
+                
+                if (type === 'Setting') {
+                    if(!availableSettings) return;
+                    availableSettings.forEach(s => {
+                        selectEl.innerHTML += `<option value='${s.id}'>${s.settingType}</option>`;
+                    });
+                } else {
+                    if(!availableStones) return;
+                    let filtered = availableStones;
+                    if(clarityId) {
+                        filtered = availableStones.filter(s => s.stoneClarityId == clarityId);
+                    }
+                    filtered.forEach(s => {
+                        let clarityName = '';
+                        if (s.stoneClarityId && availableClarities && !clarityId) {
+                            const clarity = availableClarities.find(c => c.id == s.stoneClarityId);
+                            if (clarity) clarityName = `[${clarity.name}] `;
+                        }
+                        let sName = s.stoneScale ? s.stoneScale.name : (s.name || '');
+                        selectEl.innerHTML += `<option value='${s.id}'>${clarityName}${sName}</option>`;
+                    });
+                }
+            }
+        
+            document.addEventListener('DOMContentLoaded', function() {
+                var stoneClaritySel = document.getElementById('StoneClaritySelect');
+                var settingClaritySel = document.getElementById('SettingClaritySelect');
+                if (availableClarities && availableStones) {
+                    let usedClarityIds = [...new Set(availableStones.filter(s => s.stoneClarityId).map(s => s.stoneClarityId))];
+                    
+                    availableClarities.filter(c => usedClarityIds.includes(c.id)).forEach(c => {
+                        if(stoneClaritySel) stoneClaritySel.innerHTML += `<option value='${c.id}'>${c.name}</option>`;
+                        if(settingClaritySel) settingClaritySel.innerHTML += `<option value='${c.id}'>${c.name}</option>`;
+                    });
+                }
+                
+                filterDropdown('Stone');
+                filterDropdown('Setting');
+                
+                var catSelect = document.getElementById('CategorySelect');
+                if(catSelect && availableCategories) {
+                    availableCategories.forEach(c => {
+                        catSelect.innerHTML += `<option value='${c.id}'>${c.name}</option>`;
+                    });
+                }
+            });
+        </script>
+<div class="modal-body-scroll">
+        <form id="userForm">
+            <input type="hidden" id="userId" name="Id" value="0" />
+            
+            <div id="tab-genel" class="tab-content active">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Ad</label>
+                    <input type="text" id="FirstName" name="FirstName" required />
+                </div>
+                <div class="form-group">
+                    <label>Soyad</label>
+                    <input type="text" id="LastName" name="LastName" required />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Firma Adı</label>
+                    <input type="text" id="CompanyName" name="CompanyName" required />
+                </div>
+                <div class="form-group">
+                    <label id="passLabel" style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="ChangePasswordCheck" style="width:16px; height:16px; margin:0;"> 
+                        <span id="passText">Şifreyi Değiştir</span> <small id="passHint" style="display:none;">(Yeni şifreyi giriniz)</small>
+                    </label>
+                    <div id="passGroup" style="display:none; margin-top:8px;">
+                        <input type="password" id="Password" name="Password" placeholder="Şifre Giriniz" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>E-Posta</label>
+                    <input type="email" id="Email" name="Email" required />
+                </div>
+                <div class="form-group">
+                    <label>Telefon</label>
+                    <input type="text" id="PhoneNumber" name="PhoneNumber" required />
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Adres</label>
+                <textarea id="Address" name="Address" rows="3" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;"></textarea>
+            </div>
+
+            <input type="hidden" id="RoleId" name="RoleId" value="3" />
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Üyelik Bitiş Tarihi</label>
+                    <input type="date" id="SubscriptionEndDate" name="SubscriptionEndDate" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;" />
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 20px; display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="IsLocked" name="IsLocked" value="true" style="width:18px; height:18px;" />
+                <label for="IsLocked" style="margin:0;">Kullanıcıyı Kilitle (Giriş Yapamaz)</label>
+            </div>
+
+            </div> <!-- End tab-genel -->
+
+            <div id="tab-fiyatlandirma" class="tab-content">
+                <div class="form-group" style="margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer; margin:0; color:var(--text);">
+                        <input type="checkbox" id="EnableCustomPricing" onchange="toggleCustomPricing(this.checked)" style="width:18px; height:18px;" />
+                        Özel Fiyatlandırma Uygula
+                    </label>
+                </div>
+                <div id="CustomPricingOptions" style="display:block; transition: all 0.3s ease;">
+                
+                <div class="pricing-section">
+                    <h4><i class="fas fa-coins"></i> Altın İşçilik (Milyem)</h4>
+                    <div class="form-group">
+                        <label>Özel Milyem Çarpanı</label>
+                        <input type="number" id="CustomMilyem" name="CustomMilyem" step="0.001" placeholder="Örn: 0.165" />
+                        <small style="color:var(--text-muted);">Boş bırakılırsa standart milyem kullanılır.</small>
+                    </div>
+                </div>
+
+                <div class="pricing-section">
+                    <h4><i class="fas fa-gem"></i> Taş Fiyatlandırması</h4>
+                    
+                    <div class="table-responsive" style="max-height: 400px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; position: relative;">
+                        <table class="data-table" style="margin-top: 0; min-width: max-content; border-collapse: separate; border-spacing: 0;">
+                            <thead id="MatrixTableHead">
+                                <!-- Javascript ile doldurulacak -->
+                            </thead>
+                            <tbody id="MatrixTableBody">
+                                <!-- Javascript ile doldurulacak -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="pricing-section">
+                    <h4><i class="fas fa-ring"></i> Cila/Rodaj Maliyetleri</h4>
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <select id="CategorySelect" class="form-control" style="flex:1;">
+                            <option value="">Kategori Seçiniz (Tüm Ürünler için boş bırakın)</option>
+                            <!-- Kategoriler buraya JS ile dolacak -->
+                        </select>
+                        <button type="button" onclick="addCustomPolishing()" class="btn-secondary" style="white-space:nowrap;"><i class="fas fa-plus"></i> Ekle</button>
+                    </div>
+                    <div style="max-height: 200px; overflow-y: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+<table class="data-table" style="margin-top: 0; border: none;">
+                        <thead><tr><th>Kategori</th><th>Tanımlı Müşteri Fiyatı</th><th>İşlem</th></tr></thead>
+                        <tbody id="customPolishingBody">
+                            <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Henüz cila/rodaj maliyeti eklenmedi</td></tr>
+                        </tbody>
+                    </table>
+</div>
+                </div>
+
+                <div class="pricing-section">
+                    <h4><i class="fas fa-tools"></i> Mıhlama Maliyetleri</h4>
+                    <div style="display:flex; gap:10px; margin-bottom:15px;">
+                        <select id="SettingClaritySelect" class="form-control" style="flex:0.6;" onchange="filterDropdown('Setting')">
+                            <option value="">Tüm Berraklıklar</option>
+                        </select>
+                        <select id="SettingSelect" class="form-control" style="flex:1;">
+                            <option value="">Önce Berraklık Seçin...</option>
+                        </select>
+                        <button type="button" onclick="addCustomSetting()" class="btn-secondary" style="white-space:nowrap;"><i class="fas fa-plus"></i> Ekle</button>
+                    </div>
+                    <div style="max-height: 200px; overflow-y: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
+<table class="data-table" style="margin-top: 0; border: none;">
+                        <thead><tr><th>Mıhlama Tipi</th><th>Tanımlı Müşteri Fiyatı</th><th>İşlem</th></tr></thead>
+                        <tbody id="customSettingBody">
+                            <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Henüz mıhlama maliyeti eklenmedi</td></tr>
+                        </tbody>
+                    </table>
+</div>
+                </div>
+                
+                <div class="pricing-section">
+                    <h4><i class="fas fa-percentage"></i> Kâr Marjı / Satış Çarpanı</h4>
+                    <div class="form-group">
+                        <label>Satış Çarpanı</label>
+                        <input type="number" id="SalesMultiplier" name="SalesMultiplier" step="0.01" placeholder="Örn: 1.00" value="1" />
+                        <small style="color:var(--text-muted);">Boş bırakılırsa 1 olarak kabul edilir. Müşteriye gösterilen kâr hesaplamasında kullanılır.</small>
+                    </div>
+                </div>
+
+            </div>
+            </div> <!-- End tab-fiyatlandirma -->
+
+            <div style="padding-top: 20px; border-top: 1px solid var(--border-color); margin-top: 10px;">
+                <button type="submit" class="btn-primary" id="btnSave" style="width:100%">Kaydet</button>
+            </div>
+        </form>
+        </div> <!-- End modal-body-scroll -->
+    </div>
+</div>
+
+<script>
+    
+    function switchTab(tabId) {
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        if (event && event.target) {
+            event.target.classList.add('active');
+        } else {
+            var tab = document.querySelector('[onclick="switchTab(\'' + tabId + '\')"]');
+            if (tab) tab.classList.add('active');
+        }
+        document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    let customStones = [];
+    let customPolishing = [];
+
+    function toggleCustomPricing(isChecked) {
+        let container = document.getElementById('CustomPricingOptions');
+        if(isChecked) {
+            container.style.opacity = '1';
+            container.style.pointerEvents = 'auto';
+        } else {
+            container.style.opacity = '0.4';
+            container.style.pointerEvents = 'none';
+        }
+    }
+
+    function buildMatrix() {
+        const headRow = document.getElementById('MatrixTableHead');
+        const tbody = document.getElementById('MatrixTableBody');
+        if (!headRow || !tbody) return;
+        
+        headRow.innerHTML = '';
+        tbody.innerHTML = '';
+        
+        let usedClarityIds = [...new Set((availableStones||[]).filter(s => s.stoneClarityId).map(s => s.stoneClarityId))];
+        let activeClarities = (availableClarities||[]).filter(c => usedClarityIds.includes(c.id));
+        
+        let uniqueNames = [...new Set((availableStones||[]).filter(s => s.stoneScale).map(s => s.stoneScale.name))];
+        
+        let trHead = document.createElement('tr');
+        trHead.innerHTML = '<th style="position:sticky; left:0; background:white; z-index:2; border-right:1px solid #e2e8f0; border-bottom:2px solid #e2e8f0;">Taş Partisi</th>';
+        activeClarities.forEach(c => {
+            trHead.innerHTML += `<th style="text-align:center; border-bottom:2px solid #e2e8f0; min-width:80px;">` + c.name + `</th>`;
+        });
+        headRow.appendChild(trHead);
+        
+        uniqueNames.forEach(name => {
+            let tr = document.createElement('tr');
+            tr.innerHTML = `<td style="position:sticky; left:0; background:white; z-index:1; border-right:1px solid #e2e8f0; font-weight:500;">` + name + `</td>`;
+            
+            activeClarities.forEach(c => {
+                let matchingStone = availableStones.find(s => s.stoneScale && s.stoneScale.name === name && s.stoneClarityId === c.id);
+                if (matchingStone) {
+                    tr.innerHTML += `<td style="text-align:center; padding: 6px;">
+                        <input type="number" step="0.01" data-stone-id="` + matchingStone.id + `" class="form-control matrix-input" style="width: 80px; margin: 0 auto; text-align: center; padding: 4px;" placeholder="` + (matchingStone.costPrice || matchingStone.CostPrice || 0).toFixed(2) + `" />
+                    </td>`;
+                } else {
+                    tr.innerHTML += `<td style="background:#f8fafc;"></td>`;
+                }
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    function populateMatrix(dbStones) {
+        buildMatrix();
+        let inputs = document.querySelectorAll('.matrix-input');
+        inputs.forEach(input => {
+            let sid = parseInt(input.getAttribute('data-stone-id'));
+            let found = dbStones.find(s => (s.stoneId || s.StoneId) == sid);
+            if (found && (found.customPrice || found.CustomPrice) > 0) {
+                input.value = (found.customPrice || found.CustomPrice);
+            } else {
+                input.value = '';
+            }
+        });
+    }
+
+    function openModal(title, id = 0, firstName = '', lastName = '', companyName = '', email = '', phoneNumber = '', roleId = 3, expiryDate = '', address = '', isLocked = false, customMilyem = '', stonesJson = '[]', polishingJson = '[]', salesMultiplier = '1', settingJson = '[]') {
+        document.getElementById('modalError').style.display = 'none';
+        document.getElementById('userId').value = id;
+        switchTab('genel');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('FirstName').value = firstName;
+        document.getElementById('LastName').value = lastName;
+        document.getElementById('CompanyName').value = companyName;
+        document.getElementById('Email').value = email;
+        document.getElementById('PhoneNumber').value = phoneNumber;
+        document.getElementById('RoleId').value = roleId;
+        document.getElementById('SubscriptionEndDate').value = expiryDate;
+        document.getElementById('Address').value = address;
+        document.getElementById('IsLocked').checked = isLocked;
+        
+        const changePassCheck = document.getElementById('ChangePasswordCheck');
+        const passHint = document.getElementById('passHint');
+        const passGroup = document.getElementById('passGroup');
+        const passInput = document.getElementById('Password');
+        
+        changePassCheck.checked = false;
+        passInput.value = '';
+        passGroup.style.display = 'none';
+        
+        if (customMilyem) {
+            document.getElementById('CustomMilyem').value = customMilyem.toString().replace(',', '.');
+        } else {
+            document.getElementById('CustomMilyem').value = '';
+        }
+
+        if (salesMultiplier) {
+            document.getElementById('SalesMultiplier').value = salesMultiplier.toString().replace(',', '.');
+        } else {
+            document.getElementById('SalesMultiplier').value = '1';
+        }
+        
+        try {
+            let dbStones = JSON.parse(stonesJson);
+            let dbPolishing = JSON.parse(polishingJson);
+            
+            customPolishing = dbPolishing.filter(p => (p.customPrice || p.CustomPrice) > 0).map(p => ({...p, customPrice: p.customPrice || p.CustomPrice, categoryId: p.categoryId || p.CategoryId}));
+            
+            populateMatrix(dbStones);
+            
+            let hasCustom = dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || (customMilyem != '' && customMilyem != null) || customPolishing.length > 0;
+            document.getElementById('EnableCustomPricing').checked = hasCustom;
+            toggleCustomPricing(hasCustom);
+
+        } catch(e) {
+            customPolishing = [];
+            populateMatrix([]);
+            document.getElementById('EnableCustomPricing').checked = false;
+            toggleCustomPricing(false);
+        }
+        
+        renderCustomPolishing();
+        
+        if(id > 0) {
+            changePassCheck.style.display = 'block';
+            document.getElementById('passText').innerText = 'Şifreyi Değiştir';
+            passHint.style.display = 'none';
+        } else {
+            changePassCheck.style.display = 'none';
+            document.getElementById('passText').innerText = 'Kullanıcı Şifresi (Zorunlu)';
+            passGroup.style.display = 'block';
+            document.getElementById('Password').required = true;
+            
+            let nextYear = new Date();
+            nextYear.setFullYear(nextYear.getFullYear() + 1);
+            document.getElementById('SubscriptionEndDate').value = nextYear.toISOString().split('T')[0];
+        }
+
+        document.getElementById('userModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('userModal').classList.remove('active');
+    }
+
+    document.getElementById('ChangePasswordCheck').addEventListener('change', function() {
+        const passGroup = document.getElementById('passGroup');
+        const passHint = document.getElementById('passHint');
+        const passInput = document.getElementById('Password');
+        if (this.checked) {
+            passGroup.style.display = 'block';
+            passHint.style.display = 'inline';
+            passInput.required = true;
+        } else {
+            passGroup.style.display = 'none';
+            passHint.style.display = 'none';
+            passInput.required = false;
+            passInput.value = '';
+        }
+    });
+
+    document.getElementById('userForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const id = parseInt(document.getElementById('userId').value);
+        const btn = document.getElementById('btnSave');
+        const errDiv = document.getElementById('modalError');
+        
+        btn.disabled = true;
+        btn.innerText = "Kaydediliyor...";
+        errDiv.style.display = 'none';
+
+        let isCustom = document.getElementById('EnableCustomPricing').checked;
+        const formData = new FormData(e.target);
+        formData.delete('CustomMilyem'); // Clear first
+        
+        if (isCustom) {
+            let milyemVal = document.getElementById('CustomMilyem').value;
+            if(milyemVal) formData.set('CustomMilyem', milyemVal);
+            
+            let inputs = document.querySelectorAll('.matrix-input');
+            let stoneIndex = 0;
+            inputs.forEach(input => {
+                let price = parseFloat(input.value);
+                if (!isNaN(price) && price > 0) {
+                    let sid = input.getAttribute('data-stone-id');
+                    formData.append(`CustomStonePrices[${stoneIndex}].StoneId`, sid);
+                    formData.append(`CustomStonePrices[${stoneIndex}].CustomPrice`, price);
+                    stoneIndex++;
+                }
+            });
+            
+            customPolishing.forEach((pc, index) => {
+                let el = document.getElementById(`polish_price_${index}`);
+                let pPrice = el ? parseFloat(el.value) : pc.customPrice;
+                if(pPrice > 0) {
+                    if(pc.categoryId) formData.append(`CustomPolishingCosts[${index}].CategoryId`, pc.categoryId);
+                    formData.append(`CustomPolishingCosts[${index}].CustomPrice`, pPrice);
+                }
+            });
+
+            tempSettingPricing.forEach((sc, index) => {
+                let el = document.getElementById(`setting_price_${index}`);
+                let sPrice = el ? parseFloat(el.value) : sc.customPrice;
+                if(sPrice > 0) {
+                    formData.append(`CustomSettingPrices[${index}].StoneSettingId`, sc.stoneSettingId);
+                    formData.append(`CustomSettingPrices[${index}].CustomPrice`, sPrice);
+                }
+            });
+        } else {
+            formData.append('ClearCustomPricing', 'true');
+        }
+
+        let salesVal = document.getElementById('SalesMultiplier').value;
+        if(salesVal) formData.set('SalesMultiplier', salesVal);
+        else formData.set('SalesMultiplier', '1');
+
+        if(id > 0 && !document.getElementById('ChangePasswordCheck').checked) {
+            formData.delete('Password');
+        }
+        
+        let url = id > 0 ? '/Admin/UpdateUser' : '/Admin/CreateUser';
+
+        try {
+            const res = await fetch(url, { method: 'POST', body: formData });
+            const result = await res.json();
+            
+            if (result && result.isSuccess) {
+                location.reload();
+            } else {
+                errDiv.innerText = 'Hata: ' + (result.errors ? result.errors.join(', ') : 'İşlem başarısız');
+                errDiv.style.display = 'block';
+            }
+        } catch (err) {
+            errDiv.innerText = 'Sistem Hatası: ' + err.message;
+            errDiv.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Kaydet";
+        }
+    });
+
+    function addCustomPolishing() {
+        const sel = document.getElementById('CategorySelect');
+        const id = sel.value ? parseInt(sel.value) : null;
+        if(customPolishing.some(x => x.categoryId === id)) return Swal.fire({ icon: 'info', title: 'Zaten Ekli', text: 'Bu kategori zaten listeye eklenmiş. Fiyatını tablodan değiştirebilirsiniz.', confirmButtonText: 'Tamam', confirmButtonColor: 'var(--primary)' });
+        
+        let defaultPrice = 0;
+        if (id) {
+            const opt = sel.options[sel.selectedIndex];
+            defaultPrice = parseFloat(opt.dataset.price) || 0;
+        }
+        
+        customPolishing.push({
+            categoryId: id,
+            categoryName: id ? sel.options[sel.selectedIndex].text : 'Tüm Ürünler',
+            customPrice: defaultPrice
+        });
+        renderCustomPolishing();
+    }
+
+        function removeCustomSetting(index) {
+        tempSettingPricing.splice(index, 1);
+        renderSettingPricing();
+    }
+
+    function addCustomSetting() {
+        const sel = document.getElementById('SettingSelect');
+        const sid = parseInt(sel.value);
+        if(!sid) return;
+
+        const setObj = availableSettings.find(s => s.id === sid);
+        if(!setObj) return;
+
+        const valStr = prompt(setObj.settingType + ' için Özel Müşteri Fiyatı:');
+        if(valStr === null) return;
+        const val = parseFloat(valStr.replace(',', '.'));
+        if(isNaN(val)) return;
+
+        let exist = tempSettingPricing.find(x => x.stoneSettingId === sid);
+        if(exist) {
+            exist.customPrice = val;
+        } else {
+            tempSettingPricing.push({
+                stoneSettingId: sid,
+                settingType: setObj.settingType,
+                customPrice: val
+            });
+        }
+        renderSettingPricing();
+    }
+
+        function renderSettingPricing() {
+        const tbody = document.getElementById('customSettingBody');
+        if(!tbody) return;
+        
+        tbody.innerHTML = '';
+        if(tempSettingPricing.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Henüz mıhlama maliyeti eklenmedi</td></tr>';
+            return;
+        }
+        
+        tempSettingPricing.forEach((c, index) => {
+            tbody.innerHTML += `<tr>
+                <td>${c.settingType}</td>
+                <td><input type="number" step="0.01" class="form-control" id="setting_price_${index}" value="${c.customPrice.toFixed(2)}" style="width:100px;text-align:center;margin:0 auto;"/></td>
+                <td><button type="button" class="btn btn-sm btn-danger" onclick="removeCustomSetting(${index})"><i class="fas fa-trash"></i></button></td>
+            </tr>`;
+        });
+    }
+
+    function removeCustomPolishing(index) {
+        customPolishing.splice(index, 1);
+        renderCustomPolishing();
+    }
+
+    function renderCustomPolishing() {
+        const tbody = document.getElementById('customPolishingBody');
+        if(customPolishing.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Henüz cila/rodaj maliyeti eklenmedi</td></tr>';
+            return;
+        }
+        tbody.innerHTML = customPolishing.map((pc, index) => `
+            <tr>
+                <td>${pc.categoryName || (pc.categoryId ? availableCategories.find(c=>c.id==pc.categoryId)?.name : 'Tüm Ürünler')}</td>
+                <td><div style="display:flex; align-items:center; gap:6px; white-space:nowrap;"><input type="number" step="0.01" id="polish_price_${index}" value="${(pc.customPrice || 0).toFixed(2)}" class="form-control" style="width:100px; display:inline-block; margin:0;"> <span>$</span></div></td>
+                <td><button type="button" onclick="removeCustomPolishing(${index})" class="btn-danger" style="padding:4px 8px;"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `).join('');
+    }
+
+    
+      var showOnlyCustom = false;
+      function filterCustomers(onlyCustom) {
+          showOnlyCustom = onlyCustom;
+          if (onlyCustom) {
+              document.getElementById('tabCustomPriced').className = 'btn-primary';
+              document.getElementById('tabAllCustomers').className = 'btn-secondary';
+          } else {
+              document.getElementById('tabAllCustomers').className = 'btn-primary';
+              document.getElementById('tabCustomPriced').className = 'btn-secondary';
+          }
+          if ($.fn.DataTable.isDataTable('#customersTable')) {
+              $('#customersTable').DataTable().draw();
+          }
+      }
+
+      $(document).ready(function() {
+          $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData, counter) {
+              if (!showOnlyCustom) return true;
+              var tr = settings.aoData[dataIndex].nTr;
+              return $(tr).attr('data-has-custom-pricing') === 'true';
+          });
+
+        var table = $('#customersTable').DataTable({
+            pageLength: 50,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tümü"]],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
+            },
+            columnDefs: [
+                { "orderable": false, "targets": 4 }
+            ]
+        });
+
+        $('#groupFilter').on('change', function() {
+            table.column(4).search(this.value).draw();
+        });
+    });
+</script>
+
+

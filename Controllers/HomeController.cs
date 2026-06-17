@@ -53,6 +53,9 @@ public class HomeController : Controller
 
                     var puritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalPuritysQueryRequest());
                     ViewBag.Karats = puritiesResp?.data;
+
+                    var claritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
+                    ViewBag.Clarities = claritiesResp?.data;
                 } catch { }
 
                 return View(product);

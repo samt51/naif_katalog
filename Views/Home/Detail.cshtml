@@ -251,7 +251,7 @@
                             <table class="table table-sm table-bordered text-center align-middle" style="font-size:14px;">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Taş</th>
+                                        <th>Berraklık</th>
                                         <th>Renk</th>
                                         <th>Adet</th>
                                         <th>Toplam Kr.</th>
@@ -261,7 +261,33 @@
                                     @foreach (var s in Model.ProductStones)
                                     {
                                         <tr>
-                                            <td class="fw-semibold">@(s.StoneName ?? "Taş")</td>
+                                            <td>
+                                                <select id="berraklikSelect_@s.Id" onchange="recalculatePrice()" class="form-select form-select-sm" style="width: 70px; margin: 0 auto; font-weight: 700; color: #1e293b; border: none; background-color: transparent; text-align: center; cursor: pointer; padding: 0;">
+                                                    @if (ViewBag.Clarities != null)
+                                                    {
+                                                        foreach (var c in (IEnumerable<dynamic>)ViewBag.Clarities)
+                                                        {
+                                                            if (s.ClarityId != null && c.Id == s.ClarityId)
+                                                            {
+                                                                <option value="@c.Id" selected>@c.Name</option>
+                                                            }
+                                                            else if (s.ClarityId == null && c.Name == "SI")
+                                                            {
+                                                                <option value="@c.Id" selected>@c.Name</option>
+                                                            }
+                                                            else
+                                                            {
+                                                                <option value="@c.Id">@c.Name</option>
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="1" selected>SI</option>
+                                                        <option value="2">VS</option>
+                                                    }
+                                                </select>
+                                            </td>
                                             <td>@(s.ColorName ?? "-")</td>
                                             <td>@s.Quantity.ToString("N0")</td>
                                             <td class="text-primary fw-bold">@s.TotalCarat.ToString("N2") ct</td>

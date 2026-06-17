@@ -44,7 +44,7 @@ public class HomeController : Controller
 
                 try {
                     ViewBag.RelatedProducts = prodResponse.data
-                        .Where(x => x.CategoryId == product.CategoryId && x.Id != product.Id)
+                        .Where(x => x.CategoryIds != null && product.CategoryIds != null && x.CategoryIds.Any(c => product.CategoryIds.Contains(c)) && x.Id != product.Id)
                         .Take(10)
                         .ToList();
 
@@ -76,8 +76,8 @@ public class HomeController : Controller
                     Id = x.Id,
                     Code = x.Code,
                     Name = x.Name,
-                    Category = x.Category,
-                    CategoryId = x.CategoryId,
+                    CategoryNames = x.CategoryNames,
+                    CategoryIds = x.CategoryIds,
                     Description = x.Description,
                     Gram = x.Gram,
                     Karat = x.Karat,
@@ -90,7 +90,7 @@ public class HomeController : Controller
             }
             else
             {
-                fetchedProducts.Add(new Product { Code = "API_ERROR", Category = "HATA", Images = new List<string>() });
+                fetchedProducts.Add(new Product { Code = "API_ERROR", CategoryNames = new List<string> { "HATA" }, Images = new List<string>() });
             }
         }
         else
@@ -99,7 +99,7 @@ public class HomeController : Controller
             if (allResponse.isSuccess && allResponse.data != null)
                 fetchedProducts = allResponse.data;
             else
-                fetchedProducts.Add(new Product { Code = "API_ERROR", Category = "HATA", Images = new List<string>() });
+                fetchedProducts.Add(new Product { Code = "API_ERROR", CategoryNames = new List<string> { "HATA" }, Images = new List<string>() });
         }
 
         var products = new List<Product>();

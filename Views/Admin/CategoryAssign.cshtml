@@ -1,0 +1,301 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@{
+    ViewData["Title"] = "Ürün Kategori Taşıma";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var categories = ViewBag.Categories as IEnumerable<naif_katalog.Models.CategoryDto>;
+    var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+    if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
+}
+
+<style>
+    .drag-container {
+        display: flex;
+        gap: 30px;
+        margin-top: 20px;
+    }
+
+    .product-panel {
+        flex: 1;
+        background: var(--card-bg, #fff);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+
+    .tree-panel {
+        flex: 2;
+        background: var(--card-bg, #fff);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .product-search {
+        margin-bottom: 20px;
+    }
+
+    .product-card {
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        background: #f8fafc;
+        cursor: grab;
+        transition: all 0.3s ease;
+    }
+    
+    .product-card:active {
+        cursor: grabbing;
+        transform: scale(0.98);
+        border-color: var(--primary, #3b82f6);
+        background: #eff6ff;
+    }
+
+    .product-image {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 12px;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .category-tree ul {
+        list-style-type: none;
+        padding-left: 20px;
+    }
+
+    .category-tree li {
+        margin: 5px 0;
+    }
+
+    .category-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .category-item:hover {
+        background: #e2e8f0;
+    }
+
+    .category-item.drag-over {
+        background: #dbeafe;
+        border-color: #3b82f6;
+        transform: scale(1.02);
+        box-shadow: 0 4px 10px rgba(59,130,246,0.2);
+    }
+
+    .folder-icon {
+        color: #fbbf24;
+        margin-right: 10px;
+        font-size: 18px;
+    }
+</style>
+
+<div class="card">
+    <div style="margin-bottom:20px;">
+        <h2 style="margin:0;"><i class="fas fa-random" style="color:var(--primary); margin-right:10px;"></i> Sürükle Bırak Kategori Atama</h2>
+        <p class="text-muted" style="margin-top:5px;">Ürün kodunu aratın, çıkan ürünü sağdaki ağaçta istediğiniz kategorinin üzerine sürükleyip bırakın.</p>
+    </div>
+
+    <div class="drag-container">
+        <!-- Sol Taraf: Ürün Arama ve Kart -->
+        <div class="product-panel">
+            <div class="product-search">
+                <label style="font-weight:600; margin-bottom:8px; display:block;">Ürün Kodu Ara</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Örn: YZ00509" />
+                    <button class="btn btn-primary" onclick="searchProduct()"><i class="fas fa-search"></i> Bul</button>
+                </div>
+            </div>
+
+            <div id="productResult" style="display:none; margin-top:30px;">
+                <label style="font-weight:600; margin-bottom:8px; display:block; color:#64748b;">Tut ve Sürükle</label>
+                <div class="product-card" id="draggableProduct" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">
+                    <img id="p_img" src="" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Resim+Yok'" />
+                    <h4 id="p_code" style="margin:0; color:#1e293b; font-weight:700;"></h4>
+                    <p id="p_name" class="text-muted" style="margin:5px 0 0 0;"></p>
+                    <div style="margin-top:15px;">
+                        <span style="background:#e2e8f0; color:#475569; padding:4px 10px; border-radius:12px; font-size:12px;" id="p_cat"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ Taraf: Kategori Ağacı -->
+        <div class="tree-panel">
+            <h4 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">Hedef Kategoriler</h4>
+            <div class="category-tree">
+                @if (categories != null)
+                {
+                    <ul id="catListRoot">
+                        @foreach (var parent in categories.Where(x => x.ParentId == 0 || x.ParentId == null))
+                        {
+                            @RenderCategoryNode(parent, categories)
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    public Microsoft.AspNetCore.Html.IHtmlContent RenderCategoryNode(naif_katalog.Models.CategoryDto cat, IEnumerable<naif_katalog.Models.CategoryDto> allCats)
+    {
+        var html = new System.Text.StringBuilder();
+        var children = allCats.Where(x => x.ParentId == cat.Id).ToList();
+        
+        html.Append("<li>");
+        html.Append($"<div class='category-item' data-id='{cat.Id}' ondragover='allowDrop(event)' ondragleave='dragLeave(event)' ondrop='drop(event, {cat.Id}, \"{cat.Name}\")'>");
+        html.Append(children.Any() ? "<i class='fas fa-folder-open folder-icon'></i>" : "<i class='fas fa-folder folder-icon'></i>");
+        html.Append($"<span style='font-weight:500; color:#334155;'>{cat.Name}</span>");
+        html.Append("</div>");
+
+        if (children.Any())
+        {
+            html.Append("<ul>");
+            foreach (var child in children)
+            {
+                html.Append(RenderCategoryNode(child, allCats));
+            }
+            html.Append("</ul>");
+        }
+        
+        html.Append("</li>");
+        return new Microsoft.AspNetCore.Html.HtmlString(html.ToString());
+    }
+}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let currentProductId = 0;
+    let draggedElement = null;
+
+    function searchProduct() {
+        const code = document.getElementById('searchInput').value.trim();
+        if(!code) return;
+
+        // Fetch product list and find the exact code
+        // For simple implementation we can use the Product/Details or fetch from API
+        // Normally you would have a search endpoint, but we can fetch all or a specific one.
+        // I will assume there's an API or we just trigger search via the product list.
+        fetch('/Product/GetByCode?code=' + encodeURIComponent(code))
+            .then(res => res.json())
+            .then(data => {
+                if(data.isSuccess && data.data) {
+                    const product = data.data;
+                    currentProductId = product.id;
+                    document.getElementById('p_code').innerText = product.code;
+                    document.getElementById('p_name').innerText = product.name;
+                    document.getElementById('p_cat').innerText = (product.categoryNames && product.categoryNames.length > 0) ? product.categoryNames.join(', ') : 'Kategorisiz';
+                    
+                    if(product.images && product.images.length > 0) {
+                        document.getElementById('p_img').src = product.images[0];
+                    } else {
+                        document.getElementById('p_img').src = 'https://via.placeholder.com/120?text=Resim+Yok';
+                    }
+
+                    document.getElementById('productResult').style.display = 'block';
+                } else {
+                    Swal.fire('Bulunamadı', 'Bu koda sahip bir ürün bulunamadı.', 'warning');
+                    document.getElementById('productResult').style.display = 'none';
+                }
+            })
+            .catch(err => {
+                Swal.fire('Hata', 'Ürün aranırken bir sorun oluştu.', 'error');
+            });
+    }
+
+    function dragStart(e) {
+        draggedElement = e.target;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', currentProductId);
+        setTimeout(() => { draggedElement.style.opacity = '0.5'; }, 0);
+    }
+
+    function dragEnd(e) {
+        draggedElement.style.opacity = '1';
+        document.querySelectorAll('.category-item').forEach(el => el.classList.remove('drag-over'));
+    }
+
+    function allowDrop(e) {
+        e.preventDefault();
+        const item = e.currentTarget;
+        item.classList.add('drag-over');
+    }
+
+    function dragLeave(e) {
+        const item = e.currentTarget;
+        item.classList.remove('drag-over');
+    }
+
+    function drop(e, catId, catName) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const item = e.currentTarget;
+        item.classList.remove('drag-over');
+
+        const productId = e.dataTransfer.getData('text/plain');
+        if(!productId || productId == 0) return;
+
+        Swal.fire({
+            title: 'Kategori Güncelleme',
+            html: `Ürünü <b>${catName}</b> kategorisine taşımak istediğinize emin misiniz?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Evet, Taşı',
+            cancelButtonText: 'İptal',
+            confirmButtonColor: '#3b82f6'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Here we call the API to update the product's category.
+                // Assuming we can send a PUT request to update the product.
+                fetch('/Product/Details/' + productId)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.isSuccess && res.data) {
+                        const p = res.data;
+                        p.categoryIds = [catId];
+                        
+                        // Send update back to API
+                        fetch('@apiAddress/api/Product', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(p)
+                        })
+                        .then(updateRes => updateRes.json())
+                        .then(updateData => {
+                            if(updateData.isSuccess) {
+                                fetch('/Product/ClearCache', { method: 'POST' });
+                                Swal.fire('Başarılı', 'Kategori başarıyla güncellendi.', 'success');
+                                document.getElementById('p_cat').innerText = catName;
+                            } else {
+                                Swal.fire('Hata', 'Güncelleme başarısız oldu.', 'error');
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const initialCode = '@(ViewBag.ProductCode ?? "")';
+        if (initialCode) {
+            document.getElementById('searchInput').value = initialCode;
+            searchProduct();
+        }
+    });
+</script>

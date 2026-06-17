@@ -19,7 +19,13 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHttpContextAccessor(); // ApiService requires this
 builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:3434/");
+    var apiAddress = builder.Configuration["ApiAdress"] ?? "https://localhost:3434/";
+    if (!apiAddress.EndsWith("/")) apiAddress += "/";
+    client.BaseAddress = new Uri(apiAddress);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true,
+    UseProxy = false
 });
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
@@ -46,12 +52,11 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStaticAssets();
+app.UseStaticFiles();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Account}/{action=Login}/{id?}")
-    .WithStaticAssets();
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
 

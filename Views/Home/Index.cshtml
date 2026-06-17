@@ -4,7 +4,7 @@
     var searchQuery = ViewBag.SearchQuery as string;
     var isSearchActive = !string.IsNullOrEmpty(searchQuery);
     ViewData["Title"] = string.IsNullOrEmpty(currentCategory) ? "Tüm Ürünler" : currentCategory;
-    var groupedProducts = Model.GroupBy(p => p.Category).Where(g => !string.IsNullOrEmpty(g.Key)).ToList();
+    var groupedProducts = Model.GroupBy(p => p.CategoryNames?.FirstOrDefault() ?? "Diğer").Where(g => !string.IsNullOrEmpty(g.Key)).ToList();
     
     bool isLoggedIn = User.Identity?.IsAuthenticated == true;
     string adminWhatsAppPhone = "905551234567"; // Replace with real admin phone

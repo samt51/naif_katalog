@@ -25,6 +25,9 @@
                 <a href="/Category/Index" class="menu-item @(ViewContext.RouteData.Values["Controller"].ToString() == "Category" ? "active" : "")">
                     <i class="fas fa-list"></i> Kategoriler
                 </a>
+                <a href="/Admin/CategoryAssign" class="menu-item @(ViewContext.RouteData.Values["Action"]?.ToString() == "CategoryAssign" ? "active" : "")">
+                    <i class="fas fa-random"></i> Hızlı Kategori Ata
+                </a>
                 <a href="/Admin/Customers" class="menu-item @(ViewContext.RouteData.Values["Action"].ToString() == "Customers" ? "active" : "")">
                     <i class="fas fa-users"></i> Müşteriler (Users)
                 </a>

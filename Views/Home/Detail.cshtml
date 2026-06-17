@@ -1,5 +1,8 @@
 @model naif_katalog.Models.Product
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
+    var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+    if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
     ViewData["Title"] = Model.Name + " - Detay";
     bool isLoggedIn = User.Identity?.IsAuthenticated == true;
     string adminWhatsAppPhone = "905551234567"; // Replace with real admin phone
@@ -174,7 +177,7 @@
         <!-- Product Info -->
         <div class="col-lg-6 detail-info">
             <div>
-                <span class="badge-category">@Model.Category</span>
+                <span class="badge-category">@(Model.CategoryNames?.FirstOrDefault() ?? "")</span>
                 <h1 class="product-title">@Model.Name</h1>
                 <div class="product-code">Ürün Kodu: <strong>@Model.Code</strong></div>
                 
@@ -274,7 +277,7 @@
                     @if (isLoggedIn)
                     {
                         <button class="btn btn-dark action-button" id="addToCartBtn"
-                                onclick="addToCatalogFromDetail('@Model.Code', '@Model.Category', '@mockPrice.ToString("N0") $', '@(Model.Images.Count > 0 ? Model.Images[0] : "")', '@Model.Gram.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) g')">
+                                onclick="addToCatalogFromDetail('@Model.Code', '@(Model.CategoryNames?.FirstOrDefault() ?? "")', '@mockPrice.ToString("N0") $', '@(Model.Images.Count > 0 ? Model.Images[0] : "")', '@Model.Gram.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) g')">
                             <i class="fas fa-plus"></i> Kataloğa Ekle
                         </button>
                     }
@@ -361,13 +364,13 @@
     const basePrice = @mockPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
     const gram = @Model.Gram.ToString(System.Globalization.CultureInfo.InvariantCulture);
     const productCode = '@Model.Code';
-    const productCategory = '@Model.Category';
+    const productCategory = '@(Model.CategoryNames?.FirstOrDefault() ?? "")';
     const productImage = '@(Model.Images.Count > 0 ? Model.Images[0] : "")';
 
     document.addEventListener("DOMContentLoaded", async function() {
         try {
-            // Her zaman anlık API'den güncel kuru çek
-            const response = await fetch('https://localhost:3434/api/ExchangeRate/HasAltin');
+            const API_BASE_URL = '@apiAddress';
+            const response = await fetch(`${API_BASE_URL}/api/ExchangeRate/HasAltin`);
             if(response.ok) {
                 const data = await response.json();
                 if(data && data.price) {

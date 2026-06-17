@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using naif_katalog.Core.Features.DefinitionFeature.Queries;
 using naif_katalog.Core.Features.DefinitionFeature.Commands;
@@ -10,10 +10,12 @@ namespace naif_katalog.Controllers
     public class DefinitionController : Controller
     {
         private readonly IMediator _mediator;
+        private readonly IConfiguration _configuration;
 
-        public DefinitionController(IMediator mediator)
+        public DefinitionController(IMediator mediator, IConfiguration configuration)
         {
             _mediator = mediator;
+            _configuration = configuration;
         }
 
         public async Task<IActionResult> Index()
@@ -32,10 +34,15 @@ namespace naif_katalog.Controllers
             model.Units = (await _mediator.Send(new GetAllUnitsQueryRequest()))?.data;
             model.StoneSettings = (await _mediator.Send(new naif_katalog.Core.Features.StoneSettingFeature.Queries.GetAllStoneSettingQueryRequest()))?.data;
 
+            model.PolishingCosts = null;
+            model.Categories = null;
+
             // Fetch Polishing Costs directly from API for simplicity
             using (var client = new System.Net.Http.HttpClient())
             {
-                client.BaseAddress = new System.Uri("https://localhost:3434/");
+                var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+                if (!apiAddress.EndsWith("/")) apiAddress += "/";
+                client.BaseAddress = new System.Uri(apiAddress);
                 try {
                     var pcResp = client.GetAsync("api/PolishingCost").Result;
                     if (pcResp.IsSuccessStatusCode) {

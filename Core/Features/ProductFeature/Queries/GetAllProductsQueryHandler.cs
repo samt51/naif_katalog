@@ -56,8 +56,8 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
                         Id = item.Id,
                         Code = item.Code,
                         Name = item.Name,
-                        Category = item.CategoryName,
-                        CategoryId = item.CategoryId,
+                        CategoryNames = item.CategoryNames,
+                        CategoryIds = item.CategoryIds,
                         Description = item.Description,
                         Gram = item.Gram,
                         Karat = item.DiamondCarat > 0 ? item.DiamondCarat.ToString("N2") + " ct" : "-",
@@ -94,8 +94,8 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
         public string Code { get; set; }
         public string ImageName { get; set; }
         public string Name { get; set; }
-        public string CategoryName { get; set; }
-        public int CategoryId { get; set; }
+        public List<string> CategoryNames { get; set; }
+        public List<int> CategoryIds { get; set; }
         public string Description { get; set; }
         public decimal Gram { get; set; }
         public string Karat { get; set; }

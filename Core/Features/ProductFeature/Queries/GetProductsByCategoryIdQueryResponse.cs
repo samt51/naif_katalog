@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace naif_katalog.Core.Features.ProductFeature.Queries
 {
     public class GetProductsByCategoryIdQueryResponse
@@ -6,8 +8,8 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
         public string Code { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string ImageName { get; set; }
-        public string Category { get; set; } = string.Empty;
-        public int CategoryId { get; set; }
+        public List<string> CategoryNames { get; set; } = new List<string>();
+        public List<int> CategoryIds { get; set; } = new List<int>();
         public string Description { get; set; }
         public decimal Gram { get; set; }
         public string Karat { get; set; }

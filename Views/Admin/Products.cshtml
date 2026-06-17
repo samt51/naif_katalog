@@ -1,5 +1,8 @@
 @model dynamic
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
+    var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+    if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
     ViewData["Title"] = "Ürünler";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
@@ -43,18 +46,28 @@
         <button onclick="openModal(0)" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Yeni Ürün</button>
     </div>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <div style="display:flex; gap:15px; align-items:center;">
-            <select id="categoryFilter" class="form-control" style="width:200px; display:inline-block;">
-                <option value="">Tüm Kategoriler</option>
-                @if(Model.Categories != null)
-                {
-                    foreach(var cat in Model.Categories)
+    <div style="margin-bottom: 20px;">
+        <button type="button" id="btnToggleFilters" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:8px 15px; border-radius:6px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px; margin-bottom:10px; transition:0.2s;">
+            <i class="fas fa-filter"></i> Filtreleri Göster/Gizle
+        </button>
+        <div id="filterCollapse" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; flex-direction:row; gap:15px; align-items:flex-end; flex-wrap:wrap;">
+            <div style="flex:0 0 auto;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:5px;">Ürün Koduna Göre Ara</label>
+                <input type="text" id="codeFilter" class="form-control" placeholder="Ürün kodu girin..." style="width:200px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+            </div>
+            <div style="flex:0 0 auto;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:5px;">Kategoriye Göre Filtrele</label>
+                <select id="categoryFilter" class="form-control" style="width:250px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
+                    <option value="">Tüm Kategoriler</option>
+                    @if(Model.Categories != null)
                     {
-                        <option value="@cat.Name">@cat.Name</option>
+                        foreach(var cat in Model.Categories)
+                        {
+                            <option value="@cat.Name">@cat.Name</option>
+                        }
                     }
-                }
-            </select>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -84,14 +97,19 @@
                             }
                         </td>
                         <td>@item.Code</td>
-                        <td><span style="background:var(--secondary); padding:4px 10px; border-radius:12px; font-size:12px;">@item.Category</span></td>
-                        <td>@(item.Karat ?? "Bilinmiyor")</td>
-                        <td>@(item.Gram ?? 0) gr</td>
+                        <td><span style="background:var(--secondary); padding:4px 10px; border-radius:12px; font-size:12px;">@(item.CategoryNames != null && item.CategoryNames.Count > 0 ? string.Join(", ", item.CategoryNames) : "-")</span></td>
+                        <td>@(item.DiamondCarat > 0 ? item.DiamondCarat.ToString("0.###") : "-")</td>
+                        <td>@item.Gram.ToString("0.00") gr</td>
                         <td style="font-weight:600; color:var(--primary);">
                             $@(item.CalculatedPrice.ToString("N2"))
                         </td>
                         <td>
                             <div style="display:flex; gap:8px;">
+                                <a href="/Admin/CategoryAssign?code=@item.Code"
+                                   style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #3b82f6; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(59,130,246,0.2); text-decoration:none;" 
+                                   title="Hızlı Kategori Ata">
+                                    <i class="fas fa-random"></i>
+                                </a>
                                 <button onclick="openModal(@item.Id)" 
                                         style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);" 
                                         title="Düzenle">
@@ -434,8 +452,9 @@
 
     document.addEventListener('DOMContentLoaded', async function() {
         // Fetch Polishing Costs
+        const API_BASE_URL = '@apiAddress';
         try {
-            const pcRes = await fetch('https://localhost:3434/api/PolishingCost');
+            const pcRes = await fetch(`${API_BASE_URL}/api/PolishingCost`);
             if (pcRes.ok) {
                 const pcData = await pcRes.json();
                 polishingCosts = pcData.polishingCosts || [];
@@ -553,13 +572,18 @@
 
         if (!preserveTab) switchTab('genel');
 
-        try {
-            const r = await fetch('https://localhost:3434/api/ExchangeRate/HasAltin');
-            const data = await r.json();
-            if(data && data.price) {
-                document.getElementById('LiveHasPrice').value = data.price.toFixed(2);
-            }
-        } catch(e) { console.log(e); }
+        const API_BASE_URL = '@apiAddress';
+        fetch(`${API_BASE_URL}/api/ExchangeRate/HasAltin`)
+            .then(r => r.json())
+            .then(data => {
+                if(data && data.price) {
+                    const priceEl = document.getElementById('LiveHasPrice');
+                    if (priceEl && !priceEl.value) {
+                        priceEl.value = data.price.toFixed(2);
+                    }
+                }
+            })
+            .catch(e => console.log(e));
 
         if (id === 0) {
             document.getElementById('Code').readOnly = false;
@@ -576,9 +600,17 @@
             
             calculateLiveCost();
         } else {
+            document.getElementById('modalTitle').innerText = "Veriler Yükleniyor...";
+            document.getElementById('productForm').style.opacity = '0.5';
+            document.getElementById('productForm').style.pointerEvents = 'none';
+
             fetch('/Product/Details/' + id)
                 .then(r => r.json())
                 .then(res => {
+                    document.getElementById('modalTitle').innerText = "Ürünü Düzenle";
+                    document.getElementById('productForm').style.opacity = '1';
+                    document.getElementById('productForm').style.pointerEvents = 'auto';
+
                     if (res.isSuccess && res.data) {
                         const p = res.data;
                         document.getElementById('Code').value = p.code;
@@ -586,7 +618,7 @@
                         document.getElementById('Code').style.backgroundColor = '#e9ecef';
                         document.getElementById('Name').value = p.name || '';
                         document.getElementById('Description').value = p.description || '';
-                        buildCategorySelects(p.categoryId || 0);
+                        buildCategorySelects(p.categoryIds && p.categoryIds.length > 0 ? p.categoryIds[0] : 0);
                         document.getElementById('ColorId').value = p.colorId || '';
                         document.getElementById('Gram').value = p.gram || 0;
 
@@ -627,6 +659,12 @@
                         
                         calculateLiveCost();
                     }
+                })
+                .catch(err => {
+                    document.getElementById('modalTitle').innerText = "Hata Oluştu!";
+                    document.getElementById('productForm').style.opacity = '1';
+                    document.getElementById('productForm').style.pointerEvents = 'auto';
+                    Swal.fire('Hata', 'Ürün detayları yüklenemedi.', 'error');
                 });
         }
 
@@ -900,6 +938,49 @@
             }
         });
     }
+
+    $(document).ready(function() {
+        var table = $('#productsTable').DataTable({
+            pageLength: 50,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tümü"]],
+            language: {
+                "sDecimal":        ",",
+                "sEmptyTable":     "Tabloda herhangi bir veri mevcut değil",
+                "sInfo":           "_TOTAL_ kayıttan _START_ - _END_ arasındaki kayıtlar gösteriliyor",
+                "sInfoEmpty":      "Kayıt yok",
+                "sInfoFiltered":   "(_MAX_ kayıt içerisinden bulunan)",
+                "sInfoPostFix":    "",
+                "sInfoThousands":  ".",
+                "sLengthMenu":     "Sayfada _MENU_ kayıt göster",
+                "sLoadingRecords": "Yükleniyor...",
+                "sProcessing":     "İşleniyor...",
+                "sSearch":         "Ara:",
+                "sZeroRecords":    "Eşleşen kayıt bulunamadı",
+                "oPaginate": {
+                    "sFirst":    "İlk",
+                    "sLast":     "Son",
+                    "sNext":     "Sonraki",
+                    "sPrevious": "Önceki"
+                },
+                "oAria": {
+                    "sSortAscending":  ": artan sütun sıralamasını aktifleştir",
+                    "sSortDescending": ": azalan sütun sıralamasını aktifleştir"
+                }
+            }
+        });
+
+        $('#codeFilter').on('keyup input', function() {
+            table.column(1).search(this.value).draw();
+        });
+
+        $('#categoryFilter').on('change', function() {
+            table.column(2).search(this.value).draw();
+        });
+
+        $('#btnToggleFilters').on('click', function() {
+            $('#filterCollapse').slideToggle(200);
+        });
+    });
 </script>
 
 

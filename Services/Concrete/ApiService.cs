@@ -144,17 +144,15 @@ namespace naif_katalog.Services.Concrete
                 } else {
                     result = JsonSerializer.Deserialize<ResponseDto<T>>(json, JsonOpt);
                 }
-            } catch {
-                result = null;
             }
-
-            if (result == null)
+            catch (Exception ex)
             {
+                var snippet = json != null ? (json.Length > 200 ? json.Substring(0, 200) + "..." : json) : "null";
                 return new ResponseDto<T>
                 {
                     isSuccess = false,
                     statusCode = (int)response.StatusCode,
-                    errors = new List<string> { "Sunucudan geçersiz yanıt alındı." }
+                    errors = new List<string> { $"DEBUG ERROR: {ex.Message} | JSON: {snippet} | Status: {response.StatusCode}" }
                 };
             }
 
@@ -170,6 +168,8 @@ namespace naif_katalog.Services.Concrete
         }
     }
 }
+
+
 
 
 

@@ -6,105 +6,260 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Giriş - Yönetim Paneli</title>
+    <title>Giriş - Naif Jewellery</title>
     <!-- Bootstrap CSS for Modal -->
     <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/admin.css" />
     <style>
-        .login-body {
-            /* Keep original login body styles intact despite bootstrap */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #1e3a8a 0%, #111827 100%);
+        body {
             margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            display: flex;
+            min-height: 100vh;
+            overflow: hidden;
         }
-        .login-container h2 {
-            margin-bottom: 30px;
+        .split-layout {
+            display: flex;
+            width: 100%;
+        }
+        .left-side {
+            flex: 1;
+            background: url('/images/login-bg.png') center center no-repeat;
+            background-size: cover;
+            position: relative;
+        }
+        .left-side::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%);
+        }
+        .right-side {
+            width: 500px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 40px;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+        }
+        .login-wrapper {
+            width: 100%;
+            max-width: 360px;
+        }
+        .brand-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .brand-header img {
+            height: 70px;
+            object-fit: contain;
+            margin-bottom: 15px;
+        }
+        .brand-header h1 {
             font-size: 24px;
-            font-weight: 700;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #0f172a;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #1e293b;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            border-color: #0f172a;
+            box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
+            background: #ffffff;
+            outline: none;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            border-radius: 8px;
+            border: none;
+            background: #0f172a;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 16px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            background: #1e293b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(15, 23, 42, 0.2);
+        }
+        .register-wrapper {
+            margin-top: 30px;
+            text-align: center;
         }
         .register-link {
-            display: block;
-            margin-top: 20px;
-            color: #9ca3af;
+            color: #64748b;
             font-size: 14px;
             text-decoration: none;
             transition: color 0.3s;
         }
-        .register-link:hover {
-            color: #fff;
-        }
         .register-link span {
-            color: #3b82f6;
+            color: #0f172a;
             font-weight: 600;
+            text-decoration: underline;
+        }
+        .register-link:hover span {
+            color: #334155;
         }
         
-        /* Modal overrides to match the dark theme */
+        /* Modal overrides for light theme */
         .modal-content {
-            background: #1f2937;
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.1);
+            background: #ffffff;
+            color: #1e293b;
+            border: none;
             border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
         }
         .modal-header {
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid #f1f5f9;
         }
         .modal-footer {
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid #f1f5f9;
         }
         .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
+            filter: none;
         }
-        .form-control {
-            background: rgba(0,0,0,0.2);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #fff;
+        .modal-title {
+            font-weight: 600;
+            color: #0f172a;
         }
-        .form-control:focus {
-            background: rgba(0,0,0,0.3);
-            border-color: #3b82f6;
-            color: #fff;
-            box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+
+        .lang-selector {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            z-index: 1050;
         }
-        .form-label {
-            font-size: 13px;
-            color: #9ca3af;
-            margin-bottom: 5px;
+        
+        body { top: 0 !important; }
+        .skiptranslate, .goog-te-banner-frame { display: none !important; }
+
+        @@media (max-width: 992px) {
+            .split-layout {
+                flex-direction: column;
+                height: 100vh;
+                background: url('/images/login-bg.png') center center no-repeat;
+                background-size: cover;
+                position: relative;
+            }
+            .split-layout::before {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 100%);
+                z-index: 0;
+            }
+            .left-side {
+                display: none;
+            }
+            .right-side {
+                width: 100%;
+                height: 100vh;
+                background: transparent;
+                box-shadow: none;
+                padding: 20px;
+                justify-content: center;
+                align-items: center;
+            }
+            .login-wrapper {
+                background: rgba(255, 255, 255, 0.95);
+                padding: 40px 30px;
+                border-radius: 20px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+                backdrop-filter: blur(10px);
+                margin: 0 auto;
+            }
         }
     </style>
 </head>
-<body class="login-body">
-    <div class="login-container">
-        <!-- Logo from earlier feature -->
-        <div class="mb-4 text-center">
-            <img src="/images/logo_white.png" alt="Logo" style="height: 60px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));" onerror="this.style.display='none'">
+<body>
+    <div class="split-layout">
+        <!-- Sol Taraf: Görsel -->
+        <div class="left-side"></div>
+
+        <!-- Sağ Taraf: Login -->
+        <div class="right-side">
+            <div class="lang-selector">
+                <div class="dropdown">
+                    <a href="#" class="text-dark text-decoration-none dropdown-toggle fw-medium d-flex align-items-center" data-bs-toggle="dropdown" style="font-size: 14px;">
+                        <img id="currentLangFlag" src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-1" style="border-radius:2px;"> 
+                        <span id="currentLangText">TR</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="min-width: 120px;">
+                        <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('tr')"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('en')"><img src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-2" style="border-radius:2px;"> English</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="login-wrapper">
+                <div class="brand-header">
+                    <img src="https://static.wixstatic.com/media/3afb87_01283146a20c43eda2fa6ba343107de9~mv2.png/v1/fill/w_299,h_95,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/1730592442899-7c4af1dc-40ee-4adf-80ba-dd9cd7379dee_1-Photoroom.png" alt="Naif Jewellery Logo" onerror="this.src='/images/logo.png'">
+                </div>
+                
+                <form method="post" action="/Account/Login">
+                    <div class="form-group">
+                        <label class="form-label">E-Posta Adresi</label>
+                        <input type="email" name="email" class="form-control" placeholder="E-Posta adresinizi girin" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Şifre</label>
+                        <input type="password" name="password" class="form-control" placeholder="Şifrenizi girin" required />
+                    </div>
+                    <button type="submit" class="btn-primary">Giriş Yap</button>
+                    
+                    @if(ViewBag.Error != null)
+                    {
+                        <div style="color:#ef4444; margin-top:15px; font-size:14px; text-align: center; font-weight: 500;">
+                            <i class="fas fa-exclamation-circle me-1"></i> @ViewBag.Error
+                        </div>
+                    }
+                </form>
+                
+                <div class="register-wrapper">
+                    <a href="#" class="register-link" data-bs-toggle="modal" data-bs-target="#registerModal">
+                        Henüz üye değil misiniz? <span>Hemen Üye Olun</span>
+                    </a>
+                </div>
+            </div>
         </div>
-        
-        <h2>Giriş</h2>
-        <form method="post" action="/Account/Login">
-            <div class="form-group">
-                <label>E-Posta</label>
-                <input type="email" name="email" placeholder="E-Posta adresinizi girin" required style="width: 100%; padding: 12px; border-radius: 8px; border: none; margin-bottom: 15px;" />
-            </div>
-            <div class="form-group">
-                <label>Şifre</label>
-                <input type="password" name="password" placeholder="Şifrenizi girin" required style="width: 100%; padding: 12px; border-radius: 8px; border: none; margin-bottom: 20px;" />
-            </div>
-            <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; border-radius: 8px; border: none; background: #3b82f6; color: white; font-weight: 600; cursor: pointer;">Giriş Yap</button>
-            
-            @if(ViewBag.Error != null)
-            {
-                <div style="color:#ef4444; margin-top:15px; font-size:14px;">@ViewBag.Error</div>
-            }
-        </form>
-        
-        <a href="#" class="register-link" data-bs-toggle="modal" data-bs-target="#registerModal">
-            Üye değil misiniz? <span>Lütfen üye olun</span>
-        </a>
     </div>
 
     <!-- Registration Modal -->
@@ -141,8 +296,8 @@
                         </div>
                     </div>
                     <div class="modal-footer border-0 pb-4 px-4">
-                        <button type="button" class="btn btn-secondary w-100 mb-2" data-bs-dismiss="modal">İptal</button>
-                        <button type="submit" class="btn btn-primary w-100 m-0">Kayıt Ol</button>
+                        <button type="button" class="btn btn-secondary w-100 mb-2" data-bs-dismiss="modal" style="border-radius:8px; padding:12px; font-weight:600;">İptal</button>
+                        <button type="submit" class="btn-primary w-100 m-0" style="margin-top:0;">Kayıt Ol</button>
                     </div>
                 </form>
             </div>
@@ -150,5 +305,30 @@
     </div>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Google Translate Setup -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'tr', includedLanguages: 'tr,en', autoDisplay: false}, 'google_translate_element');
+        }
+        
+        function changeLanguage(lang) {
+            var selectField = document.querySelector(".goog-te-combo");
+            if(selectField) {
+                selectField.value = lang;
+                selectField.dispatchEvent(new Event('change'));
+            }
+            
+            if(lang == 'en') {
+                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/us.png';
+                document.getElementById('currentLangText').innerText = 'EN';
+            } else {
+                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/tr.png';
+                document.getElementById('currentLangText').innerText = 'TR';
+            }
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

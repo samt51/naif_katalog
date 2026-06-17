@@ -1,7 +1,10 @@
 @model dynamic
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     ViewData["Title"] = "Genel Tanımlamalar";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+    if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
 }
 
 <!-- CSS for Modal -->
@@ -305,6 +308,8 @@
 </div>
 
 <script>
+    const API_BASE_URL = '@apiAddress';
+
     function showInfoModal(title, message) {
         document.getElementById('infoModalTitle').innerText = title;
         document.getElementById('infoModalMessage').innerText = message;
@@ -352,7 +357,7 @@
                 const id = document.getElementById('defId').value;
                 const type = document.getElementById('defType').value;
                 try {
-                    const res = await fetch(`https://localhost:3434/api/${type}/${id}`, { method: 'DELETE' });
+                    const res = await fetch(`${API_BASE_URL}/api/${type}/${id}`, { method: 'DELETE' });
                     if (res.ok) location.reload();
                     else Swal.fire('Hata!', 'Silme işlemi başarısız oldu.', 'error');
                 } catch(e) {
@@ -497,7 +502,7 @@
             categoryId: parseInt(document.getElementById('polCategoryId').value),
             costPrice: parseFloat(document.getElementById('polCostPrice').value)
         };
-        const url = 'https://localhost:3434/api/PolishingCost';
+        const url = `${API_BASE_URL}/api/PolishingCost`;
         const method = id > 0 ? 'PUT' : 'POST';
         if (id > 0) req.id = id;
 
@@ -525,7 +530,7 @@
             if (result.isConfirmed) {
                 const id = parseInt(document.getElementById('polId').value);
                 try {
-                    const res = await fetch(`https://localhost:3434/api/PolishingCost/${id}`, {
+                    const res = await fetch(`${API_BASE_URL}/api/PolishingCost/${id}`, {
                         method: 'DELETE'
                     });
                     if (res.ok) location.reload();

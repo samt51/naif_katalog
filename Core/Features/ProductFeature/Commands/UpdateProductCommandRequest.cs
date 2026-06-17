@@ -12,7 +12,7 @@ namespace naif_katalog.Core.Features.ProductFeature.Commands
         public decimal Gram { get; set; }
         public string Karat { get; set; }
         public decimal DiamondCarat { get; set; }
-        public int CategoryId { get; set; }
+        public List<int> CategoryIds { get; set; } = new List<int>();
         public int? MetalPurityId { get; set; }
         public int? ColorId { get; set; }
         public decimal LaborMultiplier { get; set; }

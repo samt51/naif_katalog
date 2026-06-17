@@ -7,8 +7,8 @@ public class Product
     public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    public int CategoryId { get; set; }
+    public List<string> CategoryNames { get; set; } = new List<string>();
+    public List<int> CategoryIds { get; set; } = new List<int>();
     public string Description { get; set; }
     public decimal Gram { get; set; }
     public string Karat { get; set; }

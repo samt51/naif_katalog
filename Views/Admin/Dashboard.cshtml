@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Dashboard";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
@@ -6,15 +6,15 @@
 <div class="dashboard-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:24px; margin-bottom:30px;">
     <div class="card" style="border-left:4px solid var(--primary);">
         <h4 style="color:var(--text-muted); font-size:14px; margin-bottom:8px;">Toplam Ürün</h4>
-        <div style="font-size:28px; font-weight:700;">1,248</div>
+        <div style="font-size:28px; font-weight:700;">@ViewBag.ProductCount.ToString("N0")</div>
     </div>
     <div class="card" style="border-left:4px solid #10b981;">
         <h4 style="color:var(--text-muted); font-size:14px; margin-bottom:8px;">Kayıtlı Müşteri</h4>
-        <div style="font-size:28px; font-weight:700;">86</div>
+        <div style="font-size:28px; font-weight:700;">@ViewBag.UserCount.ToString("N0")</div>
     </div>
     <div class="card" style="border-left:4px solid #f59e0b;">
         <h4 style="color:var(--text-muted); font-size:14px; margin-bottom:8px;">Kategoriler</h4>
-        <div style="font-size:28px; font-weight:700;">14</div>
+        <div style="font-size:28px; font-weight:700;">@ViewBag.CategoryCount.ToString("N0")</div>
     </div>
     <div class="card" style="border-left:4px solid #8b5cf6;">
         <h4 style="color:var(--text-muted); font-size:14px; margin-bottom:8px;">Sistem Uyarıları</h4>
@@ -34,18 +34,20 @@
             </tr>
         </thead>
         <tbody>
-            <tr style="border-bottom:1px solid var(--border-color);">
-                <td style="padding:12px 8px; font-weight:500;">DGF26BL00070</td>
-                <td style="padding:12px 8px;">Bileklik</td>
-                <td style="padding:12px 8px;">14K</td>
-                <td style="padding:12px 8px;"><span style="background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">Aktif</span></td>
-            </tr>
-            <tr style="border-bottom:1px solid var(--border-color);">
-                <td style="padding:12px 8px; font-weight:500;">DGF26KU00089</td>
-                <td style="padding:12px 8px;">Kolye</td>
-                <td style="padding:12px 8px;">14K</td>
-                <td style="padding:12px 8px;"><span style="background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">Aktif</span></td>
-            </tr>
+            @if(ViewBag.RecentProducts != null)
+            {
+                foreach(var item in ViewBag.RecentProducts as List<naif_katalog.Models.Product>)
+                {
+                    <tr style="border-bottom:1px solid var(--border-color);">
+                        <td style="padding:12px 8px; font-weight:500;">@item.Code</td>
+                        <td style="padding:12px 8px;">@(item.CategoryNames != null && item.CategoryNames.Count > 0 ? string.Join(", ", item.CategoryNames) : "-")</td>
+                        <td style="padding:12px 8px;">@item.MetalPurityName</td>
+                        <td style="padding:12px 8px;">
+                            <span style="background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">Aktif</span>
+                        </td>
+                    </tr>
+                }
+            }
         </tbody>
     </table>
 </div>

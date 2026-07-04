@@ -98,7 +98,7 @@
                         </td>
                         <td>@item.Code</td>
                         <td><span style="background:var(--secondary); padding:4px 10px; border-radius:12px; font-size:12px;">@(item.CategoryNames != null && item.CategoryNames.Count > 0 ? string.Join(", ", item.CategoryNames) : "-")</span></td>
-                        <td>@(item.DiamondCarat > 0 ? item.DiamondCarat.ToString("0.###") : "-")</td>
+                        <td>@(item.DiamondCarat > 0 ? item.DiamondCarat.ToString("0.00") : "-")</td>
                         <td>@item.Gram.ToString("0.00") gr</td>
                         <td style="font-weight:600; color:var(--primary);">
                             $@(item.CalculatedPrice.ToString("N2"))
@@ -165,7 +165,7 @@
                             <div class="form-row">
                                 <div class="form-group" style="width: 100%;">
                                     <label>Kategori</label>
-                                    <input type="hidden" id="CategoryId" name="CategoryId" required />
+                                    <input type="hidden" id="CategoryId" name="CategoryIds" required />
                                     <div id="categoryContainer" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
                                 </div>
                             </div>
@@ -411,7 +411,7 @@
         const container = document.getElementById('categoryContainer');
         const select = document.createElement('select');
         select.id = 'cat_select_' + level;
-        select.className = 'form-control';
+        select.className = 'form-select';
         select.style.flex = "1";
         select.style.minWidth = "150px";
         
@@ -905,37 +905,13 @@
             confirmButtonText: 'Evet, Sil!',
             cancelButtonText: 'İptal'
         }).then((result) => {
-            if (result.isConfirmed) {
-                // Call API to delete
-                fetch('/Admin/DeleteProduct/' + id, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.isSuccess) {
-                        Swal.fire(
-                            'Silindi!',
-                            'Ürün başarıyla silindi.',
-                            'success'
-                        ).then(() => {
-                            location.reload();
-                        });
-                    } else {
-                        Swal.fire(
-                            'Hata!',
-                            data.errors ? data.errors.join(', ') : 'Ürün silinirken bir hata oluştu.',
-                            'error'
-                        );
-                    }
-                })
-                .catch(err => {
-                    Swal.fire(
-                        'Hata!',
-                        'Sunucu ile iletişim kurulamadı.',
-                        'error'
-                    );
-                });
-            }
+        if (result.isConfirmed) {
+            Swal.fire(
+                'Silindi (Test Modu)!',
+                'Ürün başarıyla silinmiş gibi işaretlendi ancak arka planda işlem yapılmadı.',
+                'success'
+            );
+        }
         });
     }
 

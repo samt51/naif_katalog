@@ -6,7 +6,7 @@
     ViewData["Title"] = Model.Name + " - Detay";
     bool isLoggedIn = User.Identity?.IsAuthenticated == true;
     string adminWhatsAppPhone = "905551234567"; // Replace with real admin phone
-    decimal mockPrice = Model.CalculatedPrice > 0 ? Model.CalculatedPrice : 150m;
+    decimal mockPrice = Model.CalculatedPrice;
 }
 
 <style>
@@ -188,7 +188,7 @@
         <div class="col-lg-6 detail-info">
             <div>
                 <span class="badge-category">@string.Join(", ", Model.CategoryNames)</span>
-                <h1 class="product-title">@Model.Name</h1>
+                <h1 class="product-title">@Model.Code</h1>
              
                 
                 @if (isLoggedIn)

@@ -91,8 +91,7 @@
                     }
                     @foreach (var p in displayProducts)
                     {
-                        // Mock Price Calculation
-                        decimal mockPrice = (p.Gram * 85m) + (p.DiamondCarat * 600m) + 150m;
+                        decimal mockPrice = p.CalculatedPrice;
                         
                         <div class="col-md-4 mb-4">
                             <div class="card shadow-sm h-100 border-0 bg-white">
@@ -129,7 +128,7 @@
 
                                 <div class="card-body text-center d-flex flex-column justify-content-end p-4">
                                     <h5 class="card-title fw-bold text-uppercase letter-spacing-1 mb-2">@p.Code</h5>
-                                    <p class="text-muted small mb-3">@(p.Gram.ToString("0.00")) g | @(p.Karat ?? "14K")</p>
+                                    <p class="text-dark fw-bold mb-3 user-select-none" style="cursor: default;">@(p.Gram.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)) g | @(p.Karat ?? "14K") | @mockPrice.ToString("N0") $</p>
                                     
                                     <a href="/Home/Detail/@p.Id" class="btn btn-outline-dark rounded-pill px-4 py-2 mt-2 w-100 fw-bold" style="letter-spacing: 1px;">
                                         Detayları İncele <i class="fas fa-arrow-right ms-2"></i>

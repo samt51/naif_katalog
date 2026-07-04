@@ -1,5 +1,9 @@
-@model List<naif_katalog.Models.CategoryDto>
+﻿@model List<naif_katalog.Models.CategoryDto>
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
 @{
+    var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+    if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
     ViewData["Title"] = "Kategoriler";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 
@@ -226,7 +230,7 @@
     function deleteCategory(id) {
         Swal.fire({
             title: 'Emin misiniz?',
-            text: "Bu kategoriyi silmek istediğinize emin misiniz?",
+            text: 'Bu kategoriyi silmek istediğinize emin misiniz?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -235,8 +239,27 @@
             cancelButtonText: 'İptal'
         }).then((result) => {
             if (result.isConfirmed) {
-                // ... assuming you have a delete endpoint
-                Swal.fire('Silindi!', 'Bu özellik eklenecektir.', 'info');
+                fetch(@apiAddress/api/Category/, {
+                    method: 'DELETE'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.isSuccess || data.success) {
+                        Swal.fire(
+                            'Silindi!',
+                            'Kategori başarıyla silindi.',
+                            'success'
+                        ).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Hata!', data.message || 'Kategori silinirken bir hata oluştu.', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Hata!', 'Sunucuya bağlanılamadı.', 'error');
+                });
             }
         });
     }

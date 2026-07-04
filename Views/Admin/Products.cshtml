@@ -1,4 +1,4 @@
-@model dynamic
+﻿@model dynamic
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
@@ -977,7 +977,7 @@
     function deleteProduct(id) {
         Swal.fire({
             title: 'Emin misiniz?',
-            text: "Bu ürünü silmek istediğinize emin misiniz? (Ürün kalıcı olarak değil, sistemde gizlenecek şekilde işaretlenecektir)",
+            text: 'Bu ürünü silmek istediğinize emin misiniz? (Ürün kalıcı olarak değil, sistemde gizlenecek şekilde işaretlenecektir)',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -985,13 +985,30 @@
             confirmButtonText: 'Evet, Sil!',
             cancelButtonText: 'İptal'
         }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire(
-                'Silindi (Test Modu)!',
-                'Ürün başarıyla silinmiş gibi işaretlendi ancak arka planda işlem yapılmadı.',
-                'success'
-            );
-        }
+            if (result.isConfirmed) {
+                fetch(@apiAddress/api/Products/, {
+                    method: 'DELETE'
+                })
+                .then(res => res.json())
+                .then(async data => {
+                    if(data.isSuccess || data.success) {
+                        await fetch('/Product/ClearCache', { method: 'POST' });
+                        Swal.fire(
+                            'Silindi!',
+                            'Ürün başarıyla silindi.',
+                            'success'
+                        ).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Hata!', data.message || 'Ürün silinirken bir hata oluştu.', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Hata!', 'Sunucuya bağlanılamadı.', 'error');
+                });
+            }
         });
     }
 

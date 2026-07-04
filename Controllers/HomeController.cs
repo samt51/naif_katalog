@@ -56,6 +56,12 @@ public class HomeController : Controller
 
                     var claritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
                     ViewBag.Clarities = claritiesResp?.data;
+
+                    var stonesResp = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
+                    ViewBag.Stones = stonesResp?.data;
+
+                    var stoneTypesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
+                    ViewBag.StoneTypes = stoneTypesResp?.data;
                 } catch { }
 
                 return View(product);

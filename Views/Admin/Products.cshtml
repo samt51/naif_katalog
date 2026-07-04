@@ -75,6 +75,7 @@
         <thead>
             <tr>
                 <th>Resim</th>
+                <th>Ürün Adı</th>
                 <th>Kod</th>
                 <th>Kategori</th>
                 <th>Karat</th>
@@ -96,6 +97,7 @@
                                 <div style="width:40px; height:40px; border-radius:8px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8;"><i class="fas fa-image"></i></div>
                             }
                         </td>
+                        <td>@item.Name</td>
                         <td>@item.Code</td>
                         <td><span style="background:var(--secondary); padding:4px 10px; border-radius:12px; font-size:12px;">@(item.CategoryNames != null && item.CategoryNames.Count > 0 ? string.Join(", ", item.CategoryNames) : "-")</span></td>
                         <td>@(item.DiamondCarat > 0 ? item.DiamondCarat.ToString("0.00") : "-")</td>
@@ -164,9 +166,9 @@
                             
                             <div class="form-row">
                                 <div class="form-group" style="width: 100%;">
-                                    <label>Kategori</label>
-                                    <input type="hidden" id="CategoryId" name="CategoryIds" required />
-                                    <div id="categoryContainer" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                                    <label>Kategoriler</label>
+                                        <div id="categoryContainer" style="display: flex; gap: 10px; flex-wrap: wrap; flex:1;"></div>
+                                    <div id="selectedCategories" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;"></div>
                                 </div>
                             </div>
 
@@ -233,7 +235,20 @@
                                     <label>Taş</label>
                                     <select id="StoneId" disabled>
                                         <option value="">Seçiniz</option>
-                                        @if(Model.Stones != null){ foreach(var s in Model.Stones){ <option value="@s.Id" data-clarity="@s.StoneClarityId">@s.StoneScale?.Name</option> } }
+                                        @if(Model.Stones != null) { 
+                                            foreach(var s in Model.Stones) { 
+                                                var stoneTypeName = "";
+                                                if (Model.StoneTypes != null) {
+                                                    foreach (var t in Model.StoneTypes) {
+                                                        if (t.Id == s.StoneTypeId) {
+                                                            stoneTypeName = " - " + t.Name;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                <option value="@s.Id" data-clarity="@s.StoneClarityId" data-price="@s.CostPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)">@s.StoneScale?.Name@stoneTypeName ($@s.CostPrice.ToString("N2"))</option>
+                                            } 
+                                        }
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -271,9 +286,9 @@
                             </div>
                             
                             <table class="table table-striped" style="font-size:13px; width:100%;">
-                                <thead><tr><th>Berraklık</th><th>Taş</th><th>Renk</th><th>Adet</th><th>Karat</th><th>T. Karat</th><th>İşlem</th></tr></thead>
+                                <thead><tr><th>Berraklık</th><th>Taş Türü</th><th>Taş</th><th>Renk</th><th>Adet</th><th>Karat</th><th>T. Karat</th><th>Birim Fiyat</th><th>İşlem</th></tr></thead>
                                 <tbody id="stoneTableBody">
-                                    <tr><td colspan="7" class="text-center text-muted">Henüz taş eklenmemiş</td></tr>
+                                    <tr><td colspan="9" class="text-center text-muted">Henüz taş eklenmemiş</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -365,6 +380,7 @@
     let tempImages = [];
     let isNameManuallyEdited = false;
     let polishingCosts = []; // To store Cila/Rodaj maliyetleri
+    let selectedCategoryIds = [];
     const allCategories = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Categories ?? new List<naif_katalog.Models.CategoryDto>()));
 
     function getCategoryPath(catId) {
@@ -387,17 +403,6 @@
         while(container.children.length > level + 1) {
             container.removeChild(container.lastChild);
         }
-
-        const hiddenInput = document.getElementById('CategoryId');
-        let finalCatId = selectedValue;
-
-        if (!finalCatId && level > 0) {
-            const prevSelect = document.getElementById('cat_select_' + (level - 1));
-            finalCatId = prevSelect ? prevSelect.value : "";
-        }
-        
-        hiddenInput.value = finalCatId;
-        hiddenInput.dispatchEvent(new Event('change'));
 
         if (selectedValue) {
             renderNextCategoryLevel(parseInt(selectedValue), level + 1);
@@ -425,6 +430,9 @@
 
         select.addEventListener('change', function() {
             handleCategoryChange(level, this.value);
+            if (this.value) {
+                addCategoryToList(true); // silent = true
+            }
         });
 
         container.appendChild(select);
@@ -432,9 +440,6 @@
 
     function buildCategorySelects(targetCategoryId) {
         document.getElementById('categoryContainer').innerHTML = '';
-        const hiddenInput = document.getElementById('CategoryId');
-        hiddenInput.value = targetCategoryId || "";
-        hiddenInput.dispatchEvent(new Event('change'));
 
         if (!targetCategoryId) {
             renderNextCategoryLevel(0, 0);
@@ -450,6 +455,77 @@
         renderNextCategoryLevel(currentParent, path.length);
     }
 
+    function addCategoryToList(silent = false) {
+        const selects = document.querySelectorAll('#categoryContainer select');
+        let selectedId = null;
+        for (let i = selects.length - 1; i >= 0; i--) {
+            if (selects[i].value) {
+                selectedId = parseInt(selects[i].value);
+                break;
+            }
+        }
+        if (!selectedId) {
+            if(!silent) Swal.fire('Uyarı', 'Lütfen bir kategori seçiniz.', 'warning');
+            return;
+        }
+
+        if (selectedCategoryIds.includes(selectedId)) {
+            if(!silent) Swal.fire('Uyarı', 'Bu kategori zaten ekli.', 'warning');
+            return;
+        }
+
+        selectedCategoryIds.push(selectedId);
+        updateSelectedCategoriesUI();
+        triggerPolishingCostUpdate();
+    }
+
+    function removeCategory(id) {
+        selectedCategoryIds = selectedCategoryIds.filter(x => x !== id);
+        updateSelectedCategoriesUI();
+        triggerPolishingCostUpdate();
+    }
+
+    function updateSelectedCategoriesUI() {
+        const container = document.getElementById('selectedCategories');
+        container.innerHTML = '';
+        selectedCategoryIds.forEach(id => {
+            const cat = allCategories.find(c => (c.Id || c.id) === id);
+            if (cat) {
+                const name = cat.Name || cat.name;
+                container.innerHTML += `
+                    <span style="background:var(--primary); color:white; padding:6px 12px; border-radius:20px; font-size:13px; display:inline-flex; align-items:center; gap:8px;">
+                        ${name}
+                        <i class="fas fa-times" style="cursor:pointer;" onclick="removeCategory(${id})"></i>
+                        <input type="hidden" name="CategoryIds" value="${id}" />
+                    </span>
+                `;
+            }
+        });
+    }
+
+    function triggerPolishingCostUpdate() {
+        if (selectedCategoryIds.length > 0) {
+            const catId = selectedCategoryIds[0];
+            let pc = polishingCosts.find(x => x.categoryId === catId);
+            
+            if (!pc) {
+                const cat = allCategories.find(c => c.Id === catId);
+                if (cat && cat.ParentId > 0) {
+                    pc = polishingCosts.find(x => x.categoryId === cat.ParentId);
+                }
+            }
+
+            if (pc) {
+                document.getElementById('PolishingCost').value = pc.costPrice;
+            } else {
+                document.getElementById('PolishingCost').value = 0;
+            }
+        } else {
+            document.getElementById('PolishingCost').value = 0;
+        }
+        calculateLiveCost();
+    }
+
     document.addEventListener('DOMContentLoaded', async function() {
         // Fetch Polishing Costs
         const API_BASE_URL = '@apiAddress';
@@ -461,30 +537,7 @@
             }
         } catch(e) {}
 
-        // Listen for Category Change
-        document.getElementById('CategoryId').addEventListener('change', function() {
-            const catId = parseInt(this.value);
-            if (catId) {
-                let pc = polishingCosts.find(x => x.categoryId === catId);
-                
-                // Fallback to parent category
-                if (!pc) {
-                    const cat = allCategories.find(c => c.Id === catId);
-                    if (cat && cat.ParentId > 0) {
-                        pc = polishingCosts.find(x => x.categoryId === cat.ParentId);
-                    }
-                }
-
-                if (pc) {
-                    document.getElementById('PolishingCost').value = pc.costPrice;
-                } else {
-                    document.getElementById('PolishingCost').value = 0;
-                }
-            } else {
-                document.getElementById('PolishingCost').value = 0;
-            }
-            calculateLiveCost(); // Her halükarda hesaplamayı tetikle
-        });
+        // Kategori dinlemesi artık butonla yapıldığı için burayı kaldırdık
 
         document.getElementById('Code').addEventListener('input', function() {
             this.value = this.value.toLocaleUpperCase('tr-TR');
@@ -592,6 +645,8 @@
             document.getElementById('productForm').reset();
             document.getElementById('MetalTypeId').value = "";
             document.getElementById('productId').value = "0";
+            selectedCategoryIds = [];
+            updateSelectedCategoriesUI();
             buildCategorySelects(0);
             document.getElementById('imageGallery').innerHTML = "";
             document.getElementById('Karat').value = "14K";
@@ -618,7 +673,13 @@
                         document.getElementById('Code').style.backgroundColor = '#e9ecef';
                         document.getElementById('Name').value = p.name || '';
                         document.getElementById('Description').value = p.description || '';
-                        buildCategorySelects(p.categoryIds && p.categoryIds.length > 0 ? p.categoryIds[0] : 0);
+                        if (p.categoryIds && p.categoryIds.length > 0) {
+                            selectedCategoryIds = [...p.categoryIds];
+                        } else {
+                            selectedCategoryIds = [];
+                        }
+                        updateSelectedCategoriesUI();
+                        buildCategorySelects(0);
                         document.getElementById('ColorId').value = p.colorId || '';
                         document.getElementById('Gram').value = p.gram || 0;
 
@@ -661,10 +722,11 @@
                     }
                 })
                 .catch(err => {
+                    console.error("openModal error:", err);
                     document.getElementById('modalTitle').innerText = "Hata Oluştu!";
                     document.getElementById('productForm').style.opacity = '1';
                     document.getElementById('productForm').style.pointerEvents = 'auto';
-                    Swal.fire('Hata', 'Ürün detayları yüklenemedi.', 'error');
+                    Swal.fire('Hata', 'Ürün detayları yüklenemedi. (' + err.message + ')', 'error');
                 });
         }
 
@@ -680,7 +742,8 @@
                 allStoneOptions.push({
                     value: stoneSelect.options[i].value,
                     text: stoneSelect.options[i].text,
-                    clarity: stoneSelect.options[i].getAttribute('data-clarity')
+                    clarity: stoneSelect.options[i].getAttribute('data-clarity'),
+                    price: stoneSelect.options[i].getAttribute('data-price')
                 });
             }
         }
@@ -703,6 +766,7 @@
                     newOption.value = opt.value;
                     newOption.text = opt.text;
                     newOption.setAttribute('data-clarity', opt.clarity);
+                    if(opt.price) newOption.setAttribute('data-price', opt.price);
                     stoneSelect.appendChild(newOption);
                 }
             });
@@ -768,18 +832,25 @@
         globalStonesCost = 0;
         const stoneBody = document.getElementById('stoneTableBody');
         if(!tempStones || tempStones.length === 0) {
-            stoneBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">Henüz taş eklenmemiş</td></tr>`;
+            stoneBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">Henüz taş eklenmemiş</td></tr>`;
             calculateLiveCost();
             return;
         }
 
         const stonesArray = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Stones ?? new List<naif_katalog.Models.StoneDto>()));
+        const stoneTypesArray = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StoneTypes ?? new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>()));
 
         let html = '';
         tempStones.forEach((s, index) => {
+            let stoneTypeName = '-';
+            let price = 0;
             const st = stonesArray.find(x => (x.Id !== undefined ? x.Id : x.id) === s.StoneId);
             if(st) {
-                const price = st.CostPrice !== undefined ? st.CostPrice : (st.costPrice || 0);
+                const typeObj = stoneTypesArray.find(t => (t.Id !== undefined ? t.Id : t.id) === (st.StoneTypeId !== undefined ? st.StoneTypeId : st.stoneTypeId));
+                if (typeObj) {
+                    stoneTypeName = typeObj.Name !== undefined ? typeObj.Name : typeObj.name;
+                }
+                price = st.CostPrice !== undefined ? st.CostPrice : (st.costPrice || 0);
                 
                 let settingType = '';
                 let settingPrice = 0;
@@ -801,11 +872,13 @@
 
             html += `<tr>
                 <td>${s.ClarityName || '-'}</td>
+                <td>${stoneTypeName}</td>
                 <td>${s.StoneName}</td>
                 <td>${s.ColorName || '-'}</td>
                 <td>${s.Quantity}</td>
                 <td>${s.Carat}</td>
                 <td>${s.TotalCarat}</td>
+                <td>$${price.toFixed(2)}</td>
                 <td><button type="button" class="btn btn-sm btn-danger" onclick="deleteStoneLocal(${index})"><i class="fas fa-trash"></i></button></td>
             </tr>`;
         });
@@ -841,6 +914,13 @@
 
         const formData = new FormData(e.target);
         const id = parseInt(formData.get('Id'));
+        
+        if (selectedCategoryIds.length === 0) {
+            Swal.fire('Uyarı', 'Lütfen en az bir kategori ekleyin.', 'warning');
+            btn.disabled = false;
+            btn.innerText = "Kaydet";
+            return;
+        }
         
         const livePriceInput = document.getElementById('LiveHasPrice').value;
         if(livePriceInput) {

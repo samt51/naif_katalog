@@ -50,6 +50,9 @@ namespace naif_katalog.Controllers
             var stoneResponse = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
             model.Stones = stoneResponse.isSuccess ? stoneResponse.data : new List<naif_katalog.Models.StoneDto>();
 
+            var stoneTypeResponse = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
+            model.StoneTypes = stoneTypeResponse.isSuccess ? stoneTypeResponse.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>();
+
             var clarityResponse = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
             model.StoneClarities = clarityResponse.isSuccess ? clarityResponse.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>();
 
@@ -59,44 +62,48 @@ namespace naif_katalog.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
-            var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
-            if (!apiAddress.EndsWith("/")) apiAddress += "/";
-            
-            try
+            try 
             {
-                using (var client = new System.Net.Http.HttpClient())
+                var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+                if (!apiAddress.EndsWith("/")) apiAddress += "/";
+                
+                try
                 {
-                    client.BaseAddress = new System.Uri(apiAddress);
-                    var response = await client.GetAsync($"api/Product/{id}");
-                    if (response.IsSuccessStatusCode)
+                    using (var client = new System.Net.Http.HttpClient())
                     {
-                        var jsonString = await response.Content.ReadAsStringAsync();
-                        // Assuming the API returns a structured response similar to the frontend's expectation { isSuccess: true, data: {...} }
-                        // We can just forward the JSON directly!
-                        if(jsonString.Contains("\"isSuccess\":true", StringComparison.OrdinalIgnoreCase) || jsonString.Contains("\"data\":", StringComparison.OrdinalIgnoreCase)) {
-                            return Content(jsonString, "application/json");
+                        client.BaseAddress = new System.Uri(apiAddress);
+                        var response = await client.GetAsync($"api/Product/{id}");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var jsonString = await response.Content.ReadAsStringAsync();
+                            if(jsonString.Contains("\"isSuccess\":true", StringComparison.OrdinalIgnoreCase) || jsonString.Contains("\"data\":", StringComparison.OrdinalIgnoreCase)) {
+                                return Content(jsonString, "application/json");
+                            }
                         }
                     }
                 }
-            }
-            catch { }
+                catch { }
 
-            // Fallback: If API doesn't have the endpoint, use the slow method (now cached)
-            if (!_cache.TryGetValue("CachedProducts", out naif_katalog.Models.ResponseDto<List<naif_katalog.Models.Product>> prodResponse))
-            {
-                prodResponse = await _mediator.Send(new GetAllProductsQueryRequest());
+                if (!_cache.TryGetValue("CachedProducts", out naif_katalog.Models.ResponseDto<List<naif_katalog.Models.Product>> prodResponse))
+                {
+                    prodResponse = await _mediator.Send(new GetAllProductsQueryRequest());
+                    if (prodResponse != null && prodResponse.isSuccess)
+                    {
+                        _cache.Set("CachedProducts", prodResponse, TimeSpan.FromMinutes(10));
+                    }
+                }
+
                 if (prodResponse != null && prodResponse.isSuccess)
                 {
-                    _cache.Set("CachedProducts", prodResponse, TimeSpan.FromMinutes(10));
+                    var product = prodResponse.data.FirstOrDefault(p => p.Id == id);
+                    return Json(new { isSuccess = true, data = product });
                 }
+                return Json(new { isSuccess = false });
             }
-
-            if (prodResponse != null && prodResponse.isSuccess)
+            catch (Exception ex)
             {
-                var product = prodResponse.data.FirstOrDefault(p => p.Id == id);
-                return Json(new { isSuccess = true, data = product });
+                return Json(new { isSuccess = false, errors = new[] { ex.Message, ex.StackTrace } });
             }
-            return Json(new { isSuccess = false });
         }
 
         [HttpGet]

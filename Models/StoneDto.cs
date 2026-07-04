@@ -1,4 +1,4 @@
-﻿namespace naif_katalog.Models
+namespace naif_katalog.Models
 {
     public class StoneDto
     {
@@ -10,6 +10,7 @@
         public int? StoneSettingId { get; set; }
         public naif_katalog.Core.Features.StoneSettingFeature.Queries.StoneSettingDto StoneSetting { get; set; }
         public int? StoneClarityId { get; set; }
+        public int? StoneTypeId { get; set; }
     }
 }
 

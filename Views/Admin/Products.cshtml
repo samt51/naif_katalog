@@ -3,7 +3,7 @@
 @{
     var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
     if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
-    ViewData["Title"] = "Ürünler";
+    ViewData["Title"] = "ÃœrÃ¼nler";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
@@ -42,23 +42,23 @@
 
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0;"><i class="fas fa-box" style="color:var(--primary); margin-right:10px;"></i> Ürünler</h2>
-        <button onclick="openModal(0)" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Yeni Ürün</button>
+        <h2 style="margin:0;"><i class="fas fa-box" style="color:var(--primary); margin-right:10px;"></i> ÃœrÃ¼nler</h2>
+        <button onclick="openModal(0)" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Yeni ÃœrÃ¼n</button>
     </div>
 
     <div style="margin-bottom: 20px;">
         <button type="button" id="btnToggleFilters" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:8px 15px; border-radius:6px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px; margin-bottom:10px; transition:0.2s;">
-            <i class="fas fa-filter"></i> Filtreleri Göster/Gizle
+            <i class="fas fa-filter"></i> Filtreleri GÃ¶ster/Gizle
         </button>
         <div id="filterCollapse" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; flex-direction:row; gap:15px; align-items:flex-end; flex-wrap:wrap;">
             <div style="flex:0 0 auto;">
-                <label style="display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:5px;">Ürün Koduna Göre Ara</label>
-                <input type="text" id="codeFilter" class="form-control" placeholder="Ürün kodu girin..." style="width:200px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
+                <label style="display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:5px;">ÃœrÃ¼n Koduna GÃ¶re Ara</label>
+                <input type="text" id="codeFilter" class="form-control" placeholder="ÃœrÃ¼n kodu girin..." style="width:200px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;" />
             </div>
             <div style="flex:0 0 auto;">
-                <label style="display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:5px;">Kategoriye Göre Filtrele</label>
+                <label style="display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:5px;">Kategoriye GÃ¶re Filtrele</label>
                 <select id="categoryFilter" class="form-control" style="width:250px; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px;">
-                    <option value="">Tüm Kategoriler</option>
+                    <option value="">TÃ¼m Kategoriler</option>
                     @if(Model.Categories != null)
                     {
                         foreach(var cat in Model.Categories)
@@ -75,13 +75,13 @@
         <thead>
             <tr>
                 <th>Resim</th>
-                <th>Ürün Adı</th>
+                <th>ÃœrÃ¼n AdÄ±</th>
                 <th>Kod</th>
                 <th>Kategori</th>
                 <th>Karat</th>
-                <th>Ağırlık</th>
+                <th>AÄŸÄ±rlÄ±k</th>
                 <th>Maliyet</th>
-                <th>İşlemler</th>
+                <th>Ä°ÅŸlemler</th>
             </tr>
         </thead>
         <tbody>
@@ -109,12 +109,12 @@
                             <div style="display:flex; gap:8px;">
                                 <a href="/Admin/CategoryAssign?code=@item.Code"
                                    style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #3b82f6; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(59,130,246,0.2); text-decoration:none;" 
-                                   title="Hızlı Kategori Ata">
+                                   title="HÄ±zlÄ± Kategori Ata">
                                     <i class="fas fa-random"></i>
                                 </a>
                                 <button onclick="openModal(@item.Id)" 
                                         style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);" 
-                                        title="Düzenle">
+                                        title="DÃ¼zenle">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #ef4444; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(239,68,68,0.2);" 
@@ -134,7 +134,7 @@
 <div class="modal-overlay" id="productModal">
     <div class="modal-content" style="max-width:1200px;">
         <div class="modal-header">
-            <h3 id="modalTitle">Yeni Ürün Ekle</h3>
+            <h3 id="modalTitle">Yeni ÃœrÃ¼n Ekle</h3>
             <button type="button" class="btn-close" onclick="closeModal()" style="border:none;background:none;font-size:24px;cursor:pointer;">&times;</button>
         </div>
         
@@ -143,7 +143,7 @@
             <div style="flex:2; display:flex; flex-direction:column; border-right:1px solid var(--border-color); overflow-y:auto;">
                 <div class="modal-tabs">
                     <div class="modal-tab active" onclick="switchTab('genel')">Genel Bilgiler</div>
-                    <div class="modal-tab" onclick="switchTab('taslar')">Taşlar</div>
+                    <div class="modal-tab" onclick="switchTab('taslar')">TaÅŸlar</div>
                     <div class="modal-tab" onclick="switchTab('resimler')">Resimler</div>
                 </div>
                 
@@ -151,15 +151,15 @@
                     <form id="productForm">
                         <input type="hidden" id="productId" name="Id" value="0" />
                         
-                        <!-- GENEL BİLGİLER -->
+                        <!-- GENEL BÄ°LGÄ°LER -->
                         <div id="tab-genel" class="tab-content active">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>Ürün Kodu</label>
+                                    <label>ÃœrÃ¼n Kodu</label>
                                     <input type="text" id="Code" name="Code" required style="text-transform:uppercase;" />
                                 </div>
                                 <div class="form-group">
-                                    <label>Ürün Adı</label>
+                                    <label>ÃœrÃ¼n AdÄ±</label>
                                     <input type="text" id="Name" name="Name" required />
                                 </div>
                             </div>
@@ -174,20 +174,20 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label>Maden Türü</label>
+                                    <label>Maden TÃ¼rÃ¼</label>
                                     <select id="MetalTypeId" name="MetalTypeId" required>
-                                        <option value="">Seçiniz</option>
+                                        <option value="">SeÃ§iniz</option>
                                         @if(Model.MetalTypes != null){ foreach(var mt in Model.MetalTypes){ <option value="@mt.Id">@mt.Name</option> } }
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Ağırlık (Gram)</label>
+                                    <label>AÄŸÄ±rlÄ±k (Gram)</label>
                                     <input type="number" step="any" id="Gram" name="Gram" value="0" />
                                 </div>
                                 <div class="form-group">
-                                    <label>Karat Değeri</label>
+                                    <label>Karat DeÄŸeri</label>
                                     <select id="Karat" name="Karat">
-                                        <option value="">Seçiniz</option>
+                                        <option value="">SeÃ§iniz</option>
                                         @if(Model.MetalPurities != null){ foreach(var p in Model.MetalPurities){ <option value="@p.Name" data-id="@p.Id">@p.Name</option> } }
                                     </select>
                                 </div>
@@ -196,7 +196,7 @@
                             <div class="form-row">
 
                                 <div class="form-group">
-                                    <label>İşçilik Çarpanı</label>
+                                    <label>Ä°ÅŸÃ§ilik Ã‡arpanÄ±</label>
                                     <input type="number" step="any" id="LaborMultiplier" name="LaborMultiplier" value="0" />
                                 </div>
                                 <div class="form-group">
@@ -206,18 +206,18 @@
                             </div>
                             
                             <div class="form-group">
-                                <label>Açıklama</label>
+                                <label>AÃ§Ä±klama</label>
                                 <textarea id="Description" name="Description" rows="3"></textarea>
                             </div>
                         </div>
 
-                        <!-- TAÃ…ÂLAR -->
+                        <!-- TAÃƒâ€¦Ã‚ÂLAR -->
                         <div id="tab-taslar" class="tab-content">
                             <div class="form-row" style="align-items:flex-end;">
                                 <div class="form-group">
-                                    <label>Berraklık</label>
+                                    <label>BerraklÄ±k</label>
                                     <select id="ClarityId" name="ClarityId" onchange="filterStonesByClarity()">
-                                        <option value="">Seçiniz</option>
+                                        <option value="">SeÃ§iniz</option>
                                         @{
                                             var stones = Model.Stones as IEnumerable<naif_katalog.Models.StoneDto>;
                                             var clarities = Model.StoneClarities as IEnumerable<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>;
@@ -232,9 +232,9 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Taş</label>
+                                    <label>TaÅŸ</label>
                                     <select id="StoneId" disabled>
-                                        <option value="">Seçiniz</option>
+                                        <option value="">SeÃ§iniz</option>
                                         @if(Model.Stones != null) { 
                                             foreach(var s in Model.Stones) { 
                                                 var stoneTypeName = "";
@@ -254,7 +254,7 @@
                                 <div class="form-group">
                                     <label>Renk</label>
                                     <select id="ColorId" name="ColorId">
-                                        <option value="">Seçiniz</option>
+                                        <option value="">SeÃ§iniz</option>
                                         @if(Model.Colors != null) { 
                                             foreach(var c in Model.Colors) { 
                                                 if(c.ColorType == "Stone") {
@@ -286,21 +286,21 @@
                             </div>
                             
                             <table class="table table-striped" style="font-size:13px; width:100%;">
-                                <thead><tr><th>Berraklık</th><th>Taş Türü</th><th>Taş</th><th>Renk</th><th>Adet</th><th>Karat</th><th>T. Karat</th><th>Birim Fiyat</th><th>İşlem</th></tr></thead>
+                                <thead><tr><th>BerraklÄ±k</th><th>TaÅŸ TÃ¼rÃ¼</th><th>TaÅŸ</th><th>Renk</th><th>Adet</th><th>Karat</th><th>T. Karat</th><th>Birim Fiyat</th><th>Ä°ÅŸlem</th></tr></thead>
                                 <tbody id="stoneTableBody">
-                                    <tr><td colspan="9" class="text-center text-muted">Henüz taş eklenmemiş</td></tr>
+                                    <tr><td colspan="9" class="text-center text-muted">HenÃ¼z taÅŸ eklenmemiÅŸ</td></tr>
                                 </tbody>
                             </table>
                         </div>
 
 
 
-                        <!-- RESİMLER -->
+                        <!-- RESÄ°MLER -->
                         <div id="tab-resimler" class="tab-content">
                             <div id="uploadArea" style="border:2px dashed var(--border-color); border-radius:12px; padding:40px; text-align:center; cursor:pointer; margin-bottom:20px;">
                                 <i class="fas fa-cloud-upload-alt" style="font-size:48px; color:var(--text-muted); margin-bottom:15px;"></i>
-                                <h4>Resim Yüklemek İçin Tıklayın</h4>
-                                <p class="text-muted">veya sürükleyip bırakın</p>
+                                <h4>Resim YÃ¼klemek Ä°Ã§in TÄ±klayÄ±n</h4>
+                                <p class="text-muted">veya sÃ¼rÃ¼kleyip bÄ±rakÄ±n</p>
                             </div>
                             <input type="file" id="imageInput" multiple accept="image/*" style="display:none;" />
                             <div id="imageGallery" style="display:flex; gap:15px; flex-wrap:wrap;"></div>
@@ -309,22 +309,22 @@
                 </div>
                 
                 <div style="padding:20px 24px; border-top:1px solid #cbd5e1; display:flex; gap:12px;">
-                    <button type="button" class="btn btn-light" style="flex:0.3; font-weight:600; color:#475569; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:10px;" onclick="closeModal()">İptal</button>
+                    <button type="button" class="btn btn-light" style="flex:0.3; font-weight:600; color:#475569; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:10px;" onclick="closeModal()">Ä°ptal</button>
                     <button type="submit" form="productForm" id="btnSave" class="btn btn-primary" style="flex:0.7; font-weight:600; background:#3b82f6; border:none; border-radius:6px; padding:10px; color:#fff;">Kaydet</button>
                 </div>
             </div>
 
-            <!-- Sağ Taraf: Canlı Hesaplama -->
+            <!-- SaÄŸ Taraf: CanlÄ± Hesaplama -->
             <div style="flex:1; background:#f8fafc; padding:24px; display:flex; flex-direction:column; gap:20px; border-left:1px solid var(--border-color);">
-                <h4 style="margin:0; color:var(--text-dark); border-bottom:1px solid #e2e8f0; padding-bottom:10px;"><i class="fas fa-calculator text-primary"></i> Canlı Maliyet</h4>
+                <h4 style="margin:0; color:var(--text-dark); border-bottom:1px solid #e2e8f0; padding-bottom:10px;"><i class="fas fa-calculator text-primary"></i> CanlÄ± Maliyet</h4>
                 
                 <div class="form-group">
-                    <label>Canlı Has Fiyatı ($)</label>
+                    <label>CanlÄ± Has FiyatÄ± ($)</label>
                     <input type="number" id="LiveHasPrice" name="LiveGoldPrice" step="any" class="form-control" style="font-weight:bold; color:var(--primary);" oninput="calculateLiveCost()" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Satış Çarpanı</label>
+                    <label>SatÄ±ÅŸ Ã‡arpanÄ±</label>
                     <input type="number" id="SalesMultiplier" step="any" value="1.00" class="form-control" oninput="calculateLiveCost()" />
                 </div>
 
@@ -334,11 +334,11 @@
                         <strong id="summaryGoldCost">$0.00</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span class="text-muted">İşçilik:</span>
+                        <span class="text-muted">Ä°ÅŸÃ§ilik:</span>
                         <strong id="summaryLaborCost">$0.00</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span class="text-muted">Taş & Mıhlama:</span>
+                        <span class="text-muted">TaÅŸ & MÄ±hlama:</span>
                         <strong id="summaryStoneCost">$0.00</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -351,7 +351,7 @@
                         <strong id="summaryTotalCost" style="color:#ef4444; font-size:16px;">$0.00</strong>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-top:15px; background:var(--primary); color:white; padding:10px; border-radius:6px;">
-                        <span style="font-weight:600;">Satış Fiyatı:</span>
+                        <span style="font-weight:600;">SatÄ±ÅŸ FiyatÄ±:</span>
                         <strong id="summarySalesPrice" style="font-size:18px;">$0.00</strong>
                     </div>
                 </div>
@@ -420,7 +420,7 @@
         select.style.flex = "1";
         select.style.minWidth = "150px";
         
-        select.innerHTML = '<option value="">Seçiniz</option>';
+        select.innerHTML = '<option value="">SeÃ§iniz</option>';
         children.forEach(c => {
             const id = c.Id !== undefined ? c.Id : c.id;
             const name = c.Name !== undefined ? c.Name : c.name;
@@ -465,12 +465,12 @@
             }
         }
         if (!selectedId) {
-            if(!silent) Swal.fire('Uyarı', 'Lütfen bir kategori seçiniz.', 'warning');
+            if(!silent) Swal.fire('UyarÄ±', 'LÃ¼tfen bir kategori seÃ§iniz.', 'warning');
             return;
         }
 
         if (selectedCategoryIds.includes(selectedId)) {
-            if(!silent) Swal.fire('Uyarı', 'Bu kategori zaten ekli.', 'warning');
+            if(!silent) Swal.fire('UyarÄ±', 'Bu kategori zaten ekli.', 'warning');
             return;
         }
 
@@ -537,7 +537,7 @@
             }
         } catch(e) {}
 
-        // Kategori dinlemesi artık butonla yapıldığı için burayı kaldırdık
+        // Kategori dinlemesi artÄ±k butonla yapÄ±ldÄ±ÄŸÄ± iÃ§in burayÄ± kaldÄ±rdÄ±k
 
         document.getElementById('Code').addEventListener('input', function() {
             this.value = this.value.toLocaleUpperCase('tr-TR');
@@ -594,7 +594,7 @@
     document.getElementById('PolishingCost').addEventListener('input', calculateLiveCost);
     document.getElementById('Karat').addEventListener('change', calculateLiveCost);
 
-    // Taş karat oto-hesaplama
+    // TaÅŸ karat oto-hesaplama
     function updateStoneTotalCarat() {
         const qty = parseFloat(document.getElementById('StoneQuantity').value) || 0;
         const car = parseFloat(document.getElementById('StoneCarat').value) || 0;
@@ -617,7 +617,7 @@
 
     async function openModal(id = 0, preserveTab = false) {
         document.getElementById('productId').value = id;
-        document.getElementById('modalTitle').innerText = id === 0 ? "Yeni Ürün Ekle" : "Ürünü Düzenle";
+        document.getElementById('modalTitle').innerText = id === 0 ? "Yeni ÃœrÃ¼n Ekle" : "ÃœrÃ¼nÃ¼ DÃ¼zenle";
         
         tempStones = [];
         tempImages = [];
@@ -655,14 +655,14 @@
             
             calculateLiveCost();
         } else {
-            document.getElementById('modalTitle').innerText = "Veriler Yükleniyor...";
+            document.getElementById('modalTitle').innerText = "Veriler YÃ¼kleniyor...";
             document.getElementById('productForm').style.opacity = '0.5';
             document.getElementById('productForm').style.pointerEvents = 'none';
 
             fetch('/Product/Details/' + id)
                 .then(r => r.json())
                 .then(res => {
-                    document.getElementById('modalTitle').innerText = "Ürünü Düzenle";
+                    document.getElementById('modalTitle').innerText = "ÃœrÃ¼nÃ¼ DÃ¼zenle";
                     document.getElementById('productForm').style.opacity = '1';
                     document.getElementById('productForm').style.pointerEvents = 'auto';
 
@@ -723,10 +723,10 @@
                 })
                 .catch(err => {
                     console.error("openModal error:", err);
-                    document.getElementById('modalTitle').innerText = "Hata Oluştu!";
+                    document.getElementById('modalTitle').innerText = "Hata OluÅŸtu!";
                     document.getElementById('productForm').style.opacity = '1';
                     document.getElementById('productForm').style.pointerEvents = 'auto';
-                    Swal.fire('Hata', 'Ürün detayları yüklenemedi. (' + err.message + ')', 'error');
+                    Swal.fire('Hata', 'ÃœrÃ¼n detaylarÄ± yÃ¼klenemedi. (' + err.message + ')', 'error');
                 });
         }
 
@@ -753,7 +753,7 @@
         const selectedClarity = document.getElementById('ClarityId').value;
         const stoneSelect = document.getElementById('StoneId');
         
-        stoneSelect.innerHTML = '<option value="">Seçiniz</option>'; // Temizle
+        stoneSelect.innerHTML = '<option value="">SeÃ§iniz</option>'; // Temizle
         
         if (!selectedClarity) {
             stoneSelect.setAttribute('disabled', 'disabled');
@@ -797,7 +797,7 @@
         }
 
         if(!sId) { 
-            Swal.fire({ icon: 'warning', title: 'Uyarı', text: 'Lütfen taş seçiniz' });
+            Swal.fire({ icon: 'warning', title: 'UyarÄ±', text: 'LÃ¼tfen taÅŸ seÃ§iniz' });
             return; 
         }
 
@@ -816,7 +816,7 @@
         
         renderStones();
         const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
-        Toast.fire({ icon: 'success', title: 'Taş eklendi' });
+        Toast.fire({ icon: 'success', title: 'TaÅŸ eklendi' });
     }
 
     function deleteStoneLocal(index) {
@@ -832,7 +832,7 @@
         globalStonesCost = 0;
         const stoneBody = document.getElementById('stoneTableBody');
         if(!tempStones || tempStones.length === 0) {
-            stoneBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">Henüz taş eklenmemiş</td></tr>`;
+            stoneBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">HenÃ¼z taÅŸ eklenmemiÅŸ</td></tr>`;
             calculateLiveCost();
             return;
         }
@@ -916,7 +916,7 @@
         const id = parseInt(formData.get('Id'));
         
         if (selectedCategoryIds.length === 0) {
-            Swal.fire('Uyarı', 'Lütfen en az bir kategori ekleyin.', 'warning');
+            Swal.fire('UyarÄ±', 'LÃ¼tfen en az bir kategori ekleyin.', 'warning');
             btn.disabled = false;
             btn.innerText = "Kaydet";
             return;
@@ -960,11 +960,11 @@
             const res = await fetch(url, { method: 'POST', body: formData });
             const result = await res.json();
             if (result.isSuccess) {
-                Swal.fire({ icon: 'success', title: 'Başarılı!', text: 'Ürün başarıyla kaydedildi!' }).then(() => {
+                Swal.fire({ icon: 'success', title: 'BaÅŸarÄ±lÄ±!', text: 'ÃœrÃ¼n baÅŸarÄ±yla kaydedildi!' }).then(() => {
                     location.reload();
                 });
             } else {
-                Swal.fire({ icon: 'error', title: 'Hata!', text: (result.errors ? result.errors.join(', ') : 'İşlem başarısız') });
+                Swal.fire({ icon: 'error', title: 'Hata!', text: (result.errors ? result.errors.join(', ') : 'Ä°ÅŸlem baÅŸarÄ±sÄ±z') });
             }
         } catch (err) {
             Swal.fire({ icon: 'error', title: 'Hata!', text: err.message });
@@ -977,7 +977,7 @@
     function deleteProduct(id) {
         Swal.fire({
             title: 'Emin misiniz?',
-            text: "Bu ürünü silmek istediğinize emin misiniz? (Ürün kalıcı olarak değil, sistemde gizlenecek şekilde işaretlenecektir)",
+            text: "Bu ürününüzü silmek istediğinize emin misiniz? (Ürün kalıcı olarak değil, sistemde gizlenecek şekilde işaretlenecektir)",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -985,42 +985,59 @@
             confirmButtonText: 'Evet, Sil!',
             cancelButtonText: 'İptal'
         }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire(
-                'Silindi (Test Modu)!',
-                'Ürün başarıyla silinmiş gibi işaretlendi ancak arka planda işlem yapılmadı.',
-                'success'
-            );
-        }
+            if (result.isConfirmed) {
+                fetch(`@apiAddress/api/Products/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(res => res.json())
+                .then(async data => {
+                    if(data.isSuccess || data.success) {
+                        await fetch("/Product/ClearCache", { method: "POST" });
+                        Swal.fire(
+                            'Silindi!',
+                            'Ürün başarıyla silindi.',
+                            'success'
+                        ).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Hata!', data.message || 'Ürün silinirken bir hata oluştu.', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Hata!', 'Sunucuya baÄŸlanÄ±lamadÄ±.', 'error');
+                });
+            }
         });
     }
 
     $(document).ready(function() {
         var table = $('#productsTable').DataTable({
             pageLength: 50,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tümü"]],
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "TÃ¼mÃ¼"]],
             language: {
                 "sDecimal":        ",",
-                "sEmptyTable":     "Tabloda herhangi bir veri mevcut değil",
-                "sInfo":           "_TOTAL_ kayıttan _START_ - _END_ arasındaki kayıtlar gösteriliyor",
-                "sInfoEmpty":      "Kayıt yok",
-                "sInfoFiltered":   "(_MAX_ kayıt içerisinden bulunan)",
+                "sEmptyTable":     "Tabloda herhangi bir veri mevcut deÄŸil",
+                "sInfo":           "_TOTAL_ kayÄ±ttan _START_ - _END_ arasÄ±ndaki kayÄ±tlar gÃ¶steriliyor",
+                "sInfoEmpty":      "KayÄ±t yok",
+                "sInfoFiltered":   "(_MAX_ kayÄ±t iÃ§erisinden bulunan)",
                 "sInfoPostFix":    "",
                 "sInfoThousands":  ".",
-                "sLengthMenu":     "Sayfada _MENU_ kayıt göster",
-                "sLoadingRecords": "Yükleniyor...",
-                "sProcessing":     "İşleniyor...",
+                "sLengthMenu":     "Sayfada _MENU_ kayÄ±t gÃ¶ster",
+                "sLoadingRecords": "YÃ¼kleniyor...",
+                "sProcessing":     "Ä°ÅŸleniyor...",
                 "sSearch":         "Ara:",
-                "sZeroRecords":    "Eşleşen kayıt bulunamadı",
+                "sZeroRecords":    "EÅŸleÅŸen kayÄ±t bulunamadÄ±",
                 "oPaginate": {
-                    "sFirst":    "İlk",
+                    "sFirst":    "Ä°lk",
                     "sLast":     "Son",
                     "sNext":     "Sonraki",
-                    "sPrevious": "Önceki"
+                    "sPrevious": "Ã–nceki"
                 },
                 "oAria": {
-                    "sSortAscending":  ": artan sütun sıralamasını aktifleştir",
-                    "sSortDescending": ": azalan sütun sıralamasını aktifleştir"
+                    "sSortAscending":  ": artan sÃ¼tun sÄ±ralamasÄ±nÄ± aktifleÅŸtir",
+                    "sSortDescending": ": azalan sÃ¼tun sÄ±ralamasÄ±nÄ± aktifleÅŸtir"
                 }
             }
         });
@@ -1038,6 +1055,8 @@
         });
     });
 </script>
+
+
 
 
 

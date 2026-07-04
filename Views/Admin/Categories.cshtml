@@ -1,7 +1,11 @@
 @model List<naif_katalog.Models.CategoryDto>
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
 @{
     ViewData["Title"] = "Kategoriler";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var apiAddress = Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+    if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
 
     // Recursive helper for list items
     async Task RenderCategoryItem(naif_katalog.Models.CategoryDto cat, int level, List<naif_katalog.Models.CategoryDto> allCats)
@@ -10,7 +14,7 @@
         
         <div class="category-item border rounded mb-2 bg-white shadow-sm" data-id="@cat.Id">
             <div class="d-flex align-items-center p-3 border-bottom-0">
-                <div class="me-3 cursor-grab drag-handle text-muted" style="cursor: grab;" title="Sürükle bırak ile sırala">
+                <div class="me-3 cursor-grab drag-handle text-muted" style="cursor: grab;" title="SÃ¼rÃ¼kle bÄ±rak ile sÄ±rala">
                     <i class="fas fa-grip-vertical fs-5"></i>
                 </div>
                 <div class="flex-grow-1">
@@ -24,7 +28,7 @@
                 </div>
                 <div class="text-end">
                     <button onclick="openModal('Alt Kategori Ekle', 0, '', @cat.Id)" class="btn btn-sm btn-light text-primary border me-1" title="Buna Alt Kategori Ekle"><i class="fas fa-plus"></i></button>
-                    <button onclick="openModal('Kategori Güncelle', @cat.Id, '@cat.Name', @cat.ParentId)" class="btn btn-sm btn-light text-secondary border me-1" title="Düzenle"><i class="fas fa-edit"></i></button>
+                    <button onclick="openModal('Kategori GÃ¼ncelle', @cat.Id, '@cat.Name', @cat.ParentId)" class="btn btn-sm btn-light text-secondary border me-1" title="DÃ¼zenle"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-sm btn-light text-danger border" title="Sil" onclick="deleteCategory(@cat.Id)"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
@@ -87,8 +91,8 @@
 <div class="category-card p-4">
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <div>
-            <h2 class="h4 mb-1 fw-bold text-dark"><i class="fas fa-sitemap text-primary me-2"></i> Kategori Yönetimi</h2>
-            <p class="text-muted mb-0 small">Kategorilerinizi hiyerarşik olarak yönetin. Sıralamayı değiştirmek için soldaki tutamaçtan <i class="fas fa-grip-vertical mx-1"></i> sürükleyip bırakabilirsiniz.</p>
+            <h2 class="h4 mb-1 fw-bold text-dark"><i class="fas fa-sitemap text-primary me-2"></i> Kategori YÃ¶netimi</h2>
+            <p class="text-muted mb-0 small">Kategorilerinizi hiyerarÅŸik olarak yÃ¶netin. SÄ±ralamayÄ± deÄŸiÅŸtirmek iÃ§in soldaki tutamaÃ§tan <i class="fas fa-grip-vertical mx-1"></i> sÃ¼rÃ¼kleyip bÄ±rakabilirsiniz.</p>
         </div>
         <button onclick="openModal('Yeni Kategori Ekle', 0, '', 0)" class="btn btn-primary rounded-pill px-4 shadow-sm">
             <i class="fas fa-plus me-1"></i> Yeni Ana Kategori
@@ -101,7 +105,7 @@
             var mainCategories = Model.Where(c => c.ParentId == 0).OrderBy(c => c.OrderIndex).ToList();
             if(mainCategories.Count == 0)
             {
-                <div class="text-center py-5 text-muted">Kategori bulunamadı.</div>
+                <div class="text-center py-5 text-muted">Kategori bulunamadÄ±.</div>
             }
             foreach(var item in mainCategories)
             {
@@ -110,7 +114,7 @@
         }
         else
         {
-            <div class="text-center py-5 text-muted">Kategori bulunamadı. Lütfen yeni kategori ekleyin.</div>
+            <div class="text-center py-5 text-muted">Kategori bulunamadÄ±. LÃ¼tfen yeni kategori ekleyin.</div>
         }
     </div>
 </div>
@@ -124,9 +128,9 @@
         <form id="categoryForm">
             <input type="hidden" id="categoryId" name="Id" value="0" />
             <div class="form-group">
-                <label>Bağlı Olduğu Kategori (Üst Kategori)</label>
+                <label>BaÄŸlÄ± OlduÄŸu Kategori (Ãœst Kategori)</label>
                 <select id="parentCategory" name="ParentId" class="form-control-custom">
-                    <option value="0" class="fw-bold">--- ANA KATEGORİ (Bağımsız) ---</option>
+                    <option value="0" class="fw-bold">--- ANA KATEGORÄ° (BaÄŸÄ±msÄ±z) ---</option>
                     @if(Model != null)
                     {
                         foreach(var cat in Model.Where(c => c.ParentId == 0).OrderBy(c => c.OrderIndex))
@@ -137,8 +141,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Kategori Adı</label>
-                <input type="text" id="categoryName" name="Name" class="form-control-custom" required placeholder="Örn: Alyans..." />
+                <label>Kategori AdÄ±</label>
+                <input type="text" id="categoryName" name="Name" class="form-control-custom" required placeholder="Ã–rn: Alyans..." />
             </div>
             <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm mt-2" id="btnSave">Kategoriyi Kaydet</button>
         </form>
@@ -198,11 +202,11 @@
         .then(res => res.json())
         .then(data => {
             if(!data.isSuccess) {
-                Swal.fire('Hata', 'Sıralama kaydedilemedi.', 'error');
+                Swal.fire('Hata', 'SÄ±ralama kaydedilemedi.', 'error');
             }
         })
         .catch(err => {
-            console.error('Sıralama hatası:', err);
+            console.error('SÄ±ralama hatasÄ±:', err);
         });
     }
 
@@ -226,7 +230,7 @@
     function deleteCategory(id) {
         Swal.fire({
             title: 'Emin misiniz?',
-            text: "Bu kategoriyi silmek istediğinize emin misiniz?",
+            text: 'Bu kategoriyi silmek istediğinize emin misiniz?',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -235,8 +239,27 @@
             cancelButtonText: 'İptal'
         }).then((result) => {
             if (result.isConfirmed) {
-                // ... assuming you have a delete endpoint
-                Swal.fire('Silindi!', 'Bu özellik eklenecektir.', 'info');
+                fetch(`@@apiAddress/api/Category/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.isSuccess || data.success) {
+                        Swal.fire(
+                            'Silindi!',
+                            'Kategori başarıyla silindi.',
+                            'success'
+                        ).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire('Hata!', data.message || 'Kategori silinirken bir hata oluştu.', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Hata!', 'Sunucuya bağlanılamadı.', 'error');
+                });
             }
         });
     }
@@ -269,7 +292,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Harika!',
-                    text: 'Kategori başarıyla kaydedildi.',
+                    text: 'Kategori baÅŸarÄ±yla kaydedildi.',
                     confirmButtonColor: '#2ecc71',
                     timer: 1500,
                     showConfirmButton: false
@@ -279,15 +302,15 @@
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Hata Oluştu',
-                    text: result.errors ? result.errors.join(', ') : 'İşlem başarısız',
+                    title: 'Hata OluÅŸtu',
+                    text: result.errors ? result.errors.join(', ') : 'Ä°ÅŸlem baÅŸarÄ±sÄ±z',
                     confirmButtonColor: '#e74c3c'
                 });
             }
         } catch (err) {
             Swal.fire({
                 icon: 'error',
-                title: 'Sistem Hatası',
+                title: 'Sistem HatasÄ±',
                 text: err.message,
                 confirmButtonColor: '#e74c3c'
             });
@@ -297,3 +320,5 @@
         }
     });
 </script>
+
+

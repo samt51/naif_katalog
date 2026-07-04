@@ -27,7 +27,19 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
             var localAddress = _configuration["LocalAddress"] ?? "https://localhost:3434/";
             if (!localAddress.EndsWith("/")) localAddress += "/";
 
-            var apiResult = await _apiService.GetAsync<List<ApiProduct>>("api/Products");
+            var qs = new List<string>();
+            if (!string.IsNullOrEmpty(request.Code)) qs.Add($"Code={System.Net.WebUtility.UrlEncode(request.Code)}");
+            if (!string.IsNullOrEmpty(request.Category)) qs.Add($"Category={System.Net.WebUtility.UrlEncode(request.Category)}");
+            if (request.MinGram.HasValue) qs.Add($"MinGram={request.MinGram.Value}");
+            if (request.MaxGram.HasValue) qs.Add($"MaxGram={request.MaxGram.Value}");
+            if (request.MetalTypeId.HasValue) qs.Add($"MetalTypeId={request.MetalTypeId.Value}");
+            if (request.ClarityId.HasValue) qs.Add($"ClarityId={request.ClarityId.Value}");
+            if (request.StoneId.HasValue) qs.Add($"StoneId={request.StoneId.Value}");
+            if (request.StoneTypeId.HasValue) qs.Add($"StoneTypeId={request.StoneTypeId.Value}");
+            
+            var url = "api/Products" + (qs.Any() ? "?" + string.Join("&", qs) : "");
+
+            var apiResult = await _apiService.GetAsync<List<ApiProduct>>(url);
             
             if (apiResult.isSuccess && apiResult.data != null)
             {

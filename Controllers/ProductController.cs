@@ -21,18 +21,40 @@ namespace naif_katalog.Controllers
             _cache = cache;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? code, string? category, decimal? minGram, decimal? maxGram, int? metalTypeId, int? clarityId, int? stoneId, int? stoneTypeId)
         {
             dynamic model = new ExpandoObject();
             
-            if (!_cache.TryGetValue("CachedProducts", out naif_katalog.Models.ResponseDto<List<naif_katalog.Models.Product>> prodResponse))
+            bool hasFilters = !string.IsNullOrEmpty(code) || !string.IsNullOrEmpty(category) || minGram.HasValue || maxGram.HasValue || metalTypeId.HasValue || clarityId.HasValue || stoneId.HasValue || stoneTypeId.HasValue;
+            
+            naif_katalog.Models.ResponseDto<List<naif_katalog.Models.Product>> prodResponse = null;
+
+            if (!hasFilters)
             {
-                prodResponse = await _mediator.Send(new GetAllProductsQueryRequest());
-                if (prodResponse != null && prodResponse.isSuccess)
+                if (!_cache.TryGetValue("CachedProducts", out prodResponse))
                 {
-                    _cache.Set("CachedProducts", prodResponse, TimeSpan.FromMinutes(10));
+                    prodResponse = await _mediator.Send(new GetAllProductsQueryRequest());
+                    if (prodResponse != null && prodResponse.isSuccess)
+                    {
+                        _cache.Set("CachedProducts", prodResponse, TimeSpan.FromMinutes(10));
+                    }
                 }
             }
+            else
+            {
+                prodResponse = await _mediator.Send(new GetAllProductsQueryRequest 
+                { 
+                    Code = code, 
+                    Category = category, 
+                    MinGram = minGram, 
+                    MaxGram = maxGram, 
+                    MetalTypeId = metalTypeId, 
+                    ClarityId = clarityId, 
+                    StoneId = stoneId,
+                    StoneTypeId = stoneTypeId 
+                });
+            }
+            
             model.Products = prodResponse != null && prodResponse.isSuccess ? prodResponse.data : new List<naif_katalog.Models.Product>();
 
             var catResponse = await _mediator.Send(new GetAllCategoriesQueryRequest());

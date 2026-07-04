@@ -71,7 +71,7 @@ public class HomeController : Controller
         return RedirectToAction("Index");
     }
 
-    public async Task<IActionResult> Index(int? categoryId = null, string? search = null)
+    public async Task<IActionResult> Index(int? categoryId = null, string? search = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortOrder = null)
     {
         List<Product> fetchedProducts = new List<Product>();
 
@@ -121,6 +121,65 @@ public class HomeController : Controller
         ViewBag.CurrentCategoryId = categoryId;
         ViewBag.SearchQuery = search;
 
+        try {
+            var colorsResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalTypesQueryRequest());
+            ViewBag.MetalTypes = (colorsResp != null && colorsResp.isSuccess) ? colorsResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto>();
+
+            var claritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
+            ViewBag.Clarities = (claritiesResp != null && claritiesResp.isSuccess) ? claritiesResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>();
+
+            var stoneTypesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
+            ViewBag.StoneTypes = (stoneTypesResp != null && stoneTypesResp.isSuccess) ? stoneTypesResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>();
+        } catch (Exception ex) {
+            Console.WriteLine("Error fetching filters: " + ex.Message);
+            ViewBag.MetalTypes = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto>();
+            ViewBag.Clarities = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>();
+            ViewBag.StoneTypes = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>();
+        }
+
+        // Fallback: If API failed (e.g. 401 Unauthorized because user is public), extract from products!
+        var metalTypeList = ViewBag.MetalTypes as List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto>;
+        if (metalTypeList == null || !metalTypeList.Any())
+        {
+            ViewBag.MetalTypes = fetchedProducts
+                .SelectMany(p => p.ProductMetals)
+                .Where(pm => pm != null && pm.MetalTypeId > 0 && !string.IsNullOrEmpty(pm.MetalTypeName))
+                .GroupBy(m => m.MetalTypeId)
+                .Select(g => new naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto { Id = g.Key, Name = g.First().MetalTypeName })
+                .ToList();
+        }
+
+        var clarityList = ViewBag.Clarities as List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>;
+        if (clarityList == null || !clarityList.Any())
+        {
+            ViewBag.Clarities = fetchedProducts
+                .SelectMany(p => p.ProductStones)
+                .Where(ps => ps != null && ps.ClarityId.HasValue && !string.IsNullOrEmpty(ps.ClarityName))
+                .GroupBy(c => c.ClarityId.Value)
+                .Select(g => new naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto { Id = g.Key, Name = g.First().ClarityName })
+                .ToList();
+        }
+
+        var stoneTypeList = ViewBag.StoneTypes as List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>;
+        if (stoneTypeList == null || !stoneTypeList.Any())
+        {
+            // Fallback common stone types since we cannot extract from ApiProductStone
+            ViewBag.StoneTypes = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>
+            {
+                new naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto { Id = 1, Name = "Pırlanta" },
+                new naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto { Id = 2, Name = "Zümrüt" },
+                new naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto { Id = 3, Name = "Safir" },
+                new naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto { Id = 4, Name = "Yakut" }
+            };
+        }
+
+        try {
+            var stoneResponse = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
+            ViewBag.Stones = (stoneResponse != null && stoneResponse.isSuccess) ? stoneResponse.data : new List<naif_katalog.Models.StoneDto>();
+        } catch {
+            ViewBag.Stones = new List<naif_katalog.Models.StoneDto>();
+        }
+
         foreach (var item in fetchedProducts)
         {
             if (item.Code == "API_ERROR")
@@ -132,9 +191,29 @@ public class HomeController : Controller
             if (!string.IsNullOrEmpty(search) && !item.Code.Contains(search, StringComparison.OrdinalIgnoreCase))
                 continue;
 
+            if (minPrice.HasValue && item.CalculatedPrice < minPrice.Value)
+                continue;
+
+            if (maxPrice.HasValue && item.CalculatedPrice > maxPrice.Value)
+                continue;
+
             products.Add(item);
         }
 
+        switch (sortOrder)
+        {
+            case "price_asc":
+                products = products.OrderBy(p => p.CalculatedPrice).ToList();
+                break;
+            case "price_desc":
+                products = products.OrderByDescending(p => p.CalculatedPrice).ToList();
+                break;
+            default:
+                // Önerilen
+                break;
+        }
+
+        ViewBag.CurrentSort = sortOrder;
         return View(products);
     }
 }

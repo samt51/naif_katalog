@@ -39,115 +39,526 @@
 
 
 
-<div class="container mt-4">
-    @if (!isLoggedIn)
-    {
-        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-            <i class="fas fa-info-circle me-3 fs-4"></i>
-            <div>
-                Fiyatları görüntülemek için lütfen <strong>Giriş Yapın</strong>. Hesabınız yoksa, admin ile iletişime geçerek hesap oluşturabilirsiniz.
-            </div>
-            <a href="https://wa.me/@adminWhatsAppPhone" target="_blank" class="btn btn-success ms-auto rounded-pill text-nowrap">
-                <i class="fab fa-whatsapp"></i> Hesap İste
-            </a>
-        </div>
+<style>
+    /* Premium Minimalist Layout */
+    .premium-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 50px;
+        max-width: 1700px;
+        margin: 0 auto;
+        padding: 40px 3%;
     }
-
-    @if (isSearchActive)
-    {
-        <div class="search-results-header mb-4 p-3 rounded d-flex align-items-center justify-content-between">
-            <div>
-                <span class="text-muted">Arama:</span>
-                <strong class="ms-1">"@searchQuery"</strong>
-                <span class="badge bg-secondary ms-2">@Model.Count sonuç</span>
-            </div>
-            <a href="@Url.Action("Index", "Home")" class="btn btn-sm btn-outline-dark rounded-pill px-3">
-                <span>&times;</span> Aramayı Temizle
-            </a>
-        </div>
+    
+    /* Sidebar Styles */
+    .sidebar {
+        background: #fff;
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        padding-right: 15px;
+        /* Scrollbar styling for sticky sidebar */
+        scrollbar-width: thin;
+        scrollbar-color: #e2e8f0 transparent;
     }
+    .sidebar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+        background-color: #e2e8f0;
+        border-radius: 4px;
+    }
+    
+    .filter-section {
+        margin-bottom: 30px;
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 25px;
+    }
+    .filter-section:last-child {
+        border-bottom: none;
+    }
+    .filter-title {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        color: #1e293b;
+        text-transform: uppercase;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+    .filter-title span {
+        pointer-events: none;
+    }
+    .filter-input {
+        border: 1px solid #e2e8f0;
+        border-radius: 30px;
+        padding: 10px 20px;
+        font-size: 13px;
+        color: #475569;
+        width: 100%;
+        outline: none;
+        transition: 0.3s ease;
+    }
+    .filter-input:focus {
+        border-color: #94a3b8;
+        box-shadow: 0 0 0 2px rgba(148,163,184,0.1);
+    }
+    
+    /* Custom Checkbox */
+    .custom-checkbox {
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+    }
+    .custom-checkbox .form-check-input {
+        width: 16px;
+        height: 16px;
+        margin-top: 0;
+        margin-right: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .custom-checkbox .form-check-input:checked {
+        background-color: #0f172a;
+        border-color: #0f172a;
+    }
+    .custom-checkbox .form-check-label {
+        font-size: 13px;
+        color: #475569;
+        cursor: pointer;
+        padding-top: 2px;
+    }
+    .category-tree-node {
+        margin-bottom: 10px;
+    }
+    
+    /* Product Grid */
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 30px;
+    }
+    
+    .premium-card {
+        background: #fff;
+        border: 1px solid #f1f5f9;
+        border-radius: 16px;
+        overflow: hidden;
+        transition: 0.3s ease;
+    }
+    .premium-card:hover {
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        transform: translateY(-5px);
+    }
+    .premium-card-img-wrapper {
+        position: relative;
+        padding-top: 100%; /* 1:1 Aspect Ratio */
+        background: #f8fafc;
+    }
+    .premium-card-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .premium-card-body {
+        padding: 25px 20px;
+        text-align: center;
+    }
+    .premium-card-title {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #0f172a;
+        margin-bottom: 8px;
+    }
+    .premium-card-details {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 20px;
+    }
+    .premium-btn-outline {
+        display: inline-block;
+        padding: 10px 30px;
+        border: 1px solid #0f172a;
+        border-radius: 30px;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: 0.3s ease;
+    }
+    .premium-btn-outline:hover {
+        background: #0f172a;
+        color: #fff;
+    }
+    
+    /* Mobile Overlay & Toggle */
+    @@media (max-width: 991px) {
+        .premium-layout {
+            grid-template-columns: 1fr;
+            padding: 20px;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 280px;
+            height: 100vh;
+            max-height: 100vh;
+            background: #fff;
+            z-index: 1050;
+            border-radius: 0;
+            padding: 30px 20px 80px 20px;
+            overflow-y: auto;
+            transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 10px 0 40px rgba(0,0,0,0.1);
+        }
+        .sidebar.active {
+            left: 0;
+        }
+        .sidebar-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            z-index: 1040;
+            display: none;
+            backdrop-filter: blur(4px);
+        }
+        .sidebar-overlay.active {
+            display: block;
+        }
+    }
+</style>
 
-    @if (groupedProducts.Count > 0)
-    {
-        foreach (var group in groupedProducts)
-        {
-            <div class="mb-5 p-4 border rounded bg-light">
-                <div id="categoryHeader" class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 border-secondary border-opacity-25">
-                    <h5 class="m-0 text-uppercase" style="letter-spacing: 1px;">
-                        <a href="@Url.Action("Index", "Home", new { category = group.Key })" class="text-dark text-decoration-none">@group.Key</a>
-                        @if (isSearchActive)
-                        {
-                            <span class="badge bg-secondary ms-2" style="font-size: 0.7rem; vertical-align: middle;">@group.Count()</span>
-                        }
-                    </h5>
-                    @if (!isSearchActive && string.IsNullOrEmpty(currentCategory) && group.Count() > 3)
-                    {
-                        <a href="@Url.Action("Index", "Home", new { category = group.Key })" class="btn btn-sm btn-outline-secondary btn-glow">Tümünü Gör (@group.Count()) &rarr;</a>
-                    }
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleFilterSidebar()"></div>
+
+<div class="premium-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar" id="filterSidebar">
+        <div class="d-flex justify-content-between align-items-center mb-4 d-lg-none">
+            <h5 class="m-0 fw-bold letter-spacing-1">FİLTRELER</h5>
+            <button class="btn-close" onclick="toggleFilterSidebar()"></button>
+        </div>
+        
+        <form method="GET" action="/Home/Index" id="publicFilterForm">
+            <input type="hidden" name="sortOrder" id="hiddenSortOrder" value="@ViewBag.CurrentSort" />
+            <!-- Arama -->
+            <div class="filter-section">
+                <h6 class="filter-title">ARAMA</h6>
+                <input type="text" name="search" value="@searchQuery" class="filter-input" placeholder="Kod veya isim..." />
+            </div>
+            
+            <!-- Fiyat Range -->
+            <div class="filter-section">
+                <h6 class="filter-title">FİYAT ARALIĞI ($)</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="number" step="any" name="minPrice" value="@Context.Request.Query["minPrice"]" class="filter-input text-center px-2" placeholder="Min" />
+                    <span class="text-muted">-</span>
+                    <input type="number" step="any" name="maxPrice" value="@Context.Request.Query["maxPrice"]" class="filter-input text-center px-2" placeholder="Max" />
                 </div>
-                <div class="row">
-                    @{
-                        var displayProducts = (isSearchActive || !string.IsNullOrEmpty(currentCategory)) ? group.ToList() : group.Take(3).ToList();
-                    }
-                    @foreach (var p in displayProducts)
-                    {
-                        decimal mockPrice = p.CalculatedPrice;
-                        
-                        <div class="col-md-4 mb-4">
-                            <div class="card shadow-sm h-100 border-0 bg-white">
-                                @if (p.Images.Count > 0)
-                                {
-                                    <div id="carousel-@p.Code" class="carousel slide" data-bs-interval="false">
-                                        <div class="carousel-inner rounded-top">
-                                            @for (int i = 0; i < p.Images.Count; i++)
-                                            {
-                                                <div class="carousel-item @(i == 0 ? "active" : "")">
-                                                    <div class="img-zoom-container">
-                                                        <img src="@p.Images[i]" class="d-block zoom-img" alt="@p.Code">
-                                                    </div>
-                                                </div>
-                                            }
-                                        </div>
-                                        @if (p.Images.Count > 1)
-                                        {
-                                            <button class="carousel-control-prev" type="button" data-bs-target="#carousel-@p.Code" data-bs-slide="prev">
-                                                <span class="carousel-control-prev-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
-                                            </button>
-                                            <button class="carousel-control-next" type="button" data-bs-target="#carousel-@p.Code" data-bs-slide="next">
-                                                <span class="carousel-control-next-icon bg-dark rounded-circle p-2" aria-hidden="true"></span>
-                                            </button>
+            </div>
+            
+            <!-- Karat Range -->
+            <div class="filter-section">
+                <h6 class="filter-title">KARAT ARALIĞI (ct)</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="number" step="any" name="minKarat" class="filter-input text-center px-2" placeholder="Min" />
+                    <span class="text-muted">-</span>
+                    <input type="number" step="any" name="maxKarat" class="filter-input text-center px-2" placeholder="Max" />
+                </div>
+            </div>
+            
+            <!-- Ağırlık Range -->
+            <div class="filter-section">
+                <h6 class="filter-title">AĞIRLIK (Gram)</h6>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="number" step="any" name="minGram" class="filter-input text-center px-2" placeholder="Min" />
+                    <span class="text-muted">-</span>
+                    <input type="number" step="any" name="maxGram" class="filter-input text-center px-2" placeholder="Max" />
+                </div>
+            </div>
+            
+            <!-- Kategori Accordion -->
+            <div class="filter-section">
+                <div class="filter-title" data-bs-toggle="collapse" data-bs-target="#collapseKategori">
+                    <span>KATEGORİ</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="collapse show" id="collapseKategori">
+                    @if(ViewBag.Categories != null) {
+                        var allCats = ((IEnumerable<naif_katalog.Models.CategoryDto>)ViewBag.Categories).ToList();
+                        var topLevelCats = allCats.Where(c => c.ParentId == 0).OrderBy(c => c.OrderIndex).ToList();
+                        foreach(var cat in topLevelCats) {
+                            var subCats = allCats.Where(c => c.ParentId == cat.Id).OrderBy(c => c.OrderIndex).ToList();
+                            <div class="category-tree-node">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="custom-checkbox m-0">
+                                        <input class="form-check-input" type="checkbox" name="categoryId" value="@cat.Id" id="cat_@cat.Id">
+                                        <label class="form-check-label ms-1 fw-bold" for="cat_@cat.Id">@cat.Name</label>
+                                    </div>
+                                    @if(subCats.Any()) {
+                                        <i class="fas fa-chevron-down text-muted" style="cursor:pointer; font-size:10px; padding:5px;" data-bs-toggle="collapse" data-bs-target="#subcat_@cat.Id"></i>
+                                    }
+                                </div>
+                                @if(subCats.Any()) {
+                                    <div class="collapse ms-3 mt-2" id="subcat_@cat.Id">
+                                        @foreach(var sub in subCats) {
+                                            <div class="custom-checkbox">
+                                                <input class="form-check-input" type="checkbox" name="categoryId" value="@sub.Id" id="cat_@sub.Id">
+                                                <label class="form-check-label ms-1" for="cat_@sub.Id">@sub.Name</label>
+                                            </div>
                                         }
                                     </div>
                                 }
-                                else
-                                {
-                                    <div class="bg-light d-flex align-items-center justify-content-center rounded-top" style="height:300px;">
-                                        <span class="text-muted">Resim Yok</span>
-                                    </div>
-                                }
-
-                                <div class="card-body text-center d-flex flex-column justify-content-end p-4">
-                                    <h5 class="card-title fw-bold text-uppercase letter-spacing-1 mb-2">@p.Code</h5>
-                                    <p class="text-dark fw-bold mb-3 user-select-none" style="cursor: default;">@(p.Gram.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)) g | @(p.Karat ?? "14K") | @mockPrice.ToString("N0") $</p>
-                                    
-                                    <a href="/Home/Detail/@p.Id" class="btn btn-outline-dark rounded-pill px-4 py-2 mt-2 w-100 fw-bold" style="letter-spacing: 1px;">
-                                        Detayları İncele <i class="fas fa-arrow-right ms-2"></i>
-                                    </a>
-                                </div>
                             </div>
-                        </div>
+                        }
                     }
                 </div>
             </div>
+            
+            <!-- Maden Türü Accordion -->
+            <div class="filter-section">
+                <div class="filter-title" data-bs-toggle="collapse" data-bs-target="#collapseMaden">
+                    <span>MADEN TÜRÜ</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="collapse" id="collapseMaden">
+                    @if(ViewBag.MetalTypes != null) {
+                        foreach(var mt in ViewBag.MetalTypes) {
+                            <div class="custom-checkbox">
+                                <input class="form-check-input" type="checkbox" name="metalTypeId" value="@mt.Id" id="mt_@mt.Id">
+                                <label class="form-check-label ms-1" for="mt_@mt.Id">@mt.Name</label>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            
+            <!-- Taş Berraklığı Accordion -->
+            <div class="filter-section">
+                <div class="filter-title" data-bs-toggle="collapse" data-bs-target="#collapseBerraklik">
+                    <span>TAŞ BERRAKLIĞI</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="collapse" id="collapseBerraklik">
+                    @if(ViewBag.Clarities != null) {
+                        foreach(var c in ViewBag.Clarities) {
+                            <div class="custom-checkbox">
+                                <input class="form-check-input" type="checkbox" name="clarityId" value="@c.Id" id="clarity_@c.Id">
+                                <label class="form-check-label ms-1" for="clarity_@c.Id">@c.Name</label>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            
+            <!-- Taş Türü Accordion -->
+            <div class="filter-section">
+                <div class="filter-title" data-bs-toggle="collapse" data-bs-target="#collapseTasTuru">
+                    <span>TAŞ TÜRÜ</span>
+                    <i class="fas fa-plus"></i>
+                </div>
+                <div class="collapse" id="collapseTasTuru">
+                    @if(ViewBag.StoneTypes != null) {
+                        foreach(var st in ViewBag.StoneTypes) {
+                            <div class="custom-checkbox">
+                                <input class="form-check-input" type="checkbox" name="stoneTypeId" value="@st.Id" id="st_@st.Id">
+                                <label class="form-check-label ms-1" for="st_@st.Id">@st.Name</label>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            
+            <!-- Butonlar -->
+            <div class="mt-4 pb-4">
+                <button type="submit" class="btn btn-dark w-100 rounded-pill py-3 fw-bold letter-spacing-1 mb-3">SONUÇLARI GETİR</button>
+                <a href="/Home/Index" class="d-block text-center text-muted text-decoration-none" style="font-size: 13px; letter-spacing: 1px;">FİLTRELERİ TEMİZLE</a>
+            </div>
+        </form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mapping from DB
+            const stonesMapping = [
+                @if(ViewBag.Stones != null) {
+                    foreach(var s in ViewBag.Stones) {
+                        if(s.StoneClarityId != null && s.StoneTypeId != null) {
+                            <text>{ clarityId: '@s.StoneClarityId', typeId: '@s.StoneTypeId' },</text>
+                        }
+                    }
+                }
+            ];
+
+            const clarityCheckboxes = document.querySelectorAll('input[name="clarityId"]');
+            const stoneTypeCheckboxes = document.querySelectorAll('input[name="stoneTypeId"]');
+
+            function updateStoneTypes() {
+                // If mapping is completely empty (e.g. API error), don't filter to avoid hiding everything
+                if (stonesMapping.length === 0) return;
+
+                const selectedClarities = Array.from(clarityCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+
+                // If no clarity is selected, show all stone types
+                if (selectedClarities.length === 0) {
+                    stoneTypeCheckboxes.forEach(cb => {
+                        cb.closest('.custom-checkbox').style.display = '';
+                    });
+                    return;
+                }
+
+                // Find valid typeIds for selected clarities
+                const validTypeIds = new Set();
+                stonesMapping.forEach(mapping => {
+                    if (selectedClarities.includes(mapping.clarityId)) {
+                        validTypeIds.add(mapping.typeId);
+                    }
+                });
+
+                // Show/hide stone types
+                stoneTypeCheckboxes.forEach(cb => {
+                    const wrapper = cb.closest('.custom-checkbox');
+                    if (validTypeIds.has(cb.value)) {
+                        wrapper.style.display = '';
+                    } else {
+                        wrapper.style.display = 'none';
+                        cb.checked = false; // uncheck hidden ones
+                    }
+                });
+            }
+
+            // Attach event listeners
+            clarityCheckboxes.forEach(cb => {
+                cb.addEventListener('change', updateStoneTypes);
+            });
+
+            // Initial run in case checkboxes are already checked on load
+            updateStoneTypes();
+        });
+    </script>
+}
+    </aside>
+
+    <!-- Content Area -->
+    <main class="content-area">
+        @if (!isLoggedIn)
+        {
+            <div class="alert alert-light border d-flex flex-column flex-md-row align-items-center mb-5 p-4" style="border-radius:16px;">
+                <div class="me-auto text-center text-md-start mb-3 mb-md-0">
+                    <span class="text-dark" style="font-size: 14px;">Fiyatları görüntülemek için lütfen <strong>Giriş Yapın</strong>. Hesabınız yoksa talep edebilirsiniz.</span>
+                </div>
+                <a href="https://wa.me/@adminWhatsAppPhone" target="_blank" class="btn btn-dark rounded-pill px-4 py-2 text-nowrap" style="font-size: 13px; letter-spacing:1px;">
+                    <i class="fab fa-whatsapp me-2"></i> HESAP İSTE
+                </a>
+            </div>
         }
-    }
-    else
-    {
-        <div class="col-12 text-center mt-5 py-5">
-            <h4 class="text-muted mb-3">Kategori veya Ürün Bulunamadı.</h4>
+
+        <!-- Top Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom border-light">
+            <div class="text-muted text-uppercase" style="font-size: 12px; letter-spacing:2px; font-weight:600;">
+                TOPLAM @Model.Count ÜRÜN LİSTELENİYOR
+            </div>
+            <select class="form-select border-0 bg-transparent w-auto text-dark" style="font-size: 13px; font-weight:500; cursor:pointer; box-shadow:none;" 
+                    onchange="document.getElementById('hiddenSortOrder').value = this.value; document.getElementById('publicFilterForm').submit();">
+                @{
+                    var currentSort = ViewBag.CurrentSort as string;
+                }
+                @if (currentSort == "price_asc") {
+                    <option value="">Sıralama: Önerilen</option>
+                    <option value="price_asc" selected>Fiyata Göre Artan</option>
+                    <option value="price_desc">Fiyata Göre Azalan</option>
+                } else if (currentSort == "price_desc") {
+                    <option value="">Sıralama: Önerilen</option>
+                    <option value="price_asc">Fiyata Göre Artan</option>
+                    <option value="price_desc" selected>Fiyata Göre Azalan</option>
+                } else {
+                    <option value="" selected>Sıralama: Önerilen</option>
+                    <option value="price_asc">Fiyata Göre Artan</option>
+                    <option value="price_desc">Fiyata Göre Azalan</option>
+                }
+            </select>
         </div>
-    }
+
+        <!-- Products -->
+        @if (Model.Count > 0)
+        {
+            <div class="products-grid">
+                @foreach(var p in Model)
+                {
+                    <div class="premium-card">
+                        <div class="premium-card-img-wrapper">
+                            @if(p.Images != null && p.Images.Count > 0)
+                            {
+                                <img src="@p.Images[0]" alt="@p.Code" class="premium-card-img" />
+                            }
+                            else
+                            {
+                                <div class="premium-card-img d-flex align-items-center justify-content-center bg-light text-muted">
+                                    Görsel Yok
+                                </div>
+                            }
+                        </div>
+                        <div class="premium-card-body">
+                            <div class="premium-card-title">@p.Code</div>
+                            <div class="premium-card-details">
+                                @(p.Gram.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)) g | @(p.Karat ?? "14K") | @p.CalculatedPrice.ToString("N0") $
+                            </div>
+                            <a href="/Home/Detail/@p.Id" class="premium-btn-outline">
+                                Detayları İncele
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5 mt-5">
+                <i class="fas fa-search mb-3" style="font-size:30px; color:#cbd5e1;"></i>
+                <h5 class="text-muted fw-light">Kriterlerinize uygun ürün bulunamadı.</h5>
+            </div>
+        }
+    </main>
 </div>
+
+<script>
+    function toggleFilterSidebar() {
+        const sidebar = document.getElementById('filterSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+    }
+    
+    // Auto-toggle plus/minus icons on accordion
+    document.querySelectorAll('.filter-title').forEach(title => {
+        title.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (icon.classList.contains('fa-plus')) {
+                icon.classList.replace('fa-plus', 'fa-minus');
+            } else {
+                icon.classList.replace('fa-minus', 'fa-plus');
+            }
+        });
+    });
+</script>
 
 <!-- Cart Offcanvas -->
 <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>

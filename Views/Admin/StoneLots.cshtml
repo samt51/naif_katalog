@@ -278,12 +278,18 @@
             const result = await res.json();
             
             if (result && result.isSuccess) {
-                location.reload();
+                closeModal();
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'Taş partisi başarıyla kaydedildi!' }).then(() => {
+                    location.reload();
+                });
             } else {
-                Swal.fire('Hata!', result.errors ? result.errors.join(', ') : 'İşlem başarısız', 'error');
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                Toast.fire({ icon: 'error', title: 'Hata!', text: result.errors ? result.errors.join(', ') : 'İşlem başarısız' });
             }
         } catch (err) {
-            Swal.fire('Sistem Hatası', err.message, 'error');
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+            Toast.fire({ icon: 'error', title: 'Sistem Hatası!', text: err.message });
         } finally {
             btn.disabled = false;
             btn.innerText = "Kaydet";

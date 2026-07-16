@@ -449,7 +449,12 @@
                 
                 <div class="form-group">
                     <label>Canlı Has Fiyatı ($)</label>
-                    <input type="number" id="LiveHasPrice" name="LiveGoldPrice" step="any" class="form-control" style="font-weight:bold; color:var(--primary);" oninput="calculateLiveCost()" />
+                    <div style="display:flex; gap:8px;">
+                        <input type="number" id="LiveHasPrice" name="LiveGoldPrice" step="0.01" class="form-control" style="font-weight:bold; color:var(--primary);" oninput="calculateLiveCost()" />
+                        <button type="button" onclick="fetchCurrentGoldPrice()" title="Güncel kuru getir" style="width:42px; height:42px; border:none; border-radius:6px; background:var(--primary); color:white; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -507,6 +512,7 @@
 
     let tempStones = [];
     let tempImages = [];
+    let tempExistingImages = [];
     let isNameManuallyEdited = false;
     let polishingCosts = []; // To store Cila/Rodaj maliyetleri
     let selectedCategoryIds = [];
@@ -722,6 +728,10 @@
     document.getElementById('LaborMultiplier').addEventListener('input', calculateLiveCost);
     document.getElementById('PolishingCost').addEventListener('input', calculateLiveCost);
     document.getElementById('Karat').addEventListener('change', calculateLiveCost);
+    document.getElementById('LiveHasPrice').addEventListener('blur', function() {
+        formatMoneyInput(this);
+        calculateLiveCost();
+    });
 
     // Taş karat oto-hesaplama
     function updateStoneTotalCarat() {
@@ -744,28 +754,128 @@
         document.getElementById('productModal').classList.remove('active');
     }
 
+    function formatMoneyInput(input) {
+        if (!input) return;
+        const value = parseFloat(input.value.toString().replace(',', '.'));
+        if (!isNaN(value)) {
+            input.value = value.toFixed(2);
+        }
+    }
+
+    async function fetchCurrentGoldPrice() {
+        const priceEl = document.getElementById('LiveHasPrice');
+        const API_BASE_URL = '@apiAddress';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/ExchangeRate/HasAltin`);
+            const data = await response.json();
+
+            if (data && data.price) {
+                priceEl.value = parseFloat(data.price).toFixed(2);
+                formatMoneyInput(priceEl);
+                calculateLiveCost();
+            } else {
+                Swal.fire('Hata', 'Güncel kur alınamadı.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Hata', 'Güncel kur alınamadı.', 'error');
+        }
+    }
+
+    function normalizeImageName(imageUrl) {
+        if (!imageUrl) return '';
+        const marker = '/images/katalog/';
+        const markerIndex = imageUrl.indexOf(marker);
+        if (markerIndex >= 0) {
+            return imageUrl.substring(markerIndex + marker.length);
+        }
+        return imageUrl.replace(/^\/?images\/katalog\//i, '');
+    }
+
+    function renderImageGallery() {
+        const imageGallery = document.getElementById('imageGallery');
+        imageGallery.innerHTML = '';
+
+        tempExistingImages.forEach((img, index) => {
+            imageGallery.innerHTML += `
+                <div style="width:100px; height:100px; border-radius:8px; background:url('${img.url}') center/cover; position:relative; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <button type="button" onclick="removeExistingImage(${index})" title="Resmi sil" style="position:absolute; top:-8px; right:-8px; width:24px; height:24px; border-radius:50%; border:none; background:#ef4444; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.25);">
+                        <i class="fas fa-times" style="font-size:12px;"></i>
+                    </button>
+                </div>`;
+        });
+
+        tempImages.forEach((image, index) => {
+            imageGallery.innerHTML += `
+                <div style="width:100px; height:100px; border-radius:8px; background:url('${image.url}') center/cover; position:relative; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <button type="button" onclick="removeNewImage(${index})" title="Resmi sil" style="position:absolute; top:-8px; right:-8px; width:24px; height:24px; border-radius:50%; border:none; background:#ef4444; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.25);">
+                        <i class="fas fa-times" style="font-size:12px;"></i>
+                    </button>
+                    <span style="position:absolute; left:4px; bottom:4px; background:rgba(255,255,255,0.85); border-radius:4px; font-size:10px; padding:2px 4px;">Yeni</span>
+                </div>`;
+        });
+    }
+
+    async function removeExistingImage(index) {
+        const image = tempExistingImages[index];
+        const productId = parseInt(document.getElementById('productId').value);
+
+        if (!image || !image.name) return;
+        if (!productId || productId <= 0) {
+            tempExistingImages.splice(index, 1);
+            renderImageGallery();
+            return;
+        }
+
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: 'Resim silinsin mi?',
+            text: 'Bu işlem hemen uygulanacak.',
+            showCancelButton: true,
+            confirmButtonText: 'Sil',
+            cancelButtonText: 'Vazgeç',
+            confirmButtonColor: '#ef4444'
+        });
+
+        if (!result.isConfirmed) return;
+
+        const formData = new FormData();
+        formData.append('productId', productId);
+        formData.append('imageName', image.name);
+
+        try {
+            const response = await fetch('/Admin/DeleteProductImage', { method: 'POST', body: formData });
+            const deleteResult = await response.json();
+            if (deleteResult && deleteResult.isSuccess) {
+                tempExistingImages.splice(index, 1);
+                renderImageGallery();
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'Resim silindi.' });
+            } else {
+                Swal.fire('Hata', deleteResult.errors ? deleteResult.errors.join(', ') : 'Resim silinemedi.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Hata', err.message, 'error');
+        }
+    }
+
+    function removeNewImage(index) {
+        const image = tempImages[index];
+        if (image && image.url) URL.revokeObjectURL(image.url);
+        tempImages.splice(index, 1);
+        renderImageGallery();
+    }
+
     async function openModal(id = 0, preserveTab = false) {
         document.getElementById('productId').value = id;
         document.getElementById('modalTitle').innerText = id === 0 ? "Yeni Ürün Ekle" : "Ürünü Düzenle";
         
         tempStones = [];
         tempImages = [];
+        tempExistingImages = [];
         document.getElementById('imageInput').value = '';
 
         if (!preserveTab) switchTab('genel');
-
-        const API_BASE_URL = '@apiAddress';
-        fetch(`${API_BASE_URL}/api/ExchangeRate/HasAltin`)
-            .then(r => r.json())
-            .then(data => {
-                if(data && data.price) {
-                    const priceEl = document.getElementById('LiveHasPrice');
-                    if (priceEl && !priceEl.value) {
-                        priceEl.value = data.price.toFixed(2);
-                    }
-                }
-            })
-            .catch(e => console.log(e));
 
         if (id === 0) {
             document.getElementById('Code').readOnly = false;
@@ -777,7 +887,7 @@
             selectedCategoryIds = [];
             updateSelectedCategoriesUI();
             buildCategorySelects(0);
-            document.getElementById('imageGallery').innerHTML = "";
+            renderImageGallery();
             document.getElementById('Karat').value = "14K";
             document.getElementById('LaborMultiplier').value = "0.200";
             renderStones();
@@ -822,16 +932,18 @@
                         document.getElementById('LaborMultiplier').value = p.laborMultiplier || 0;
                         document.getElementById('PolishingCost').value = p.polishingCost || 0;
                         if(p.liveGoldPrice > 0) {
-                            document.getElementById('LiveHasPrice').value = p.liveGoldPrice;
+                            const priceEl = document.getElementById('LiveHasPrice');
+                            priceEl.value = parseFloat(p.liveGoldPrice).toFixed(2);
+                            formatMoneyInput(priceEl);
                         }
 
-                        const imageGallery = document.getElementById('imageGallery');
-                        imageGallery.innerHTML = '';
+                        tempExistingImages = [];
                         if(p.images) {
                             p.images.forEach(img => {
-                                imageGallery.innerHTML += `<div style="width:100px; height:100px; border-radius:8px; background:url('${img}') center/cover; position:relative; box-shadow:0 2px 4px rgba(0,0,0,0.1);"></div>`;
+                                tempExistingImages.push({ url: img, name: normalizeImageName(img) });
                             });
                         }
+                        renderImageGallery();
 
                         tempStones = p.productStones ? p.productStones.map(s => {
                             let car = s.carat || 0;
@@ -1026,13 +1138,11 @@
         if(files.length === 0) return;
         
         for(let i=0; i<files.length; i++) {
-            tempImages.push(files[i]);
             const objectUrl = URL.createObjectURL(files[i]);
-            const imageGallery = document.getElementById('imageGallery');
-            imageGallery.innerHTML += `<div style="width:100px; height:100px; border-radius:8px; background:url('${objectUrl}') center/cover; position:relative; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                <span style="position:absolute; top:2px; right:2px; background:rgba(255,255,255,0.8); border-radius:4px; font-size:10px; padding:2px;">Yeni</span>
-            </div>`;
+            tempImages.push({ file: files[i], url: objectUrl });
         }
+        e.target.value = '';
+        renderImageGallery();
     });
 
     document.getElementById('productForm').addEventListener('submit', async (e) => {
@@ -1051,7 +1161,9 @@
             return;
         }
         
-        const livePriceInput = document.getElementById('LiveHasPrice').value;
+        const livePriceEl = document.getElementById('LiveHasPrice');
+        formatMoneyInput(livePriceEl);
+        const livePriceInput = livePriceEl.value;
         if(livePriceInput) {
             formData.set('LiveGoldPrice', livePriceInput.toString().replace(',', '.'));
         }
@@ -1079,8 +1191,14 @@
         }
         formData.append('metalsJson', JSON.stringify(finalMetals));
 
-        tempImages.forEach(file => {
-            formData.append('imageFiles', file);
+        tempExistingImages.forEach(image => {
+            if (image.name) {
+                formData.append('ImageNames', image.name);
+            }
+        });
+
+        tempImages.forEach(image => {
+            formData.append('imageFiles', image.file);
         });
 
         const url = id > 0 ? '/Admin/UpdateProduct' : '/Admin/CreateProduct';
@@ -1089,14 +1207,18 @@
             const res = await fetch(url, { method: 'POST', body: formData });
             const result = await res.json();
             if (result.isSuccess) {
-                Swal.fire({ icon: 'success', title: 'Başarılı!', text: 'Ürün başarıyla kaydedildi!' }).then(() => {
+                closeModal();
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'Ürün başarıyla kaydedildi!' }).then(() => {
                     location.reload();
                 });
             } else {
-                Swal.fire({ icon: 'error', title: 'Hata!', text: (result.errors ? result.errors.join(', ') : 'İşlem başarısız') });
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                Toast.fire({ icon: 'error', title: 'Hata!', text: (result.errors ? result.errors.join(', ') : 'İşlem başarısız') });
             }
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Hata!', text: err.message });
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+            Toast.fire({ icon: 'error', title: 'Hata!', text: err.message });
         } finally {
             btn.disabled = false;
             btn.innerText = "Kaydet";

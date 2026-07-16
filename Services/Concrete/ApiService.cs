@@ -119,7 +119,8 @@ namespace naif_katalog.Services.Concrete
             string json = "";
             try
             {
-                json = await response.Content.ReadAsStringAsync();
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                json = System.Text.Encoding.UTF8.GetString(bytes);
             }
             catch
             {

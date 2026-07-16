@@ -279,10 +279,12 @@
                         .then(updateData => {
                             if(updateData.isSuccess) {
                                 fetch('/Product/ClearCache', { method: 'POST' });
-                                Swal.fire('Başarılı', 'Kategori başarıyla güncellendi.', 'success');
+                                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+                                Toast.fire({ icon: 'success', title: 'Kategori başarıyla güncellendi.' });
                                 document.getElementById('p_cat').innerText = catName;
                             } else {
-                                Swal.fire('Hata', 'Güncelleme başarısız oldu.', 'error');
+                                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+                                Toast.fire({ icon: 'error', title: 'Güncelleme başarısız oldu.' });
                             }
                         });
                     }

@@ -283,7 +283,7 @@
             <input type="hidden" id="defId" name="id" value="0" />
             <div class="form-group">
                 <label>Tanım Adı</label>
-                <input type="text" id="defName" name="name" required placeholder="Değer giriniz..." />
+                <input type="text" id="defName" name="name" required placeholder="Değer giriniz..." oninput="this.value = this.value.toUpperCase()" style="text-transform: uppercase;" />
             </div>
             <div class="form-group" id="discountGroup" style="display:none;">
                 <label>İndirim / Yüzdelik Dilim (%)</label>
@@ -372,7 +372,18 @@
         
         const type = document.getElementById('defType').value;
         const id = parseInt(document.getElementById('defId').value);
-        const name = document.getElementById('defName').value;
+        const name = document.getElementById('defName').value.trim().toUpperCase();
+        
+        // Aynı isimde kayıt olup olmadığını kontrol et
+        const existingItems = Array.from(document.querySelectorAll('.def-item'))
+            .filter(span => span.getAttribute('onclick') && span.getAttribute('onclick').includes(`openModal('${type}'`))
+            .map(span => span.innerText.trim().toUpperCase());
+            
+        if (id === 0 && existingItems.includes(name)) {
+            Swal.fire('Uyarı!', 'Bu tanım zaten mevcut. Lütfen farklı bir değer giriniz.', 'warning');
+            return;
+        }
+        
         const btn = document.getElementById('btnSave');
         
         btn.disabled = true;
@@ -402,7 +413,8 @@
             const result = await res.json();
             
             if (result && result.isSuccess) {
-                location.reload(); // Refresh to show new data
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'İşlem Başarılı' }).then(() => { location.reload(); });
             } else {
                 showInfoModal('İşlem Başarısız', result.errors ? result.errors.join(', ') : 'İşlem başarısız');
             }
@@ -446,7 +458,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(req)
             });
-            if (res.ok) { location.reload(); } else { showInfoModal('Hata', 'İşlem başarısız oldu.'); }
+            if (res.ok) { 
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'İşlem Başarılı' }).then(() => { location.reload(); });
+            } else { showInfoModal('Hata', 'İşlem başarısız oldu.'); }
         } catch (err) { showInfoModal('İşlem Başarısız', err.message); }
     });
 
@@ -512,7 +527,10 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(req)
             });
-            if (res.ok) { location.reload(); } else { showInfoModal('Hata', 'İşlem başarısız oldu.'); }
+            if (res.ok) { 
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'İşlem Başarılı' }).then(() => { location.reload(); });
+            } else { showInfoModal('Hata', 'İşlem başarısız oldu.'); }
         } catch (err) { showInfoModal('İşlem Başarısız', err.message); }
     });
 

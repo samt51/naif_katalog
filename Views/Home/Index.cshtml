@@ -257,6 +257,7 @@
         
         <form method="GET" action="/Home/Index" id="publicFilterForm">
             <input type="hidden" name="sortOrder" id="hiddenSortOrder" value="@ViewBag.CurrentSort" />
+            <input type="hidden" name="page" id="hiddenPage" value="@(ViewBag.CurrentPage ?? 1)" />
             <!-- Arama -->
             <div class="filter-section">
                 <h6 class="filter-title">ARAMA</h6>
@@ -518,8 +519,8 @@
                         </div>
                         <div class="premium-card-body">
                             <div class="premium-card-title">@p.Code</div>
-                            <div class="premium-card-details">
-                                @(p.Gram.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)) g | @(p.Karat ?? "14K") | @p.CalculatedPrice.ToString("N0") $
+                            <div class="premium-card-details fw-bold text-dark" style="font-size: 14px;">
+                                @(p.Gram.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)) g | @(p.MetalPurityName ?? "14K") | @p.CalculatedPrice.ToString("N0") $
                             </div>
                             <a href="/Home/Detail/@p.Id" class="premium-btn-outline">
                                 Detayları İncele
@@ -528,6 +529,47 @@
                     </div>
                 }
             </div>
+
+            @if(ViewBag.TotalPages != null && ViewBag.TotalPages > 1) {
+                <div class="d-flex justify-content-center mt-5">
+                    <nav>
+                        <ul class="pagination pagination-sm shadow-sm rounded-pill overflow-hidden">
+                            <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link text-dark px-3" href="javascript:void(0)" onclick="changePage(@(ViewBag.CurrentPage - 1))">Önceki</a>
+                            </li>
+                            
+                            @{
+                                int startPage = Math.Max(1, ViewBag.CurrentPage - 2);
+                                int endPage = Math.Min(ViewBag.TotalPages, ViewBag.CurrentPage + 2);
+                                
+                                if (startPage > 1) {
+                                    <li class="page-item"><a class="page-link text-dark px-3" href="javascript:void(0)" onclick="changePage(1)">1</a></li>
+                                    if (startPage > 2) {
+                                        <li class="page-item disabled"><a class="page-link text-dark px-3" href="javascript:void(0)">...</a></li>
+                                    }
+                                }
+                                
+                                for(int i = startPage; i <= endPage; i++) {
+                                    <li class="page-item @(ViewBag.CurrentPage == i ? "active" : "")">
+                                        <a class="page-link @(ViewBag.CurrentPage == i ? "bg-dark border-dark text-white" : "text-dark") px-3" href="javascript:void(0)" onclick="changePage(@i)">@i</a>
+                                    </li>
+                                }
+                                
+                                if (endPage < ViewBag.TotalPages) {
+                                    if (endPage < ViewBag.TotalPages - 1) {
+                                        <li class="page-item disabled"><a class="page-link text-dark px-3" href="javascript:void(0)">...</a></li>
+                                    }
+                                    <li class="page-item"><a class="page-link text-dark px-3" href="javascript:void(0)" onclick="changePage(@ViewBag.TotalPages)">@ViewBag.TotalPages</a></li>
+                                }
+                            }
+                            
+                            <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                                <a class="page-link text-dark px-3" href="javascript:void(0)" onclick="changePage(@(ViewBag.CurrentPage + 1))">Sonraki</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
         }
         else
         {
@@ -540,6 +582,11 @@
 </div>
 
 <script>
+    function changePage(p) {
+        document.getElementById('hiddenPage').value = p;
+        document.getElementById('publicFilterForm').submit();
+    }
+
     function toggleFilterSidebar() {
         const sidebar = document.getElementById('filterSidebar');
         const overlay = document.getElementById('sidebarOverlay');

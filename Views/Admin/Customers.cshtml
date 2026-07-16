@@ -119,8 +119,9 @@
                                         title="Düzenle">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #ef4444; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(239,68,68,0.2);" 
-                                        title="Sil">
+                                <button onclick="removeCustomPricing(@user.Id, '@user.Name', '@user.Surname', '@Html.Raw((user.CompanyName ?? "").Replace("'", "\\'"))', '@user.Email', '@user.Phone', @user.RoleId, '@(user.MembershipExpiryDate?.ToString("yyyy-MM-dd"))', '@Html.Raw((user.Address ?? "").Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))', @user.IsLocked.ToString().ToLower())"
+                                        style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #ef4444; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(239,68,68,0.2);" 
+                                        title="Özel fiyatlandırmadan çıkar">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -173,7 +174,7 @@
                 if (type === 'Setting') {
                     if(!availableSettings) return;
                     availableSettings.forEach(s => {
-                        selectEl.innerHTML += `<option value='${s.id}'>${s.settingType}</option>`;
+                        selectEl.innerHTML += `<option value='${s.id}'>${s.settingType} (${(s.settingPrice || 0).toFixed(2)} $)</option>`;
                     });
                 } else {
                     if(!availableStones) return;
@@ -492,23 +493,36 @@
         try {
             let dbStones = JSON.parse(stonesJson);
             let dbPolishing = JSON.parse(polishingJson);
+            let dbSettings = JSON.parse(settingJson);
             
             customPolishing = dbPolishing.filter(p => (p.customPrice || p.CustomPrice) > 0).map(p => ({...p, customPrice: p.customPrice || p.CustomPrice, categoryId: p.categoryId || p.CategoryId}));
             
+            tempSettingPricing = dbSettings.filter(s => (s.customPrice || s.CustomPrice) > 0).map(s => {
+                const settingId = s.stoneSettingId || s.StoneSettingId;
+                const setObj = availableSettings ? availableSettings.find(x => x.id === settingId) : null;
+                return {
+                    stoneSettingId: settingId,
+                    settingType: s.settingType || s.SettingType || (setObj ? setObj.settingType : 'Bilinmeyen Mıhlama'),
+                    customPrice: s.customPrice || s.CustomPrice
+                };
+            });
+            
             populateMatrix(dbStones);
             
-            let hasCustom = dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || (customMilyem != '' && customMilyem != null) || customPolishing.length > 0;
+            let hasCustom = dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || (customMilyem != '' && customMilyem != null) || customPolishing.length > 0 || tempSettingPricing.length > 0;
             document.getElementById('EnableCustomPricing').checked = hasCustom;
             toggleCustomPricing(hasCustom);
 
         } catch(e) {
             customPolishing = [];
+            tempSettingPricing = [];
             populateMatrix([]);
             document.getElementById('EnableCustomPricing').checked = false;
             toggleCustomPricing(false);
         }
         
         renderCustomPolishing();
+        renderSettingPricing();
         
         if(id > 0) {
             changePassCheck.style.display = 'block';
@@ -613,14 +627,30 @@
         try {
             const res = await fetch(url, { method: 'POST', body: formData });
             const result = await res.json();
-            
             if (result && result.isSuccess) {
-                location.reload();
+                closeModal();
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: 'İşlem başarıyla kaydedildi!'
+                }).then(() => {
+                    location.reload();
+                });
             } else {
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                Toast.fire({ icon: 'error', title: 'Hata: ' + (result.errors ? result.errors.join(', ') : 'İşlem başarısız') });
                 errDiv.innerText = 'Hata: ' + (result.errors ? result.errors.join(', ') : 'İşlem başarısız');
                 errDiv.style.display = 'block';
             }
         } catch (err) {
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+            Toast.fire({ icon: 'error', title: 'Sistem Hatası: ' + err.message });
             errDiv.innerText = 'Sistem Hatası: ' + err.message;
             errDiv.style.display = 'block';
         } finally {
@@ -661,22 +691,33 @@
         const setObj = availableSettings.find(s => s.id === sid);
         if(!setObj) return;
 
-        const valStr = prompt(setObj.settingType + ' için Özel Müşteri Fiyatı:');
-        if(valStr === null) return;
-        const val = parseFloat(valStr.replace(',', '.'));
-        if(isNaN(val)) return;
+        Swal.fire({
+            title: 'Özel Müşteri Fiyatı',
+            text: setObj.settingType + ' için Özel Müşteri Fiyatı:',
+            input: 'text',
+            inputPlaceholder: 'Örn: 10.50',
+            showCancelButton: true,
+            confirmButtonText: 'Tamam',
+            cancelButtonText: 'İptal',
+            confirmButtonColor: 'var(--primary)'
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                const val = parseFloat(result.value.replace(',', '.'));
+                if(isNaN(val)) return;
 
-        let exist = tempSettingPricing.find(x => x.stoneSettingId === sid);
-        if(exist) {
-            exist.customPrice = val;
-        } else {
-            tempSettingPricing.push({
-                stoneSettingId: sid,
-                settingType: setObj.settingType,
-                customPrice: val
-            });
-        }
-        renderSettingPricing();
+                let exist = tempSettingPricing.find(x => x.stoneSettingId === sid);
+                if(exist) {
+                    exist.customPrice = val;
+                } else {
+                    tempSettingPricing.push({
+                        stoneSettingId: sid,
+                        settingType: setObj.settingType,
+                        customPrice: val
+                    });
+                }
+                renderSettingPricing();
+            }
+        });
     }
 
         function renderSettingPricing() {
@@ -720,6 +761,47 @@
 
     
       var showOnlyCustom = false;
+      async function removeCustomPricing(id, firstName, lastName, companyName, email, phoneNumber, roleId, subscriptionEndDate, address, isLocked) {
+          const result = await Swal.fire({
+              icon: 'warning',
+              title: 'Özel fiyatlandırma kaldırılsın mı?',
+              text: 'Müşteri silinmeyecek, sadece özel fiyat ayarları temizlenecek.',
+              showCancelButton: true,
+              confirmButtonText: 'Kaldır',
+              cancelButtonText: 'Vazgeç',
+              confirmButtonColor: '#ef4444'
+          });
+
+          if (!result.isConfirmed) return;
+
+          const formData = new FormData();
+          formData.append('Id', id);
+          formData.append('FirstName', firstName || '');
+          formData.append('LastName', lastName || '');
+          formData.append('CompanyName', companyName || '');
+          formData.append('Email', email || '');
+          formData.append('PhoneNumber', phoneNumber || '');
+          formData.append('RoleId', roleId || 3);
+          formData.append('SubscriptionEndDate', subscriptionEndDate || '');
+          formData.append('Address', address || '');
+          formData.append('IsLocked', !!isLocked);
+          formData.append('SalesMultiplier', '1');
+          formData.append('ClearCustomPricing', 'true');
+
+          try {
+              const response = await fetch('/Admin/UpdateUser', { method: 'POST', body: formData });
+              const updateResult = await response.json();
+              if (updateResult && updateResult.isSuccess) {
+                  const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+                  Toast.fire({ icon: 'success', title: 'Özel fiyatlandırma kaldırıldı.' }).then(() => location.reload());
+              } else {
+                  Swal.fire('Hata', updateResult.errors ? updateResult.errors.join(', ') : 'İşlem başarısız.', 'error');
+              }
+          } catch (err) {
+              Swal.fire('Hata', err.message, 'error');
+          }
+      }
+
       function filterCustomers(onlyCustom) {
           showOnlyCustom = onlyCustom;
           if (onlyCustom) {

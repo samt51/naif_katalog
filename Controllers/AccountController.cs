@@ -48,6 +48,25 @@ namespace naif_katalog.Controllers
                 var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
                 await HttpContext.SignInAsync("Cookies", claimsPrincipal);
+                
+                try {
+                    var userIdClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier || c.Type == "nameid" || c.Type == "sub" || c.Type == "id" || c.Type == "userId")?.Value;
+                    if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int uid))
+                    {
+                        var _mediator = HttpContext.RequestServices.GetService(typeof(MediatR.IMediator)) as MediatR.IMediator;
+                        if (_mediator != null) {
+                            await _mediator.Send(new naif_katalog.Core.Features.UserActionLogFeature.Commands.Create.CreateUserActionLogCommandRequest
+                            {
+                                UserId = uid,
+                                ActionType = "Login",
+                                ProductId = null,
+                                Details = "Sisteme giriş yapıldı.",
+                                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
+                                UserAgent = HttpContext.Request.Headers["User-Agent"].ToString()
+                            });
+                        }
+                    }
+                } catch {}
 
                 var roleClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
                 if (roleClaim == "3")

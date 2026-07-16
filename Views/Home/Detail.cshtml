@@ -193,7 +193,7 @@
                 
                 @if (isLoggedIn)
                 {
-                    <div class="price-tag" id="productPriceDisplay">@mockPrice.ToString("N0") $</div>
+                    <div class="price-tag" id="productPriceDisplay"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#cbd5e1;"></i></div>
                 }
 
 
@@ -395,7 +395,7 @@
 </div>
 
 <script>
-    let liveGoldPrice = @Model.LiveGoldPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const liveGoldPrice = @Model.LiveGoldPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
     const backendGoldPrice = @Model.LiveGoldPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
     const basePrice = @mockPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
     const gram = @Model.Gram.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -403,7 +403,11 @@
     const productCategory = '@(Model.CategoryNames?.FirstOrDefault() ?? "")';
     const productImage = '@(Model.Images.Count > 0 ? Model.Images[0] : "")';
 
-    document.addEventListener("DOMContentLoaded", async function() {
+    document.addEventListener("DOMContentLoaded", function() {
+        recalculatePrice();
+    });
+
+    /*
         try {
             const API_BASE_URL = '@apiAddress';
             const response = await fetch(`${API_BASE_URL}/api/ExchangeRate/HasAltin`);
@@ -415,8 +419,13 @@
                     recalculatePrice();
                 }
             }
-        } catch(e) { console.log("Has Altın fiyatı çekilemedi", e); }
+        } catch(e) { 
+            console.log("Has Altın fiyatı çekilemedi", e); 
+        } finally {
+            recalculatePrice();
+        }
     });
+    */
 
     function recalculatePrice() {
         const selectElement = document.getElementById('ayarSelect');

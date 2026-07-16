@@ -302,7 +302,7 @@ namespace naif_katalog.Controllers
 
                 if (imageFiles != null && imageFiles.Count > 0)
                 {
-                    request.ImageNames = new List<string>();
+                    request.ImageNames ??= new List<string>();
                     
                     var catResponse = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
                     string folderName = "DIGER";
@@ -373,7 +373,7 @@ namespace naif_katalog.Controllers
 
                 if (imageFiles != null && imageFiles.Count > 0)
                 {
-                    request.ImageNames = new List<string>();
+                    request.ImageNames ??= new List<string>();
                     
                     var catResponse = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
                     string folderName = "DIGER";
@@ -496,6 +496,168 @@ namespace naif_katalog.Controllers
             catch (System.Exception ex)
             {
                 return Json(new naif_katalog.Models.ResponseDto<bool> { isSuccess = false, errors = new List<string> { ex.Message } });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteProductImage(int productId, string imageName)
+        {
+            _cache.Remove("CachedProducts");
+
+            if (productId <= 0 || string.IsNullOrWhiteSpace(imageName))
+            {
+                return Json(new naif_katalog.Models.ResponseDto<bool> { isSuccess = false, errors = new List<string> { "Silinecek resim bilgisi eksik." } });
+            }
+
+            try
+            {
+                var handler = new System.Net.Http.HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                };
+
+                using var client = new System.Net.Http.HttpClient(handler);
+                var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+                if (!apiAddress.EndsWith("/")) apiAddress += "/";
+                client.BaseAddress = new System.Uri(apiAddress);
+
+                var token = Request.Cookies["jwtToken"];
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                }
+
+                var encodedImageName = System.Net.WebUtility.UrlEncode(imageName);
+                var deleteResponse = await client.DeleteAsync($"api/ProductImage?productId={productId}&imageName={encodedImageName}");
+                if (!deleteResponse.IsSuccessStatusCode)
+                {
+                    using var formContent = new System.Net.Http.MultipartFormDataContent();
+                    formContent.Add(new System.Net.Http.StringContent(productId.ToString()), "productId");
+                    formContent.Add(new System.Net.Http.StringContent(imageName), "imageName");
+                    deleteResponse = await client.PostAsync("api/ProductImage/delete", formContent);
+                }
+
+                if (!deleteResponse.IsSuccessStatusCode)
+                {
+                    var updateResponse = await RemoveProductImageThroughProductUpdate(productId, imageName);
+                    if (updateResponse == null || !updateResponse.isSuccess)
+                    {
+                        var error = await deleteResponse.Content.ReadAsStringAsync();
+                        return Json(updateResponse ?? new naif_katalog.Models.ResponseDto<bool> { isSuccess = false, errors = new List<string> { string.IsNullOrWhiteSpace(error) ? "Resim silinemedi." : error } });
+                    }
+                }
+
+                TryDeleteLocalProductImage(imageName);
+                return Json(new naif_katalog.Models.ResponseDto<bool> { isSuccess = true, data = true });
+            }
+            catch (System.Exception ex)
+            {
+                return Json(new naif_katalog.Models.ResponseDto<bool> { isSuccess = false, errors = new List<string> { ex.Message } });
+            }
+        }
+
+        private async Task<naif_katalog.Models.ResponseDto<bool>?> RemoveProductImageThroughProductUpdate(int productId, string imageName)
+        {
+            var productsResponse = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllProductsQueryRequest());
+            if (productsResponse == null || !productsResponse.isSuccess || productsResponse.data == null)
+            {
+                return new naif_katalog.Models.ResponseDto<bool> { isSuccess = false, errors = productsResponse?.errors ?? new List<string> { "Ürün bilgileri alınamadı." } };
+            }
+
+            var product = productsResponse.data.FirstOrDefault(p => p.Id == productId);
+            if (product == null)
+            {
+                return new naif_katalog.Models.ResponseDto<bool> { isSuccess = false, errors = new List<string> { "Ürün bulunamadı." } };
+            }
+
+            var normalizedImageName = NormalizeProductImageName(imageName);
+            var remainingImages = (product.Images ?? new List<string>())
+                .Select(NormalizeProductImageName)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Where(x => !string.Equals(x, normalizedImageName, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var updateRequest = new naif_katalog.Core.Features.ProductFeature.Commands.UpdateProductCommandRequest
+            {
+                Id = product.Id,
+                Code = product.Code,
+                Name = product.Name,
+                Description = product.Description,
+                Gram = product.Gram,
+                Karat = product.MetalPurityName,
+                DiamondCarat = product.DiamondCarat,
+                CategoryIds = product.CategoryIds ?? new List<int>(),
+                MetalPurityId = product.ProductMetals?.FirstOrDefault()?.MetalPurityId,
+                ColorId = product.ColorId,
+                LaborMultiplier = product.LaborMultiplier,
+                PolishingCost = product.PolishingCost,
+                LiveGoldPrice = product.LiveGoldPrice,
+                ImageNames = remainingImages,
+                ProductStones = (product.ProductStones ?? new List<naif_katalog.Core.Features.ProductFeature.Queries.ApiProductStone>())
+                    .Select(s => new naif_katalog.Core.Features.ProductFeature.Commands.UpdateProductStoneDto
+                    {
+                        Id = s.Id,
+                        StoneId = s.StoneId,
+                        Quantity = Convert.ToInt32(s.Quantity),
+                        Carat = s.Carat,
+                        TotalCarat = s.TotalCarat,
+                        ClarityId = s.ClarityId,
+                        ColorId = s.ColorId
+                    })
+                    .ToList(),
+                ProductMetals = (product.ProductMetals ?? new List<naif_katalog.Core.Features.ProductFeature.Queries.ApiProductMetal>())
+                    .Select(m => new naif_katalog.Core.Features.ProductFeature.Commands.UpdateProductMetalDto
+                    {
+                        Id = m.Id,
+                        MetalTypeId = m.MetalTypeId,
+                        Weight = m.Gram
+                    })
+                    .ToList()
+            };
+
+            return await _mediator.Send(updateRequest);
+        }
+
+        private static string NormalizeProductImageName(string imageName)
+        {
+            if (string.IsNullOrWhiteSpace(imageName))
+            {
+                return string.Empty;
+            }
+
+            var normalized = imageName.Replace('\\', '/');
+            const string marker = "/images/katalog/";
+            var markerIndex = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex >= 0)
+            {
+                normalized = normalized[(markerIndex + marker.Length)..];
+            }
+
+            normalized = normalized.TrimStart('/');
+            if (normalized.StartsWith("images/katalog/", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized["images/katalog/".Length..];
+            }
+
+            return Uri.UnescapeDataString(normalized);
+        }
+
+        private void TryDeleteLocalProductImage(string imageName)
+        {
+            try
+            {
+                var relativePath = NormalizeProductImageName(imageName).Replace('/', System.IO.Path.DirectorySeparatorChar).Replace('\\', System.IO.Path.DirectorySeparatorChar);
+                var fullPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "katalog", relativePath));
+                var katalogRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "images", "katalog"));
+
+                if (fullPath.StartsWith(katalogRoot, StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(fullPath))
+                {
+                    System.IO.File.Delete(fullPath);
+                }
+            }
+            catch
+            {
             }
         }
     

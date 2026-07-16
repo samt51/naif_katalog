@@ -1,4 +1,4 @@
-﻿@model List<naif_katalog.Models.CategoryDto>
+@model List<naif_katalog.Models.CategoryDto>
 @using Microsoft.Extensions.Configuration
 @inject IConfiguration Configuration
 @{
@@ -289,31 +289,18 @@
             const result = await res.json();
             
             if (result && result.isSuccess) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Harika!',
-                    text: 'Kategori başarıyla kaydedildi.',
-                    confirmButtonColor: '#2ecc71',
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
+                closeModal();
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                Toast.fire({ icon: 'success', title: 'Kategori başarıyla kaydedildi!' }).then(() => {
                     location.reload();
                 });
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Hata Oluştu',
-                    text: result.errors ? result.errors.join(', ') : 'İşlem başarısız',
-                    confirmButtonColor: '#e74c3c'
-                });
+                const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+                Toast.fire({ icon: 'error', title: 'Hata!', text: result.errors ? result.errors.join(', ') : 'İşlem başarısız' });
             }
         } catch (err) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Sistem Hatası',
-                text: err.message,
-                confirmButtonColor: '#e74c3c'
-            });
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
+            Toast.fire({ icon: 'error', title: 'Sistem Hatası!', text: err.message });
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Kategoriyi Kaydet';

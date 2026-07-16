@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using naif_katalog.Models;
 using MediatR;
 using naif_katalog.Core.Features.ProductFeature.Queries;
@@ -8,10 +9,12 @@ namespace naif_katalog.Controllers;
 public class HomeController : Controller
 {
     private readonly IMediator _mediator;
+    private readonly IMemoryCache _memoryCache;
 
-    public HomeController(IMediator mediator)
+    public HomeController(IMediator mediator, IMemoryCache memoryCache)
     {
         _mediator = mediator;
+        _memoryCache = memoryCache;
     }
 
         public async Task<IActionResult> Detail(int id)
@@ -26,7 +29,9 @@ public class HomeController : Controller
                 // Log View Product Activity
                 try
                 {
-                    var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "id" || c.Type == "userId")?.Value;
+                    var allClaims = string.Join(", ", User.Claims.Select(c => c.Type + ":" + c.Value));
+                    System.Console.WriteLine("Tüm Claimler: " + allClaims);
+                    var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "id" || c.Type == "userId" || c.Type == "sub" || c.Type == "nameid")?.Value;
                     if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int uid))
                     {
                         await _mediator.Send(new naif_katalog.Core.Features.UserActionLogFeature.Commands.Create.CreateUserActionLogCommandRequest
@@ -34,13 +39,15 @@ public class HomeController : Controller
                             UserId = uid,
                             ActionType = "ViewProduct",
                             ProductId = id,
-                            Details = product.Name + " ürünü incelendi.",
+                            Details = product.Name + " ürünü incelendi. Görülen Fiyat: $" + product.CalculatedPrice.ToString("N2"),
                             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
                             UserAgent = HttpContext.Request.Headers["User-Agent"].ToString()
                         });
                     }
                 }
-                catch { }
+                catch (System.Exception ex) { 
+                    System.Console.WriteLine("UserActionLog HATA: " + ex.Message + " | " + ex.StackTrace);
+                }
 
                 try {
                     ViewBag.RelatedProducts = prodResponse.data
@@ -71,47 +78,39 @@ public class HomeController : Controller
         return RedirectToAction("Index");
     }
 
-    public async Task<IActionResult> Index(int? categoryId = null, string? search = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortOrder = null)
+    public async Task<IActionResult> Index(int? categoryId = null, string? search = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortOrder = null, int page = 1)
     {
-        List<Product> fetchedProducts = new List<Product>();
+        var products = new List<Product>();
+        
+        // --- Cache Logic START ---
+        var cacheKey = "CachedProducts";
+        List<Product>? fetchedProducts = null;
 
-        if (categoryId.HasValue && categoryId.Value > 0)
+        if (!_memoryCache.TryGetValue(cacheKey, out fetchedProducts))
         {
-            var catResponse = await _mediator.Send(new GetProductsByCategoryIdQueryRequest { CategoryId = categoryId.Value });
-            if (catResponse.isSuccess && catResponse.data != null)
-            {
-                fetchedProducts = catResponse.data.Select(x => new Product
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Name = x.Name,
-                    CategoryNames = x.CategoryNames,
-                    CategoryIds = x.CategoryIds,
-                    Description = x.Description,
-                    Gram = x.Gram,
-                    Karat = x.Karat,
-                    DiamondCarat = x.DiamondCarat,
-                    ColorId = x.ColorId,
-                    ColorName = x.ColorName,
-                    CalculatedPrice = x.CalculatedPrice,
-                    Images = x.Images
-                }).ToList();
-            }
-            else
-            {
-                fetchedProducts.Add(new Product { Code = "API_ERROR", CategoryNames = new List<string> { "HATA" }, Images = new List<string>() });
-            }
-        }
-        else
-        {
+            fetchedProducts = new List<Product>();
+            
             var allResponse = await _mediator.Send(new GetAllProductsQueryRequest());
             if (allResponse.isSuccess && allResponse.data != null)
                 fetchedProducts = allResponse.data;
             else
                 fetchedProducts.Add(new Product { Code = "API_ERROR", CategoryNames = new List<string> { "HATA" }, Images = new List<string>() });
+            
+            if (fetchedProducts != null && !fetchedProducts.Any(p => p.Code == "API_ERROR"))
+            {
+                var cacheEntryOptions = new Microsoft.Extensions.Caching.Memory.MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromHours(24));
+                _memoryCache.Set(cacheKey, fetchedProducts, cacheEntryOptions);
+            }
+        }
+        // --- Cache Logic END ---
+        
+        // In-memory Category Filtering
+        if (categoryId.HasValue && categoryId.Value > 0)
+        {
+            fetchedProducts = fetchedProducts.Where(x => x.CategoryIds != null && x.CategoryIds.Contains(categoryId.Value)).ToList();
         }
 
-        var products = new List<Product>();
         var categoriesResponse = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
         var categoriesList = categoriesResponse.isSuccess ? categoriesResponse.data : new List<naif_katalog.Models.CategoryDto>();
         ViewBag.Categories = categoriesList;
@@ -142,7 +141,7 @@ public class HomeController : Controller
         if (metalTypeList == null || !metalTypeList.Any())
         {
             ViewBag.MetalTypes = fetchedProducts
-                .SelectMany(p => p.ProductMetals)
+                .SelectMany(p => p.ProductMetals ?? new List<naif_katalog.Core.Features.ProductFeature.Queries.ApiProductMetal>())
                 .Where(pm => pm != null && pm.MetalTypeId > 0 && !string.IsNullOrEmpty(pm.MetalTypeName))
                 .GroupBy(m => m.MetalTypeId)
                 .Select(g => new naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto { Id = g.Key, Name = g.First().MetalTypeName })
@@ -153,7 +152,7 @@ public class HomeController : Controller
         if (clarityList == null || !clarityList.Any())
         {
             ViewBag.Clarities = fetchedProducts
-                .SelectMany(p => p.ProductStones)
+                .SelectMany(p => p.ProductStones ?? new List<naif_katalog.Core.Features.ProductFeature.Queries.ApiProductStone>())
                 .Where(ps => ps != null && ps.ClarityId.HasValue && !string.IsNullOrEmpty(ps.ClarityName))
                 .GroupBy(c => c.ClarityId.Value)
                 .Select(g => new naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto { Id = g.Key, Name = g.First().ClarityName })
@@ -214,7 +213,22 @@ public class HomeController : Controller
         }
 
         ViewBag.CurrentSort = sortOrder;
-        return View(products);
+        
+        // --- Pagination Logic START ---
+        int pageSize = 24;
+        int totalProducts = products.Count;
+        int totalPages = (int)Math.Ceiling(totalProducts / (double)pageSize);
+        if (page < 1) page = 1;
+        if (page > totalPages && totalPages > 0) page = totalPages;
+        
+        ViewBag.CurrentPage = page;
+        ViewBag.TotalPages = totalPages;
+        ViewBag.TotalCount = totalProducts;
+        
+        var pagedProducts = products.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        // --- Pagination Logic END ---
+
+        return View(pagedProducts);
     }
 }
 

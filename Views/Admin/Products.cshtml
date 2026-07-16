@@ -214,7 +214,7 @@
             </tr>
         </thead>
         <tbody>
-            @if(Model.Products != null)
+            @if(false && Model.Products != null)
             {
                 foreach(var item in Model.Products)
                 {
@@ -866,6 +866,13 @@
         renderImageGallery();
     }
 
+    function setGoldPriceRefreshVisible(isVisible) {
+        const button = document.querySelector('button[onclick="fetchCurrentGoldPrice()"]');
+        if (button) {
+            button.style.display = isVisible ? 'flex' : 'none';
+        }
+    }
+
     async function openModal(id = 0, preserveTab = false) {
         document.getElementById('productId').value = id;
         document.getElementById('modalTitle').innerText = id === 0 ? "Yeni Ürün Ekle" : "Ürünü Düzenle";
@@ -878,6 +885,7 @@
         if (!preserveTab) switchTab('genel');
 
         if (id === 0) {
+            setGoldPriceRefreshVisible(true);
             document.getElementById('Code').readOnly = false;
             document.getElementById('Code').style.backgroundColor = '#fff';
 
@@ -893,7 +901,9 @@
             renderStones();
             
             calculateLiveCost();
+            fetchCurrentGoldPrice();
         } else {
+            setGoldPriceRefreshVisible(false);
             document.getElementById('modalTitle').innerText = "Veriler Yükleniyor...";
             document.getElementById('productForm').style.opacity = '0.5';
             document.getElementById('productForm').style.pointerEvents = 'none';
@@ -1279,9 +1289,94 @@
     });
 
     $(document).ready(function() {
+        const filterParams = new URLSearchParams(window.location.search);
         var table = $('#productsTable').DataTable({
-            pageLength: 50,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tümü"]],
+            processing: true,
+            serverSide: true,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            ajax: {
+                url: '/Product/IndexData',
+                type: 'GET',
+                data: function(d) {
+                    d.pageSize = d.length > 0 ? d.length : 10;
+                    d.page = Math.floor(d.start / d.pageSize) + 1;
+                    d.columnIndex = d.order && d.order.length ? d.order[0].column : 0;
+                    d.orderBy = d.order && d.order.length ? d.order[0].dir : 'asc';
+                    d.code = filterParams.get('code') || d.search.value || '';
+                    d.category = filterParams.get('category') || '';
+                    d.minGram = filterParams.get('minGram') || '';
+                    d.maxGram = filterParams.get('maxGram') || '';
+                    d.metalTypeId = filterParams.get('metalTypeId') || '';
+                    d.clarityId = filterParams.get('clarityId') || '';
+                    d.stoneId = filterParams.get('stoneId') || '';
+                    d.stoneTypeId = filterParams.get('stoneTypeId') || '';
+                }
+            },
+            columns: [
+                {
+                    data: 'imageUrl',
+                    orderable: false,
+                    render: function(value) {
+                        if (value) {
+                            return `<img src="${value}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" />`;
+                        }
+                        return '<div style="width:40px; height:40px; border-radius:8px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#94a3b8;"><i class="fas fa-image"></i></div>';
+                    }
+                },
+                { data: 'name' },
+                { data: 'code' },
+                {
+                    data: 'categoryNames',
+                    render: function(value) {
+                        const text = value && value.length ? value.join(', ') : '-';
+                        return `<span style="background:var(--secondary); padding:4px 10px; border-radius:12px; font-size:12px;">${text}</span>`;
+                    }
+                },
+                {
+                    data: 'diamondCarat',
+                    render: function(value) {
+                        const number = Number(value || 0);
+                        return number > 0 ? number.toFixed(2) : '-';
+                    }
+                },
+                {
+                    data: 'gram',
+                    render: function(value) {
+                        return `${Number(value || 0).toFixed(2)} gr`;
+                    }
+                },
+                {
+                    data: 'calculatedPrice',
+                    render: function(value) {
+                        const amount = Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        return `<span style="font-weight:600; color:var(--primary);">$${amount}</span>`;
+                    }
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    render: function(row) {
+                        return `
+                            <div style="display:flex; gap:8px;">
+                                <a href="/Admin/CategoryAssign?code=${encodeURIComponent(row.code || '')}"
+                                   style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color:#3b82f6; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(59,130,246,0.2); text-decoration:none;"
+                                   title="Hızlı Kategori Ata">
+                                    <i class="fas fa-random"></i>
+                                </a>
+                                <button onclick="openModal(${row.id})"
+                                        style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color:#f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);"
+                                        title="Düzenle">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color:#ef4444; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(239,68,68,0.2);"
+                                        title="Sil" onclick="deleteProduct(${row.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>`;
+                    }
+                }
+            ],
             language: {
                 "sDecimal":        ",",
                 "sEmptyTable":     "Tabloda herhangi bir veri mevcut değil",
@@ -1306,14 +1401,6 @@
                     "sSortDescending": ": azalan sütun sıralamasını aktifleştir"
                 }
             }
-        });
-
-        $('#codeFilter').on('keyup input', function() {
-            table.column(1).search(this.value).draw();
-        });
-
-        $('#categoryFilter').on('change', function() {
-            table.column(2).search(this.value).draw();
         });
 
         $('#btnToggleFilters').on('click', function() {

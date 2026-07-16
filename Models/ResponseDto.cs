@@ -5,6 +5,7 @@ namespace naif_katalog.Models
     public class ResponseDto<T>
     {
         public T data { get; set; }
+        public int count { get; set; }
         public bool isSuccess { get; set; }
         public int statusCode { get; set; }
         public List<string> errors { get; set; }

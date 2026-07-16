@@ -80,6 +80,79 @@ public class HomeController : Controller
 
     public async Task<IActionResult> Index(int? categoryId = null, string? search = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortOrder = null, int page = 1)
     {
+        if (HttpContext != null)
+        {
+            const int homePageSize = 24;
+            if (page < 1) page = 1;
+
+            var categoriesResponsePaged = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
+            var categoriesListPaged = categoriesResponsePaged.isSuccess ? categoriesResponsePaged.data : new List<naif_katalog.Models.CategoryDto>();
+            var currentCategoryObjPaged = categoryId.HasValue ? categoriesListPaged.FirstOrDefault(c => c.Id == categoryId.Value) : null;
+
+            var columnIndex = sortOrder switch
+            {
+                "price_asc" => 6,
+                "price_desc" => 6,
+                _ => 0
+            };
+
+            var orderBy = sortOrder == "price_desc" ? "desc" : "asc";
+
+            var productsResponsePaged = await _mediator.Send(new GetAllProductsQueryRequest
+            {
+                Code = search,
+                Category = currentCategoryObjPaged?.Name,
+                MinPrice = minPrice,
+                MaxPrice = maxPrice,
+                Page = page,
+                PageSize = homePageSize,
+                ColumnIndex = columnIndex,
+                OrderBy = orderBy
+            });
+
+            var pagedProductsFromBackend = productsResponsePaged != null && productsResponsePaged.isSuccess && productsResponsePaged.data != null
+                ? productsResponsePaged.data
+                : new List<Product>();
+
+            foreach (var product in pagedProductsFromBackend)
+            {
+                _memoryCache.Set($"CachedProduct_{product.Id}", product, TimeSpan.FromMinutes(10));
+            }
+
+            var totalProductsPaged = productsResponsePaged != null && productsResponsePaged.count > 0 ? productsResponsePaged.count : pagedProductsFromBackend.Count;
+            var totalPagesPaged = (int)Math.Ceiling(totalProductsPaged / (double)homePageSize);
+
+            ViewBag.Categories = categoriesListPaged;
+            ViewBag.CurrentCategory = currentCategoryObjPaged?.Name;
+            ViewBag.CurrentCategoryId = categoryId;
+            ViewBag.SearchQuery = search;
+            ViewBag.CurrentSort = sortOrder;
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = totalPagesPaged;
+            ViewBag.TotalCount = totalProductsPaged;
+
+            try {
+                var colorsResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalTypesQueryRequest());
+                ViewBag.MetalTypes = (colorsResp != null && colorsResp.isSuccess) ? colorsResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto>();
+
+                var claritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
+                ViewBag.Clarities = (claritiesResp != null && claritiesResp.isSuccess) ? claritiesResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>();
+
+                var stoneTypesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
+                ViewBag.StoneTypes = (stoneTypesResp != null && stoneTypesResp.isSuccess) ? stoneTypesResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>();
+
+                var stoneResponse = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
+                ViewBag.Stones = (stoneResponse != null && stoneResponse.isSuccess) ? stoneResponse.data : new List<naif_katalog.Models.StoneDto>();
+            } catch {
+                ViewBag.MetalTypes = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto>();
+                ViewBag.Clarities = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>();
+                ViewBag.StoneTypes = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>();
+                ViewBag.Stones = new List<naif_katalog.Models.StoneDto>();
+            }
+
+            return View(pagedProductsFromBackend);
+        }
+
         var products = new List<Product>();
         
         // --- Cache Logic START ---

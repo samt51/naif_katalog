@@ -32,10 +32,16 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
             if (!string.IsNullOrEmpty(request.Category)) qs.Add($"Category={System.Net.WebUtility.UrlEncode(request.Category)}");
             if (request.MinGram.HasValue) qs.Add($"MinGram={request.MinGram.Value}");
             if (request.MaxGram.HasValue) qs.Add($"MaxGram={request.MaxGram.Value}");
+            if (request.MinPrice.HasValue) qs.Add($"MinPrice={request.MinPrice.Value}");
+            if (request.MaxPrice.HasValue) qs.Add($"MaxPrice={request.MaxPrice.Value}");
             if (request.MetalTypeId.HasValue) qs.Add($"MetalTypeId={request.MetalTypeId.Value}");
             if (request.ClarityId.HasValue) qs.Add($"ClarityId={request.ClarityId.Value}");
             if (request.StoneId.HasValue) qs.Add($"StoneId={request.StoneId.Value}");
             if (request.StoneTypeId.HasValue) qs.Add($"StoneTypeId={request.StoneTypeId.Value}");
+            qs.Add($"page={request.Page}");
+            qs.Add($"pageSize={request.PageSize}");
+            if (request.ColumnIndex.HasValue) qs.Add($"columnIndex={request.ColumnIndex.Value}");
+            if (!string.IsNullOrEmpty(request.OrderBy)) qs.Add($"orderBy={System.Net.WebUtility.UrlEncode(request.OrderBy)}");
             
             var url = "api/Products" + (qs.Any() ? "?" + string.Join("&", qs) : "");
 
@@ -86,7 +92,9 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
                         ProductMetals = item.ProductMetals ?? new List<ApiProductMetal>()
                     });
                 }
-                return new ResponseDto<List<Product>>().Success(products);
+                var response = new ResponseDto<List<Product>>().Success(products);
+                response.count = apiResult.count > 0 ? apiResult.count : products.Count;
+                return response;
             }
 
             var err = apiResult.errors != null && apiResult.errors.Count > 0 ? string.Join(", ", apiResult.errors) : "Hata";

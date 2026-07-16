@@ -509,7 +509,8 @@
             
             populateMatrix(dbStones);
             
-            let hasCustom = dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || (customMilyem != '' && customMilyem != null) || customPolishing.length > 0 || tempSettingPricing.length > 0;
+            const salesMultiplierNumber = parseFloat((salesMultiplier || '1').toString().replace(',', '.')) || 1;
+            let hasCustom = dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || (customMilyem != '' && customMilyem != null) || customPolishing.length > 0 || tempSettingPricing.length > 0 || salesMultiplierNumber !== 1;
             document.getElementById('EnableCustomPricing').checked = hasCustom;
             toggleCustomPricing(hasCustom);
 
@@ -610,13 +611,14 @@
                     formData.append(`CustomSettingPrices[${index}].CustomPrice`, sPrice);
                 }
             });
+            let salesVal = document.getElementById('SalesMultiplier').value;
+            if(salesVal) formData.set('SalesMultiplier', salesVal);
+            else formData.set('SalesMultiplier', '1');
         } else {
+            formData.delete('SalesMultiplier');
+            formData.delete('CustomMilyem');
             formData.append('ClearCustomPricing', 'true');
         }
-
-        let salesVal = document.getElementById('SalesMultiplier').value;
-        if(salesVal) formData.set('SalesMultiplier', salesVal);
-        else formData.set('SalesMultiplier', '1');
 
         if(id > 0 && !document.getElementById('ChangePasswordCheck').checked) {
             formData.delete('Password');

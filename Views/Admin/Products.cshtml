@@ -974,6 +974,8 @@
         document.getElementById('productModal').classList.add('active');
     }
 
+    window.openModal = openModal;
+
     
     let allStoneOptions = [];
     document.addEventListener('DOMContentLoaded', function() {
@@ -1262,6 +1264,19 @@
             }
         });
     }
+
+    Object.assign(window, {
+        openModal,
+        closeModal,
+        switchTab,
+        addStone,
+        deleteStoneLocal,
+        removeCategory,
+        removeExistingImage,
+        removeNewImage,
+        fetchCurrentGoldPrice,
+        deleteProduct
+    });
 
     $(document).ready(function() {
         var table = $('#productsTable').DataTable({

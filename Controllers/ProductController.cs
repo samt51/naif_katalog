@@ -86,26 +86,6 @@ namespace naif_katalog.Controllers
         {
             try 
             {
-                var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
-                if (!apiAddress.EndsWith("/")) apiAddress += "/";
-                
-                try
-                {
-                    using (var client = new System.Net.Http.HttpClient())
-                    {
-                        client.BaseAddress = new System.Uri(apiAddress);
-                        var response = await client.GetAsync($"api/Product/{id}");
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var jsonString = await response.Content.ReadAsStringAsync();
-                            if(jsonString.Contains("\"isSuccess\":true", StringComparison.OrdinalIgnoreCase) || jsonString.Contains("\"data\":", StringComparison.OrdinalIgnoreCase)) {
-                                return Content(jsonString, "application/json");
-                            }
-                        }
-                    }
-                }
-                catch { }
-
                 if (!_cache.TryGetValue("CachedProducts", out naif_katalog.Models.ResponseDto<List<naif_katalog.Models.Product>> prodResponse))
                 {
                     prodResponse = await _mediator.Send(new GetAllProductsQueryRequest());
@@ -118,7 +98,32 @@ namespace naif_katalog.Controllers
                 if (prodResponse != null && prodResponse.isSuccess)
                 {
                     var product = prodResponse.data.FirstOrDefault(p => p.Id == id);
-                    return Json(new { isSuccess = true, data = product });
+                    if (product == null)
+                    {
+                        return Json(new { isSuccess = false, errors = new[] { "Ürün bulunamadı." } });
+                    }
+
+                    return Json(new
+                    {
+                        isSuccess = true,
+                        data = new
+                        {
+                            product.Id,
+                            product.Code,
+                            product.Name,
+                            product.Description,
+                            product.CategoryIds,
+                            product.ColorId,
+                            product.Gram,
+                            product.MetalPurityName,
+                            product.LaborMultiplier,
+                            product.PolishingCost,
+                            product.LiveGoldPrice,
+                            product.Images,
+                            product.ProductStones,
+                            product.ProductMetals
+                        }
+                    });
                 }
                 return Json(new { isSuccess = false });
             }

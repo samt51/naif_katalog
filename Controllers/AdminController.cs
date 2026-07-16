@@ -168,7 +168,7 @@ namespace naif_katalog.Controllers
 
             switch(type)
             {
-                case "Color": response = await _mediator.Send(new CreateColorsCommandRequest { Name = name }); break;
+                case "Color": response = await _mediator.Send(new CreateColorsCommandRequest { Name = name, Code = name, ColorType = "Stone" }); break;
                 case "CustomerGroup": response = await _mediator.Send(new CreateCustomerGroupsCommandRequest { Name = name }); break;
                 case "MetalPurity": response = await _mediator.Send(new CreateMetalPuritysCommandRequest { Name = name }); break;
                 case "MetalType": response = await _mediator.Send(new CreateMetalTypesCommandRequest { Name = name }); break;
@@ -193,7 +193,7 @@ namespace naif_katalog.Controllers
 
             switch(type)
             {
-                case "Color": response = await _mediator.Send(new UpdateColorsCommandRequest { Id = id, Name = name }); break;
+                case "Color": response = await _mediator.Send(new UpdateColorsCommandRequest { Id = id, Name = name, Code = name, ColorType = "Stone" }); break;
                 case "CustomerGroup": response = await _mediator.Send(new UpdateCustomerGroupsCommandRequest { Id = id, Name = name }); break;
                 case "MetalPurity": response = await _mediator.Send(new UpdateMetalPuritysCommandRequest { Id = id, Name = name }); break;
                 case "MetalType": response = await _mediator.Send(new UpdateMetalTypesCommandRequest { Id = id, Name = name }); break;

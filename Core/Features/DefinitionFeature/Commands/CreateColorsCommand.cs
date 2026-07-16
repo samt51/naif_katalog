@@ -10,6 +10,8 @@ namespace naif_katalog.Core.Features.DefinitionFeature.Commands
     public class CreateColorsCommandRequest : IRequest<ResponseDto<bool>>
     {
         public string Name { get; set; }
+        public string Code { get; set; }
+        public string ColorType { get; set; }
     }
 
     // Handler

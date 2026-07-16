@@ -104,7 +104,9 @@
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
                 @if(Model.Colors != null) {
                     foreach(var item in Model.Colors) {
-                        <span class="def-item" onclick="openModal('Color', 'Renk Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                        if(item.ColorType == "Stone") {
+                            <span class="def-item" onclick="openModal('Color', 'Renk Güncelle', @item.Id, '@item.Name')">@item.Name</span>
+                        }
                     }
                 }
             </div>

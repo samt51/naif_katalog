@@ -11,6 +11,8 @@ namespace naif_katalog.Core.Features.DefinitionFeature.Commands
     {
         public int Id { get; set; }
         public string Name { get; set; }
+        public string Code { get; set; }
+        public string ColorType { get; set; }
     }
 
     // Handler

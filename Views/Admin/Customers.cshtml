@@ -52,6 +52,7 @@
     .data-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
     .data-table tr:last-child td { border-bottom: none; }
     .pricing-section:has(#customSettingBody) { display: none; }
+    .pricing-section div:has(> #CategorySelect) { display: none !important; }
     .btn-secondary { background: #f1f5f9; color: #334155; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
     .btn-secondary:hover { background: #e2e8f0; color: #0f172a; }
     .btn-danger { background: #fee2e2; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
@@ -333,7 +334,7 @@
                     </div>
                     <div style="max-height: 200px; overflow-y: auto; border-radius: 8px; border: 1px solid #e2e8f0;">
 <table class="data-table" style="margin-top: 0; border: none;">
-                        <thead><tr><th>Kategori</th><th>Tanımlı Müşteri Fiyatı</th><th>İşlem</th></tr></thead>
+                        <thead><tr><th>Kategori</th><th>Genel Maliyet</th><th>Müşteri Fiyatı</th></tr></thead>
                         <tbody id="customPolishingBody">
                             <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Henüz cila/rodaj maliyeti eklenmedi</td></tr>
                         </tbody>
@@ -706,12 +707,14 @@
                 }
             });
             
-            customPolishing.forEach((pc, index) => {
-                let el = document.getElementById(`polish_price_${index}`);
-                let pPrice = el ? parseDecimalValue(el.value, NaN) : parseDecimalValue(pc.customPrice, NaN);
-                if(pPrice > 0) {
-                    if(pc.categoryId) formData.append(`CustomPolishingCosts[${index}].CategoryId`, pc.categoryId);
-                    formData.append(`CustomPolishingCosts[${index}].CustomPrice`, pPrice.toString());
+            let polishingIndex = 0;
+            document.querySelectorAll('.polishing-price-input').forEach((input) => {
+                let pPrice = parseDecimalValue(input.value, NaN);
+                if (!isNaN(pPrice) && pPrice > 0) {
+                    let categoryId = input.getAttribute('data-category-id');
+                    if(categoryId) formData.append(`CustomPolishingCosts[${polishingIndex}].CategoryId`, categoryId);
+                    formData.append(`CustomPolishingCosts[${polishingIndex}].CustomPrice`, pPrice.toString());
+                    polishingIndex++;
                 }
             });
 
@@ -852,17 +855,27 @@
 
     function renderCustomPolishing() {
         const tbody = document.getElementById('customPolishingBody');
-        if(customPolishing.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Henüz cila/rodaj maliyeti eklenmedi</td></tr>';
+        const polishingCosts = availablePolishingCosts || [];
+        if(polishingCosts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Cila/rodaj maliyeti bulunamadı</td></tr>';
             return;
         }
-        tbody.innerHTML = customPolishing.map((pc, index) => `
+
+        tbody.innerHTML = polishingCosts.map((pc) => {
+            const categoryId = pc.categoryId ?? pc.CategoryId;
+            const custom = customPolishing.find(x => (x.categoryId ?? x.CategoryId) == categoryId);
+            const customPrice = custom ? (custom.customPrice ?? custom.CustomPrice ?? '') : '';
+            const costPrice = pc.costPrice ?? pc.CostPrice ?? 0;
+            const categoryName = pc.categoryName ?? pc.CategoryName ?? (categoryId ? availableCategories.find(c=>c.id==categoryId)?.name : 'Tüm Ürünler');
+
+            return `
             <tr>
-                <td>${pc.categoryName || (pc.categoryId ? availableCategories.find(c=>c.id==pc.categoryId)?.name : 'Tüm Ürünler')}</td>
-                <td><div style="display:flex; align-items:center; gap:6px; white-space:nowrap;"><input type="number" step="0.01" id="polish_price_${index}" value="${(pc.customPrice || 0).toFixed(2)}" class="form-control" style="width:100px; display:inline-block; margin:0;"> <span>$</span></div></td>
-                <td><button type="button" onclick="removeCustomPolishing(${index})" class="btn-danger" style="padding:4px 8px;"><i class="fas fa-trash"></i></button></td>
+                <td>${categoryName}</td>
+                <td>$${formatMoney(costPrice)}</td>
+                <td><div style="display:flex; align-items:center; gap:6px; white-space:nowrap;"><input type="number" step="0.01" data-category-id="${categoryId || ''}" value="${customPrice || ''}" placeholder="${formatMoney(costPrice)}" class="form-control polishing-price-input" style="width:120px; display:inline-block; margin:0; text-align:center;"> <span>$</span></div></td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
     }
 
     

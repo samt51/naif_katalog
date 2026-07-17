@@ -82,7 +82,7 @@ public class HomeController : Controller
     {
         if (HttpContext != null)
         {
-            const int homePageSize = 24;
+            const int homePageSize = 12;
             if (page < 1) page = 1;
 
             var categoriesResponsePaged = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
@@ -288,7 +288,7 @@ public class HomeController : Controller
         ViewBag.CurrentSort = sortOrder;
         
         // --- Pagination Logic START ---
-        int pageSize = 24;
+        int pageSize = 12;
         int totalProducts = products.Count;
         int totalPages = (int)Math.Ceiling(totalProducts / (double)pageSize);
         if (page < 1) page = 1;

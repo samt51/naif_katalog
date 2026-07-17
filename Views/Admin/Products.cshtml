@@ -1293,6 +1293,7 @@
         var table = $('#productsTable').DataTable({
             processing: true,
             serverSide: true,
+            stateSave: false,
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
             ajax: {

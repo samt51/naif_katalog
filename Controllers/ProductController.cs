@@ -68,8 +68,10 @@ namespace naif_katalog.Controllers
             int start = 0,
             int length = 10)
         {
-            pageSize = pageSize > 0 ? pageSize : (length > 0 ? length : 10);
-            page = page > 0 ? page : (start / pageSize) + 1;
+            var hasExplicitPageSize = Request.Query.ContainsKey("pageSize");
+            var requestedPageSize = hasExplicitPageSize ? pageSize : length;
+            pageSize = requestedPageSize > 0 ? requestedPageSize : 10;
+            page = start >= 0 ? (start / pageSize) + 1 : (page > 0 ? page : 1);
             columnIndex ??= 0;
             orderBy = string.Equals(orderBy, "desc", StringComparison.OrdinalIgnoreCase) ? "desc" : "asc";
 
@@ -98,7 +100,8 @@ namespace naif_katalog.Controllers
                 Page = page,
                 PageSize = pageSize,
                 ColumnIndex = columnIndex,
-                OrderBy = orderBy
+                OrderBy = orderBy,
+                ApplyCustomerPricing = false
             });
 
             var products = prodResponse != null && prodResponse.isSuccess && prodResponse.data != null

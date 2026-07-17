@@ -454,6 +454,18 @@
         });
     }
 
+    function parseDecimalValue(value, fallback = 0) {
+        if (value === null || value === undefined || value === '') return fallback;
+        const parsed = parseFloat(value.toString().replace(',', '.'));
+        return isNaN(parsed) ? fallback : parsed;
+    }
+
+    function normalizeDecimalValue(value, fallback = '') {
+        if (value === null || value === undefined || value === '') return fallback;
+        const parsed = parseDecimalValue(value, NaN);
+        return isNaN(parsed) ? fallback : parsed.toString();
+    }
+
     function openModal(title, id = 0, firstName = '', lastName = '', companyName = '', email = '', phoneNumber = '', roleId = 3, expiryDate = '', address = '', isLocked = false, customMilyem = '', stonesJson = '[]', polishingJson = '[]', salesMultiplier = '1', settingJson = '[]') {
         document.getElementById('modalError').style.display = 'none';
         document.getElementById('userId').value = id;
@@ -478,17 +490,15 @@
         passInput.value = '';
         passGroup.style.display = 'none';
         
-        if (customMilyem) {
-            document.getElementById('CustomMilyem').value = customMilyem.toString().replace(',', '.');
-        } else {
-            document.getElementById('CustomMilyem').value = '';
-        }
+        const normalizedCustomMilyem = normalizeDecimalValue(customMilyem, '');
+        const normalizedSalesMultiplier = normalizeDecimalValue(salesMultiplier, '1');
+        const salesMultiplierNumber = parseDecimalValue(normalizedSalesMultiplier, 1);
+        const hasCustomMilyem = normalizedCustomMilyem !== '';
 
-        if (salesMultiplier) {
-            document.getElementById('SalesMultiplier').value = salesMultiplier.toString().replace(',', '.');
-        } else {
-            document.getElementById('SalesMultiplier').value = '1';
-        }
+        document.getElementById('CustomMilyem').value = normalizedCustomMilyem;
+        document.getElementById('SalesMultiplier').value = normalizedSalesMultiplier || '1';
+
+        let hasCustom = hasCustomMilyem || salesMultiplierNumber !== 1;
         
         try {
             let dbStones = JSON.parse(stonesJson);
@@ -509,18 +519,16 @@
             
             populateMatrix(dbStones);
             
-            const salesMultiplierNumber = parseFloat((salesMultiplier || '1').toString().replace(',', '.')) || 1;
-            let hasCustom = dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || (customMilyem != '' && customMilyem != null) || customPolishing.length > 0 || tempSettingPricing.length > 0 || salesMultiplierNumber !== 1;
-            document.getElementById('EnableCustomPricing').checked = hasCustom;
-            toggleCustomPricing(hasCustom);
+            hasCustom = hasCustom || dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || customPolishing.length > 0 || tempSettingPricing.length > 0;
 
         } catch(e) {
             customPolishing = [];
             tempSettingPricing = [];
             populateMatrix([]);
-            document.getElementById('EnableCustomPricing').checked = false;
-            toggleCustomPricing(false);
         }
+
+        document.getElementById('EnableCustomPricing').checked = hasCustom;
+        toggleCustomPricing(hasCustom);
         
         renderCustomPolishing();
         renderSettingPricing();
@@ -579,39 +587,39 @@
         formData.delete('CustomMilyem'); // Clear first
         
         if (isCustom) {
-            let milyemVal = document.getElementById('CustomMilyem').value;
+            let milyemVal = normalizeDecimalValue(document.getElementById('CustomMilyem').value, '');
             if(milyemVal) formData.set('CustomMilyem', milyemVal);
             
             let inputs = document.querySelectorAll('.matrix-input');
             let stoneIndex = 0;
             inputs.forEach(input => {
-                let price = parseFloat(input.value);
+                let price = parseDecimalValue(input.value, NaN);
                 if (!isNaN(price) && price > 0) {
                     let sid = input.getAttribute('data-stone-id');
                     formData.append(`CustomStonePrices[${stoneIndex}].StoneId`, sid);
-                    formData.append(`CustomStonePrices[${stoneIndex}].CustomPrice`, price);
+                    formData.append(`CustomStonePrices[${stoneIndex}].CustomPrice`, price.toString());
                     stoneIndex++;
                 }
             });
             
             customPolishing.forEach((pc, index) => {
                 let el = document.getElementById(`polish_price_${index}`);
-                let pPrice = el ? parseFloat(el.value) : pc.customPrice;
+                let pPrice = el ? parseDecimalValue(el.value, NaN) : parseDecimalValue(pc.customPrice, NaN);
                 if(pPrice > 0) {
                     if(pc.categoryId) formData.append(`CustomPolishingCosts[${index}].CategoryId`, pc.categoryId);
-                    formData.append(`CustomPolishingCosts[${index}].CustomPrice`, pPrice);
+                    formData.append(`CustomPolishingCosts[${index}].CustomPrice`, pPrice.toString());
                 }
             });
 
             tempSettingPricing.forEach((sc, index) => {
                 let el = document.getElementById(`setting_price_${index}`);
-                let sPrice = el ? parseFloat(el.value) : sc.customPrice;
+                let sPrice = el ? parseDecimalValue(el.value, NaN) : parseDecimalValue(sc.customPrice, NaN);
                 if(sPrice > 0) {
                     formData.append(`CustomSettingPrices[${index}].StoneSettingId`, sc.stoneSettingId);
-                    formData.append(`CustomSettingPrices[${index}].CustomPrice`, sPrice);
+                    formData.append(`CustomSettingPrices[${index}].CustomPrice`, sPrice.toString());
                 }
             });
-            let salesVal = document.getElementById('SalesMultiplier').value;
+            let salesVal = normalizeDecimalValue(document.getElementById('SalesMultiplier').value, '1');
             if(salesVal) formData.set('SalesMultiplier', salesVal);
             else formData.set('SalesMultiplier', '1');
         } else {

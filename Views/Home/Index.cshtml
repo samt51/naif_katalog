@@ -475,7 +475,7 @@
         <!-- Top Bar -->
         <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom border-light">
             <div class="text-muted text-uppercase" style="font-size: 12px; letter-spacing:2px; font-weight:600;">
-                TOPLAM @Model.Count ÜRÜN LİSTELENİYOR
+                TOPLAM @(ViewBag.TotalCount ?? Model.Count) ÜRÜN LİSTELENİYOR
             </div>
             <select class="form-select border-0 bg-transparent w-auto text-dark" style="font-size: 13px; font-weight:500; cursor:pointer; box-shadow:none;" 
                     onchange="document.getElementById('hiddenSortOrder').value = this.value; document.getElementById('publicFilterForm').submit();">

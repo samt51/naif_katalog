@@ -42,6 +42,7 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
             qs.Add($"pageSize={request.PageSize}");
             if (request.ColumnIndex.HasValue) qs.Add($"columnIndex={request.ColumnIndex.Value}");
             if (!string.IsNullOrEmpty(request.OrderBy)) qs.Add($"orderBy={System.Net.WebUtility.UrlEncode(request.OrderBy)}");
+            qs.Add($"applyCustomerPricing={request.ApplyCustomerPricing.ToString().ToLowerInvariant()}");
             
             var url = "api/Products" + (qs.Any() ? "?" + string.Join("&", qs) : "");
 

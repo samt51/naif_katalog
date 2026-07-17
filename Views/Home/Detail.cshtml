@@ -145,6 +145,63 @@
         transform: translateY(-2px);
         box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
+    .related-carousel {
+        position: relative;
+        padding: 0 48px;
+    }
+    .related-carousel-track {
+        display: flex;
+        gap: 20px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 6px 0 18px;
+    }
+    .related-carousel-track::-webkit-scrollbar {
+        display: none;
+    }
+    .related-carousel-item {
+        flex: 0 0 220px;
+        scroll-snap-align: start;
+    }
+    .related-carousel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        border: 1px solid #e2e8f0;
+        border-radius: 50%;
+        background: #fff;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 22px rgba(15,23,42,0.08);
+        transition: all 0.2s;
+        z-index: 2;
+    }
+    .related-carousel-btn:hover {
+        background: #0f172a;
+        color: #fff;
+        border-color: #0f172a;
+    }
+    .related-carousel-btn.prev {
+        left: 0;
+    }
+    .related-carousel-btn.next {
+        right: 0;
+    }
+    @@media (max-width: 768px) {
+        .related-carousel {
+            padding: 0 38px;
+        }
+        .related-carousel-item {
+            flex-basis: 190px;
+        }
+    }
 </style>
 
 <div class="container">
@@ -366,27 +423,35 @@
             <div class="col-12 p-4 p-lg-5" style="border-top: 1px solid #f1f5f9; background: #fafaf9;">
                 <div class="container-fluid px-0">
                     <h4 class="fw-bold mb-4 text-center" style="color: #1e293b; font-size: 22px;"><i class="fas fa-layer-group me-2 text-primary"></i> Diğer Ürünlerimiz</h4>
-                    <div class="d-flex overflow-auto pb-3 justify-content-lg-center" style="gap: 20px; scroll-snap-type: x mandatory;">
-                        @foreach(var relProduct in (IEnumerable<dynamic>)ViewBag.RelatedProducts)
-                        {
-                            <div style="flex: 0 0 200px; scroll-snap-align: start;">
-                                <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px; transition: transform 0.2s;">
-                                    <a href="/Home/Detail/@relProduct.Id" class="text-decoration-none">
-                                        @if(relProduct.Images != null && relProduct.Images.Count > 0) {
-                                            <img src="@relProduct.Images[0]" class="card-img-top" style="height: 180px; object-fit: cover; border-radius: 12px 12px 0 0;" alt="@relProduct.Name">
-                                        } else {
-                                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 180px; border-radius: 12px 12px 0 0;">
-                                                <i class="fas fa-image text-muted fa-2x"></i>
+                    <div class="related-carousel" id="relatedProductsCarousel">
+                        <button type="button" class="related-carousel-btn prev" data-related-direction="-1" aria-label="Önceki ürün">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="related-carousel-track">
+                            @foreach(var relProduct in (IEnumerable<dynamic>)ViewBag.RelatedProducts)
+                            {
+                                <div class="related-carousel-item">
+                                    <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px; transition: transform 0.2s;">
+                                        <a href="/Home/Detail/@relProduct.Id" class="text-decoration-none">
+                                            @if(relProduct.Images != null && relProduct.Images.Count > 0) {
+                                                <img src="@relProduct.Images[0]" class="card-img-top" style="height: 180px; object-fit: cover; border-radius: 12px 12px 0 0;" alt="@relProduct.Name">
+                                            } else {
+                                                <div class="bg-light d-flex align-items-center justify-content-center" style="height: 180px; border-radius: 12px 12px 0 0;">
+                                                    <i class="fas fa-image text-muted fa-2x"></i>
+                                                </div>
+                                            }
+                                            <div class="card-body p-3 text-center">
+                                                <h6 class="card-title text-dark fw-bold mb-1 text-truncate" style="font-size: 15px;">@relProduct.Name</h6>
+                                                <p class="text-muted small mb-0">@relProduct.Code</p>
                                             </div>
-                                        }
-                                        <div class="card-body p-3 text-center">
-                                            <h6 class="card-title text-dark fw-bold mb-1 text-truncate" style="font-size: 15px;">@relProduct.Name</h6>
-                                            <p class="text-muted small mb-0">@relProduct.Code</p>
-                                        </div>
-                                    </a>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                        }
+                            }
+                        </div>
+                        <button type="button" class="related-carousel-btn next" data-related-direction="1" aria-label="Sonraki ürün">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -405,6 +470,7 @@
 
     document.addEventListener("DOMContentLoaded", function() {
         recalculatePrice();
+        initRelatedProductsCarousel();
     });
 
     /*
@@ -426,6 +492,61 @@
         }
     });
     */
+
+    function initRelatedProductsCarousel() {
+        const carousel = document.getElementById('relatedProductsCarousel');
+        if (!carousel) return;
+
+        const track = carousel.querySelector('.related-carousel-track');
+        const items = carousel.querySelectorAll('.related-carousel-item');
+        const buttons = carousel.querySelectorAll('[data-related-direction]');
+        if (!track || items.length <= 1) return;
+
+        const getStep = () => {
+            const firstItem = items[0];
+            const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 20;
+            return firstItem.getBoundingClientRect().width + gap;
+        };
+
+        const moveCarousel = (direction = 1) => {
+            const maxScroll = track.scrollWidth - track.clientWidth;
+            if (maxScroll <= 0) return;
+
+            if (direction > 0 && track.scrollLeft >= maxScroll - 4) {
+                track.scrollTo({ left: 0, behavior: 'smooth' });
+                return;
+            }
+
+            if (direction < 0 && track.scrollLeft <= 4) {
+                track.scrollTo({ left: maxScroll, behavior: 'smooth' });
+                return;
+            }
+
+            track.scrollBy({ left: getStep() * direction, behavior: 'smooth' });
+        };
+
+        let autoTimer = window.setInterval(() => moveCarousel(1), 3000);
+        const pause = () => window.clearInterval(autoTimer);
+        const resume = () => {
+            window.clearInterval(autoTimer);
+            autoTimer = window.setInterval(() => moveCarousel(1), 3000);
+        };
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                pause();
+                moveCarousel(parseInt(this.dataset.relatedDirection, 10));
+                window.setTimeout(resume, 5000);
+            });
+        });
+
+        carousel.addEventListener('mouseenter', pause);
+        carousel.addEventListener('mouseleave', resume);
+        carousel.addEventListener('focusin', pause);
+        carousel.addEventListener('focusout', resume);
+        track.addEventListener('touchstart', pause, { passive: true });
+        track.addEventListener('touchend', resume);
+    }
 
     function recalculatePrice() {
         const selectElement = document.getElementById('ayarSelect');

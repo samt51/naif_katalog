@@ -17,65 +17,109 @@ public class HomeController : Controller
         _memoryCache = memoryCache;
     }
 
-        public async Task<IActionResult> Detail(int id)
+    public async Task<IActionResult> Detail(int id)
     {
-        var prodResponse = await _mediator.Send(new GetAllProductsQueryRequest());
-        if (prodResponse.isSuccess && prodResponse.data != null)
+        var detailResult = await FindProductForDetail(id);
+        var product = detailResult.Product;
+        var productPool = detailResult.Products;
+
+        if (product != null)
         {
-            var product = prodResponse.data.FirstOrDefault(x => x.Id == id);
-            if (product != null)
+            // Log View Product Activity
+            try
             {
-                
-                // Log View Product Activity
-                try
+                var allClaims = string.Join(", ", User.Claims.Select(c => c.Type + ":" + c.Value));
+                System.Console.WriteLine("TÃ¼m Claimler: " + allClaims);
+                var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "id" || c.Type == "userId" || c.Type == "sub" || c.Type == "nameid")?.Value;
+                if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int uid))
                 {
-                    var allClaims = string.Join(", ", User.Claims.Select(c => c.Type + ":" + c.Value));
-                    System.Console.WriteLine("Tüm Claimler: " + allClaims);
-                    var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "id" || c.Type == "userId" || c.Type == "sub" || c.Type == "nameid")?.Value;
-                    if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int uid))
+                    await _mediator.Send(new naif_katalog.Core.Features.UserActionLogFeature.Commands.Create.CreateUserActionLogCommandRequest
                     {
-                        await _mediator.Send(new naif_katalog.Core.Features.UserActionLogFeature.Commands.Create.CreateUserActionLogCommandRequest
-                        {
-                            UserId = uid,
-                            ActionType = "ViewProduct",
-                            ProductId = id,
-                            Details = product.Name + " ürünü incelendi. Görülen Fiyat: $" + product.CalculatedPrice.ToString("N2"),
-                            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
-                            UserAgent = HttpContext.Request.Headers["User-Agent"].ToString()
-                        });
-                    }
+                        UserId = uid,
+                        ActionType = "ViewProduct",
+                        ProductId = id,
+                        Details = product.Name + " Ã¼rÃ¼nÃ¼ incelendi. GÃ¶rÃ¼len Fiyat: $" + product.CalculatedPrice.ToString("N2"),
+                        IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
+                        UserAgent = HttpContext.Request.Headers["User-Agent"].ToString()
+                    });
                 }
-                catch (System.Exception ex) { 
-                    System.Console.WriteLine("UserActionLog HATA: " + ex.Message + " | " + ex.StackTrace);
-                }
+            }
+            catch (System.Exception ex) { 
+                System.Console.WriteLine("UserActionLog HATA: " + ex.Message + " | " + ex.StackTrace);
+            }
 
-                try {
-                    ViewBag.RelatedProducts = prodResponse.data
-                        .Where(x => x.CategoryIds != null && product.CategoryIds != null && x.CategoryIds.Any(c => product.CategoryIds.Contains(c)) && x.Id != product.Id)
-                        .Take(10)
-                        .ToList();
+            try {
+                ViewBag.RelatedProducts = productPool
+                    .Where(x => x.CategoryIds != null && product.CategoryIds != null && x.CategoryIds.Any(c => product.CategoryIds.Contains(c)) && x.Id != product.Id)
+                    .Take(10)
+                    .ToList();
 
-                    var colorsResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalTypesQueryRequest());
-                    ViewBag.MetalTypes = colorsResp?.data;
+                var colorsResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalTypesQueryRequest());
+                ViewBag.MetalTypes = colorsResp?.data;
 
-                    var puritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalPuritysQueryRequest());
-                    ViewBag.Karats = puritiesResp?.data;
+                var puritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalPuritysQueryRequest());
+                ViewBag.Karats = puritiesResp?.data;
 
-                    var claritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
-                    ViewBag.Clarities = claritiesResp?.data;
+                var claritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
+                ViewBag.Clarities = claritiesResp?.data;
 
-                    var stonesResp = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
-                    ViewBag.Stones = stonesResp?.data;
+                var stonesResp = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
+                ViewBag.Stones = stonesResp?.data;
 
-                    var stoneTypesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
-                    ViewBag.StoneTypes = stoneTypesResp?.data;
-                } catch { }
+                var stoneTypesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
+                ViewBag.StoneTypes = stoneTypesResp?.data;
+            } catch { }
 
-                return View(product);
+            return View(product);
+        }
 
+        return RedirectToAction("Index");
+    }
+
+    private async Task<(Product? Product, List<Product> Products)> FindProductForDetail(int id)
+    {
+        if (_memoryCache.TryGetValue($"CachedProduct_{id}", out Product? cachedProduct) && cachedProduct != null)
+        {
+            return (cachedProduct, new List<Product> { cachedProduct });
+        }
+
+        const int pageSize = 100;
+        var loadedProducts = new List<Product>();
+
+        for (var page = 1; page <= 100; page++)
+        {
+            var prodResponse = await _mediator.Send(new GetAllProductsQueryRequest
+            {
+                Page = page,
+                PageSize = pageSize
+            });
+
+            if (prodResponse == null || !prodResponse.isSuccess || prodResponse.data == null || prodResponse.data.Count == 0)
+            {
+                break;
+            }
+
+            foreach (var product in prodResponse.data)
+            {
+                _memoryCache.Set($"CachedProduct_{product.Id}", product, TimeSpan.FromMinutes(10));
+            }
+
+            loadedProducts.AddRange(prodResponse.data);
+
+            var found = prodResponse.data.FirstOrDefault(x => x.Id == id);
+            if (found != null)
+            {
+                return (found, loadedProducts);
+            }
+
+            var totalCount = prodResponse.count > 0 ? prodResponse.count : loadedProducts.Count;
+            if (loadedProducts.Count >= totalCount)
+            {
+                break;
             }
         }
-        return RedirectToAction("Index");
+
+        return (null, loadedProducts);
     }
 
     public async Task<IActionResult> Index(int? categoryId = null, string? search = null, decimal? minPrice = null, decimal? maxPrice = null, string? sortOrder = null, int page = 1)

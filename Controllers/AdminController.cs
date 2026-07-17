@@ -70,10 +70,14 @@ namespace naif_katalog.Controllers
             var stones = await _mediator.Send(new GetAllStoneQueryRequest());
             var categories = await _mediator.Send(new GetAllCategoriesQueryRequest());
             var clarities = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
+            var stoneTypes = await _mediator.Send(new GetAllStoneTypesQueryRequest());
+            var units = await _mediator.Send(new GetAllUnitsQueryRequest());
             
             ViewBag.Stones = stones?.data;
             ViewBag.Categories = categories?.data;
             ViewBag.Clarities = clarities?.data;
+            ViewBag.StoneTypes = stoneTypes?.data;
+            ViewBag.Units = units?.data;
 
             var settingsResponse = await _mediator.Send(new naif_katalog.Core.Features.StoneSettingFeature.Queries.GetAllStoneSettingQueryRequest());
             ViewBag.Settings = settingsResponse?.data;

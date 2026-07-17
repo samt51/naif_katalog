@@ -51,6 +51,7 @@
     .data-table th { background: #f8fafc; padding: 12px; font-weight: 600; font-size: 13px; color: #64748b; border-bottom: 1px solid #e2e8f0; text-align: left; }
     .data-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
     .data-table tr:last-child td { border-bottom: none; }
+    .pricing-section:has(#customSettingBody) { display: none; }
     .btn-secondary { background: #f1f5f9; color: #334155; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
     .btn-secondary:hover { background: #e2e8f0; color: #0f172a; }
     .btn-danger { background: #fee2e2; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
@@ -161,6 +162,8 @@
             var availablePolishingCosts = @Html.Raw(Json.Serialize(ViewBag.PolishingCosts ?? new object[] {}));
             var availableClarities = @Html.Raw(Json.Serialize(ViewBag.Clarities ?? new object[] {}));
             var availableSettings = @Html.Raw(Json.Serialize(ViewBag.Settings ?? new object[] {}));
+            var availableStoneTypes = @Html.Raw(Json.Serialize(ViewBag.StoneTypes ?? new object[] {}));
+            var availableUnits = @Html.Raw(Json.Serialize(ViewBag.Units ?? new object[] {}));
             
             
             function filterDropdown(type) {
@@ -302,11 +305,17 @@
                     <h4><i class="fas fa-gem"></i> Taş Fiyatlandırması</h4>
                     
                     <div class="table-responsive" style="max-height: 400px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; position: relative;">
-                        <table class="data-table" style="margin-top: 0; min-width: max-content; border-collapse: separate; border-spacing: 0;">
-                            <thead id="MatrixTableHead">
-                                <!-- Javascript ile doldurulacak -->
+                        <table class="data-table" style="margin-top: 0; min-width: 900px; border-collapse: separate; border-spacing: 0;">
+                            <thead>
+                                <tr>
+                                    <th>Parti Adı</th>
+                                    <th>Taş Türü</th>
+                                    <th>Birim</th>
+                                    <th>Ürün Fiyat ($)</th>
+                                    <th>Mıhlama Fiyatı</th>
+                                </tr>
                             </thead>
-                            <tbody id="MatrixTableBody">
+                            <tbody id="StonePricingTableBody">
                                 <!-- Javascript ile doldurulacak -->
                             </tbody>
                         </table>
@@ -454,6 +463,87 @@
         });
     }
 
+    function getLookupName(list, id, fallback = '-') {
+        const item = (list || []).find(x => (x.id ?? x.Id) == id);
+        return item ? (item.name ?? item.Name ?? fallback) : fallback;
+    }
+
+    function getStoneScaleName(stone) {
+        const scale = stone.stoneScale || stone.StoneScale;
+        return scale ? (scale.name || scale.Name || '-') : (stone.name || stone.Name || '-');
+    }
+
+    function getStoneSetting(stone) {
+        return stone.stoneSetting || stone.StoneSetting || null;
+    }
+
+    function formatMoney(value) {
+        const parsed = parseDecimalValue(value, 0);
+        return parsed.toFixed(2);
+    }
+
+    function buildStonePricingTable(dbStones = [], dbSettings = []) {
+        const tbody = document.getElementById('StonePricingTableBody');
+        if (!tbody) return;
+
+        const stones = [...(availableStones || [])].sort((a, b) => {
+            const clarityA = getLookupName(availableClarities, a.stoneClarityId ?? a.StoneClarityId, 'Belirtilmedi');
+            const clarityB = getLookupName(availableClarities, b.stoneClarityId ?? b.StoneClarityId, 'Belirtilmedi');
+            return clarityA.localeCompare(clarityB, 'tr') || getStoneScaleName(a).localeCompare(getStoneScaleName(b), 'tr');
+        });
+
+        tbody.innerHTML = '';
+        if (stones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Taş partisi bulunamadı</td></tr>';
+            return;
+        }
+
+        let currentClarity = null;
+        stones.forEach(stone => {
+            const stoneId = stone.id ?? stone.Id;
+            const clarityName = getLookupName(availableClarities, stone.stoneClarityId ?? stone.StoneClarityId, 'Belirtilmedi');
+            if (clarityName !== currentClarity) {
+                currentClarity = clarityName;
+                const count = stones.filter(s => getLookupName(availableClarities, s.stoneClarityId ?? s.StoneClarityId, 'Belirtilmedi') === clarityName).length;
+                tbody.insertAdjacentHTML('beforeend', `<tr>
+                    <td colspan="5" style="background-color:#f1f5f9; font-weight:bold; color:var(--primary);">
+                        <i class="fas fa-layer-group"></i> Berraklık: ${clarityName} (${count} taş)
+                    </td>
+                </tr>`);
+            }
+
+            const customStone = dbStones.find(s => (s.stoneId ?? s.StoneId) == stoneId);
+            const setting = getStoneSetting(stone);
+            const settingId = stone.stoneSettingId ?? stone.StoneSettingId;
+            const customSetting = dbSettings.find(s => (s.stoneSettingId ?? s.StoneSettingId) == settingId);
+            const defaultSettingPrice = setting ? (setting.settingPrice ?? setting.SettingPrice ?? 0) : 0;
+            const customPrice = customStone ? (customStone.customPrice ?? customStone.CustomPrice ?? '') : '';
+            const customSettingPrice = customStone ? (customStone.customSettingPrice ?? customStone.CustomSettingPrice ?? '') : '';
+            const fallbackSettingPrice = customSetting ? (customSetting.customPrice ?? customSetting.CustomPrice ?? '') : '';
+            const settingValue = customSettingPrice !== '' && customSettingPrice !== null ? customSettingPrice : fallbackSettingPrice;
+            const settingType = setting ? (setting.settingType ?? setting.SettingType ?? 'Adet') : '';
+
+            tbody.insertAdjacentHTML('beforeend', `<tr>
+                <td>${getStoneScaleName(stone)}</td>
+                <td>${getLookupName(availableStoneTypes, stone.stoneTypeId ?? stone.StoneTypeId, 'Bilinmiyor')}</td>
+                <td>${getLookupName(availableUnits, stone.unitId ?? stone.UnitId, 'Bilinmiyor')}</td>
+                <td>
+                    <input type="number" step="0.01" data-stone-id="${stoneId}" class="form-control stone-price-input" style="width:110px; text-align:center;" value="${customPrice || ''}" placeholder="${formatMoney(stone.costPrice ?? stone.CostPrice ?? 0)}" />
+                </td>
+                <td>
+                    ${setting ? `<div style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+                        <input type="number" step="0.01" data-stone-id="${stoneId}" data-setting-id="${settingId}" class="form-control stone-setting-input" style="width:110px; text-align:center;" value="${settingValue || ''}" placeholder="${formatMoney(defaultSettingPrice)}" />
+                        <span>(${settingType})</span>
+                    </div>` : '-'}
+                </td>
+            </tr>`);
+        });
+    }
+
+    function populateMatrix(dbStones, dbSettings = []) {
+        buildStonePricingTable(dbStones, dbSettings);
+    }
+
     function parseDecimalValue(value, fallback = 0) {
         if (value === null || value === undefined || value === '') return fallback;
         const parsed = parseFloat(value.toString().replace(',', '.'));
@@ -517,14 +607,14 @@
                 };
             });
             
-            populateMatrix(dbStones);
+            populateMatrix(dbStones, dbSettings);
             
-            hasCustom = hasCustom || dbStones.some(s => (s.customPrice || s.CustomPrice) > 0) || customPolishing.length > 0 || tempSettingPricing.length > 0;
+            hasCustom = hasCustom || dbStones.some(s => (s.customPrice || s.CustomPrice || s.customSettingPrice || s.CustomSettingPrice) > 0) || customPolishing.length > 0 || tempSettingPricing.length > 0;
 
         } catch(e) {
             customPolishing = [];
             tempSettingPricing = [];
-            populateMatrix([]);
+            populateMatrix([], []);
         }
 
         document.getElementById('EnableCustomPricing').checked = hasCustom;
@@ -590,14 +680,28 @@
             let milyemVal = normalizeDecimalValue(document.getElementById('CustomMilyem').value, '');
             if(milyemVal) formData.set('CustomMilyem', milyemVal);
             
-            let inputs = document.querySelectorAll('.matrix-input');
-            let stoneIndex = 0;
+            let inputs = document.querySelectorAll('.stone-price-input, .stone-setting-input');
+            let stoneRows = {};
             inputs.forEach(input => {
-                let price = parseDecimalValue(input.value, NaN);
-                if (!isNaN(price) && price > 0) {
-                    let sid = input.getAttribute('data-stone-id');
-                    formData.append(`CustomStonePrices[${stoneIndex}].StoneId`, sid);
-                    formData.append(`CustomStonePrices[${stoneIndex}].CustomPrice`, price.toString());
+                const sid = input.getAttribute('data-stone-id');
+                if (!sid) return;
+                if (!stoneRows[sid]) stoneRows[sid] = { stoneId: sid, customPrice: NaN, customSettingPrice: NaN };
+                const value = parseDecimalValue(input.value, NaN);
+                if (input.classList.contains('stone-price-input')) {
+                    stoneRows[sid].customPrice = value;
+                } else {
+                    stoneRows[sid].customSettingPrice = value;
+                }
+            });
+
+            let stoneIndex = 0;
+            Object.values(stoneRows).forEach(row => {
+                const hasStonePrice = !isNaN(row.customPrice) && row.customPrice > 0;
+                const hasSettingPrice = !isNaN(row.customSettingPrice) && row.customSettingPrice > 0;
+                if (hasStonePrice || hasSettingPrice) {
+                    formData.append(`CustomStonePrices[${stoneIndex}].StoneId`, row.stoneId);
+                    if (hasStonePrice) formData.append(`CustomStonePrices[${stoneIndex}].CustomPrice`, row.customPrice.toString());
+                    if (hasSettingPrice) formData.append(`CustomStonePrices[${stoneIndex}].CustomSettingPrice`, row.customSettingPrice.toString());
                     stoneIndex++;
                 }
             });
@@ -611,14 +715,6 @@
                 }
             });
 
-            tempSettingPricing.forEach((sc, index) => {
-                let el = document.getElementById(`setting_price_${index}`);
-                let sPrice = el ? parseDecimalValue(el.value, NaN) : parseDecimalValue(sc.customPrice, NaN);
-                if(sPrice > 0) {
-                    formData.append(`CustomSettingPrices[${index}].StoneSettingId`, sc.stoneSettingId);
-                    formData.append(`CustomSettingPrices[${index}].CustomPrice`, sPrice.toString());
-                }
-            });
             let salesVal = normalizeDecimalValue(document.getElementById('SalesMultiplier').value, '1');
             if(salesVal) formData.set('SalesMultiplier', salesVal);
             else formData.set('SalesMultiplier', '1');

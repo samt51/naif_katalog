@@ -45,7 +45,15 @@
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h2 style="margin:0;"><i class="fas fa-box" style="color:var(--primary); margin-right:10px;"></i> Ürünler</h2>
-        <button onclick="openModal(0)" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Yeni Ürün</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <select id="catalogExportLanguage" title="Çıktı dili" style="height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-weight:600;">
+                <option value="tr">Türkçe</option>
+                <option value="en">English</option>
+            </select>
+            <a href="#" onclick="downloadProductCatalog('pdf');return false;" title="PDF indir" style="height:42px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600;"><i class="fas fa-file-pdf"></i> PDF</a>
+            <a href="#" onclick="downloadProductCatalog('excel');return false;" title="Excel indir" style="height:42px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#16a34a;color:#fff;text-decoration:none;font-weight:600;"><i class="fas fa-file-excel"></i> Excel</a>
+            <button onclick="openModal(0)" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Yeni Ürün</button>
+        </div>
     </div>
 
     <div style="margin-bottom: 20px;">
@@ -260,6 +268,13 @@
 </div>
 
 <!-- Modal -->
+<script>
+    function downloadProductCatalog(format) {
+        const language = document.getElementById('catalogExportLanguage')?.value || 'tr';
+        window.location.href = `/Product/ExportCatalog?format=${format}&lang=${language}`;
+    }
+</script>
+
 <div class="modal-overlay" id="productModal">
     <div class="modal-content" style="max-width:1200px;">
         <div class="modal-header">

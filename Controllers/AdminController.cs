@@ -26,6 +26,27 @@ namespace naif_katalog.Controllers
             _cache = cache;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> ExportCustomerCatalog(int customerId, string format = "excel", string lang = "tr")
+        {
+            if (customerId <= 0) return BadRequest("Geçersiz müşteri.");
+            format = string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase) ? "pdf" : "excel";
+            lang = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "tr";
+            using var client = new HttpClient();
+            var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+            if (!apiAddress.EndsWith("/")) apiAddress += "/";
+            var response = await client.GetAsync($"{apiAddress}api/customers/{customerId}/catalog-export/{format}?lang={lang}");
+            if (!response.IsSuccessStatusCode)
+                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+
+            var contentType = response.Content.Headers.ContentType?.ToString()
+                ?? (format == "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+                ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
+                ?? $"musteri_{customerId}_ozel_katalog.{(format == "pdf" ? "pdf" : "xlsx")}";
+            return File(await response.Content.ReadAsByteArrayAsync(), contentType, fileName);
+        }
+
         
 
         

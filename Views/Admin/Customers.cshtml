@@ -63,9 +63,15 @@
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h2 style="margin:0;"><i class="fas fa-users" style="color:var(--primary); margin-right:10px;"></i> Müşteriler</h2>
-        <button onclick="openModal('Müşteri Ekle')" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;">
-            <i class="fas fa-plus"></i> Yeni Müşteri
-        </button>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <select id="customerCatalogExportLanguage" title="Müşteri katalog çıktı dili" style="height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-weight:600;">
+                <option value="tr">Türkçe</option>
+                <option value="en">English</option>
+            </select>
+            <button onclick="openModal('Müşteri Ekle')" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;">
+                <i class="fas fa-plus"></i> Yeni Müşteri
+            </button>
+        </div>
     </div>
 
     <!-- Müşteri Listesi Sekmeleri -->
@@ -116,6 +122,14 @@
                                                 
                         <td>
                             <div style="display:flex; gap:8px;">
+                                <a href="#" onclick="downloadCustomerCatalog(@user.Id, 'pdf');return false;"
+                                   style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#dc2626;color:white;text-decoration:none;box-shadow:0 2px 4px rgba(220,38,38,.2)" title="Özel fiyatlı detaylı PDF indir">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                                <a href="#" onclick="downloadCustomerCatalog(@user.Id, 'excel');return false;"
+                                   style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#16a34a;color:white;text-decoration:none;box-shadow:0 2px 4px rgba(22,163,74,.2)" title="Özel fiyatlı detaylı Excel indir">
+                                    <i class="fas fa-file-excel"></i>
+                                </a>
                                 <button onclick="openModal('Müşteri Güncelle', @user.Id, '@user.Name', '@user.Surname', '@Html.Raw((user.CompanyName ?? "").Replace("'", "\\'"))', '@user.Email', '@user.Phone', @user.RoleId, '@(user.MembershipExpiryDate?.ToString("yyyy-MM-dd"))', '@Html.Raw((user.Address ?? "").Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))', @user.IsLocked.ToString().ToLower(), '@(user.PricingProfile?.CustomMilyem)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomStonePrices ?? new List<naif_katalog.Models.UserStonePriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomPolishingCosts ?? new List<naif_katalog.Models.UserPolishingCostDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@(user.PricingProfile?.SalesMultiplier ?? 1)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomSettingPrices ?? new List<naif_katalog.Models.UserSettingPriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))')" 
                                         style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);" 
                                         title="Düzenle">
@@ -384,6 +398,11 @@
 </div>
 
 <script>
+    function downloadCustomerCatalog(customerId, format) {
+        const language = document.getElementById('customerCatalogExportLanguage')?.value || 'tr';
+        window.location.href = `/Admin/ExportCustomerCatalog?customerId=${customerId}&format=${format}&lang=${language}`;
+    }
+
     
     function switchTab(tabId) {
         document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));

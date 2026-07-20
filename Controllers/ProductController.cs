@@ -21,6 +21,25 @@ namespace naif_katalog.Controllers
             _cache = cache;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> ExportCatalog(string format = "excel", string lang = "tr")
+        {
+            format = string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase) ? "pdf" : "excel";
+            lang = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "tr";
+            using var client = new HttpClient();
+            var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
+            if (!apiAddress.EndsWith("/")) apiAddress += "/";
+            var response = await client.GetAsync($"{apiAddress}api/products/catalog-export/{format}?lang={lang}");
+            if (!response.IsSuccessStatusCode)
+                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+            var contentType = response.Content.Headers.ContentType?.ToString()
+                ?? (format == "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+                ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
+                ?? $"urun_katalogu_{DateTime.Now:yyyyMMdd}.{(format == "pdf" ? "pdf" : "xlsx")}";
+            return File(await response.Content.ReadAsByteArrayAsync(), contentType, fileName);
+        }
+
         public async Task<IActionResult> Index(string? code, string? category, decimal? minGram, decimal? maxGram, int? metalTypeId, int? clarityId, int? stoneId, int? stoneTypeId)
         {
             dynamic model = new ExpandoObject();

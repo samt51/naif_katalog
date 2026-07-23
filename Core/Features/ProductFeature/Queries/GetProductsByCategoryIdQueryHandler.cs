@@ -6,16 +6,20 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.AspNetCore.Hosting;
+using System.IO;
 
 namespace naif_katalog.Core.Features.ProductFeature.Queries
 {
     public class GetProductsByCategoryIdQueryHandler : BaseHandler, IRequestHandler<GetProductsByCategoryIdQueryRequest, ResponseDto<List<GetProductsByCategoryIdQueryResponse>>>
     {
         private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _environment;
 
-        public GetProductsByCategoryIdQueryHandler(IApiService apiService, IConfiguration configuration) : base(apiService)
+        public GetProductsByCategoryIdQueryHandler(IApiService apiService, IConfiguration configuration, IWebHostEnvironment environment) : base(apiService)
         {
             _configuration = configuration;
+            _environment = environment;
         }
 
         public async Task<ResponseDto<List<GetProductsByCategoryIdQueryResponse>>> Handle(GetProductsByCategoryIdQueryRequest request, CancellationToken cancellationToken)
@@ -32,17 +36,17 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
                 {
                     var imageUrls = new List<string>();
                     
-                    if (!string.IsNullOrEmpty(item.ImageName))
+                    if (ProductImageExists(item.ImageName))
                     {
-                        imageUrls.Add($"{localAddress}images/katalog/" + item.ImageName);
+                        imageUrls.Add(BuildImageUrl(localAddress, item.ImageName));
                     }
 
                     if (item.Images != null)
                     {
                         foreach(var img in item.Images)
                         {
-                            var fullPath = $"{localAddress}images/katalog/" + img;
-                            if (!imageUrls.Contains(fullPath))
+                            var fullPath = BuildImageUrl(localAddress, img);
+                            if (ProductImageExists(img) && !imageUrls.Contains(fullPath))
                                 imageUrls.Add(fullPath);
                         }
                     }
@@ -52,7 +56,7 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
                         Id = item.Id,
                         Code = item.Code,
                         Name = item.Name,
-                        ImageName = !string.IsNullOrEmpty(item.ImageName) ? $"{localAddress}images/katalog/" + item.ImageName : "",
+                        ImageName = ProductImageExists(item.ImageName) ? BuildImageUrl(localAddress, item.ImageName) : "",
                         CategoryNames = item.CategoryNames,
                         CategoryIds = item.CategoryIds,
                         Description = item.Description,
@@ -72,6 +76,30 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
 
             var err = apiResult.errors != null && apiResult.errors.Count > 0 ? string.Join(", ", apiResult.errors) : "Hata";
             return new ResponseDto<List<GetProductsByCategoryIdQueryResponse>>().Fail(err);
+        }
+
+        private bool ProductImageExists(string? imageName)
+        {
+            if (string.IsNullOrWhiteSpace(imageName)) return false;
+
+            var relativePath = imageName.Replace('\\', '/').TrimStart('/');
+            var catalogRoot = Path.GetFullPath(Path.Combine(_environment.WebRootPath, "images", "katalog"));
+            var fullPath = Path.GetFullPath(Path.Combine(catalogRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+            return fullPath.StartsWith(catalogRoot + Path.DirectorySeparatorChar, System.StringComparison.OrdinalIgnoreCase)
+                && File.Exists(fullPath);
+        }
+
+        private string BuildImageUrl(string localAddress, string imageName)
+        {
+            var relativePath = imageName.Replace('\\', '/').TrimStart('/');
+            var fullPath = Path.GetFullPath(Path.Combine(
+                _environment.WebRootPath,
+                "images",
+                "katalog",
+                relativePath.Replace('/', Path.DirectorySeparatorChar)));
+            var version = File.GetLastWriteTimeUtc(fullPath).Ticks;
+            return $"{localAddress}images/katalog/{relativePath}?v={version}";
         }
     }
 }

@@ -47,6 +47,7 @@ namespace naif_katalog.Controllers
             return File(await response.Content.ReadAsByteArrayAsync(), contentType, fileName);
         }
 
+
         
 
         
@@ -328,6 +329,7 @@ namespace naif_katalog.Controllers
                 if (imageFiles != null && imageFiles.Count > 0)
                 {
                     request.ImageNames ??= new List<string>();
+                    var newImageCount = 0;
                     
                     var catResponse = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
                     string folderName = "DIGER";
@@ -370,7 +372,9 @@ namespace naif_katalog.Controllers
                             await file.CopyToAsync(stream);
                         }
                         
-                        request.ImageNames.Add($"{folderName}/{fileName}");
+                        // Yeni yüklenen görselleri listenin başına koy; ürün kartında
+                        // son yüklenen görsel hemen ana görsel olarak görünür.
+                        request.ImageNames.Insert(newImageCount++, $"{folderName}/{fileName}");
                         i++;
                     }
                 }
@@ -388,6 +392,7 @@ namespace naif_katalog.Controllers
         public async Task<IActionResult> UpdateProduct([FromForm] naif_katalog.Core.Features.ProductFeature.Commands.UpdateProductCommandRequest request, [FromForm] string? stonesJson, [FromForm] string? metalsJson, [FromForm] List<IFormFile>? imageFiles)
         {
             _cache.Remove("CachedProducts");
+            _cache.Remove($"CachedProduct_{request.Id}");
             try
             {
                 if (!string.IsNullOrEmpty(stonesJson) && stonesJson != "undefined" && stonesJson != "null")
@@ -399,6 +404,7 @@ namespace naif_katalog.Controllers
                 if (imageFiles != null && imageFiles.Count > 0)
                 {
                     request.ImageNames ??= new List<string>();
+                    var newImageCount = 0;
                     
                     var catResponse = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
                     string folderName = "DIGER";
@@ -441,7 +447,7 @@ namespace naif_katalog.Controllers
                             await file.CopyToAsync(stream);
                         }
                         
-                        request.ImageNames.Add($"{folderName}/{fileName}");
+                        request.ImageNames.Insert(newImageCount++, $"{folderName}/{fileName}");
                         i++;
                     }
                 }
@@ -528,6 +534,7 @@ namespace naif_katalog.Controllers
         public async Task<IActionResult> DeleteProductImage(int productId, string imageName)
         {
             _cache.Remove("CachedProducts");
+            _cache.Remove($"CachedProduct_{productId}");
 
             if (productId <= 0 || string.IsNullOrWhiteSpace(imageName))
             {
@@ -652,6 +659,11 @@ namespace naif_katalog.Controllers
             }
 
             var normalized = imageName.Replace('\\', '/');
+            var queryIndex = normalized.IndexOfAny(new[] { '?', '#' });
+            if (queryIndex >= 0)
+            {
+                normalized = normalized[..queryIndex];
+            }
             const string marker = "/images/katalog/";
             var markerIndex = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
             if (markerIndex >= 0)

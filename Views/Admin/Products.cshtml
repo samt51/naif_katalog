@@ -292,7 +292,7 @@
                 </div>
                 
                 <div class="modal-body">
-                    <form id="productForm">
+                    <form id="productForm" novalidate>
                         <input type="hidden" id="productId" name="Id" value="0" />
                         
                         <!-- GENEL BİLGİLER -->
@@ -799,6 +799,7 @@
 
     function normalizeImageName(imageUrl) {
         if (!imageUrl) return '';
+        imageUrl = imageUrl.split(/[?#]/, 1)[0];
         const marker = '/images/katalog/';
         const markerIndex = imageUrl.indexOf(marker);
         if (markerIndex >= 0) {
@@ -1174,6 +1175,23 @@
 
     document.getElementById('productForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const form = e.currentTarget;
+
+        // Sekmelerdeki gizli zorunlu alanlar için tarayıcının "not focusable"
+        // hatasına düşmek yerine ilgili sekmeyi açıp alanı kullanıcıya göster.
+        if (!form.checkValidity()) {
+            const invalidField = form.querySelector(':invalid');
+            const tabContent = invalidField?.closest('.tab-content');
+            if (tabContent?.id) {
+                switchTab(tabContent.id.replace('tab-', ''));
+            }
+
+            const fieldName = invalidField?.closest('.form-group')?.querySelector('label')?.textContent?.trim();
+            Swal.fire('Eksik Bilgi', `${fieldName || 'Zorunlu alan'} doldurulmalıdır.`, 'warning')
+                .then(() => invalidField?.focus());
+            return;
+        }
+
         const btn = document.getElementById('btnSave');
         btn.disabled = true;
         btn.innerText = "Kaydediliyor...";

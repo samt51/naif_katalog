@@ -13,12 +13,14 @@ namespace naif_katalog.Controllers
         private readonly IMediator _mediator;
         private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
         private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
+        private readonly IWebHostEnvironment _environment;
 
-        public ProductController(IMediator mediator, Microsoft.Extensions.Configuration.IConfiguration configuration, Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+        public ProductController(IMediator mediator, Microsoft.Extensions.Configuration.IConfiguration configuration, Microsoft.Extensions.Caching.Memory.IMemoryCache cache, IWebHostEnvironment environment)
         {
             _mediator = mediator;
             _configuration = configuration;
             _cache = cache;
+            _environment = environment;
         }
 
         [HttpGet]
@@ -27,6 +29,11 @@ namespace naif_katalog.Controllers
             format = string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase) ? "pdf" : "excel";
             lang = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "tr";
             using var client = new HttpClient();
+            // Web uygulaması görsellerin gerçek fiziksel konumunu bilir. API farklı bir
+            // IIS klasöründe çalıştığı için export sırasında bu ortak klasörü bildir.
+            client.DefaultRequestHeaders.TryAddWithoutValidation(
+                "X-Catalog-Image-Root",
+                Path.Combine(_environment.WebRootPath, "images", "katalog"));
             var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
             if (!apiAddress.EndsWith("/")) apiAddress += "/";
             var response = await client.GetAsync($"{apiAddress}api/products/catalog-export/{format}?lang={lang}");

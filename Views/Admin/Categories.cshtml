@@ -27,6 +27,7 @@
                     else { <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2 rounded-pill w-100">Seviye @(level+1) Kategori</span> }
                 </div>
                 <div class="text-end">
+                    <button type="button" onclick='openCategoryProducts(@cat.Id, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(cat.Name)))' class="btn btn-sm btn-light text-success border me-1" title="Kategori Ürünlerini Göster"><i class="fas fa-box-open"></i></button>
                     <button onclick="openModal('Alt Kategori Ekle', 0, '', @cat.Id)" class="btn btn-sm btn-light text-primary border me-1" title="Buna Alt Kategori Ekle"><i class="fas fa-plus"></i></button>
                     <button onclick="openModal('Kategori Güncelle', @cat.Id, '@cat.Name', @cat.ParentId)" class="btn btn-sm btn-light text-secondary border me-1" title="Düzenle"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-sm btn-light text-danger border" title="Sil" onclick="deleteCategory(@cat.Id)"><i class="fas fa-trash"></i></button>
@@ -81,6 +82,20 @@
     
     .sortable-ghost { opacity: 0.4; background-color: #f8f9fa; border: 2px dashed #0d6efd !important; }
     .cursor-grab:active { cursor: grabbing !important; }
+
+    .product-browser-overlay { position: fixed; inset: 0; z-index: 1060; display: none; background: rgba(15,23,42,.62); backdrop-filter: blur(5px); padding: 24px; }
+    .product-browser-overlay.active { display: flex; align-items: center; justify-content: center; }
+    .product-browser { width: min(1180px, 100%); height: min(820px, 94vh); background: #f8fafc; border-radius: 20px; box-shadow: 0 28px 80px rgba(0,0,0,.28); overflow: hidden; display: flex; flex-direction: column; }
+    .product-browser-head { padding: 20px 24px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+    .product-filter-bar { padding: 14px 24px; background: #fff; border-bottom: 1px solid #e5e7eb; display: grid; grid-template-columns: minmax(220px,2fr) repeat(3,minmax(145px,1fr)); gap: 10px; }
+    .product-grid { padding: 20px 24px; overflow: auto; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; align-content: start; flex: 1; }
+    .category-product-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; transition: .2s; }
+    .category-product-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15,23,42,.10); border-color: #bfdbfe; }
+    .category-product-image { height: 150px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
+    .category-product-image img { width: 100%; height: 100%; object-fit: contain; }
+    .product-browser-footer { padding: 12px 24px; background: #fff; border-top: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+    @@media(max-width: 900px) { .product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .product-filter-bar { grid-template-columns: 1fr 1fr; } }
+    @@media(max-width: 560px) { .product-browser-overlay { padding: 0; } .product-browser { height: 100vh; border-radius: 0; } .product-grid,.product-filter-bar { grid-template-columns: 1fr; } }
     
     @@keyframes fadeIn {
         from { opacity: 0; transform: translateY(-10px); }
@@ -144,14 +159,61 @@
                 <label>Kategori Adı</label>
                 <input type="text" id="categoryName" name="Name" class="form-control-custom" required placeholder="Örn: Alyans..." />
             </div>
+            <div class="form-group">
+                <label>Çeviri</label>
+                <select id="categoryLanguage" class="form-control-custom" style="margin-bottom:7px;" onchange="loadCategoryTranslation()"></select>
+                <input type="text" id="categoryNameEn" class="form-control-custom" placeholder="English category name..." />
+                <small id="categoryNameEnHint" class="text-muted" style="display:none;">Önce kategoriyi kaydedin, ardından düzenleyerek çevirisini ekleyin.</small>
+            </div>
             <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm mt-2" id="btnSave">Kategoriyi Kaydet</button>
         </form>
     </div>
 </div>
 
+<div class="product-browser-overlay" id="categoryProductsModal" onclick="if(event.target===this) closeCategoryProducts()">
+    <section class="product-browser" role="dialog" aria-modal="true" aria-labelledby="categoryProductsTitle">
+        <header class="product-browser-head">
+            <div>
+                <div class="small text-primary fw-bold text-uppercase">Kategori ürünleri</div>
+                <h3 class="h5 mb-0 fw-bold" id="categoryProductsTitle">Ürünler</h3>
+            </div>
+            <button type="button" class="btn btn-light rounded-circle" onclick="closeCategoryProducts()" aria-label="Kapat"><i class="fas fa-times"></i></button>
+        </header>
+        <div class="product-filter-bar">
+            <div class="input-group"><span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span><input id="categoryProductSearch" class="form-control" placeholder="Ürün kodu veya adı ara..."></div>
+            <select id="categoryProductImageFilter" class="form-select"><option value="all">Tüm görseller</option><option value="with">Görseli olan</option><option value="without">Görseli olmayan</option></select>
+            <select id="categoryProductPurityFilter" class="form-select"><option value="all">Tüm ayarlar</option></select>
+            <select id="categoryProductSort" class="form-select"><option value="code">Koda göre</option><option value="name">Ada göre</option><option value="priceAsc">Fiyat: Artan</option><option value="priceDesc">Fiyat: Azalan</option></select>
+        </div>
+        <div id="categoryProductGrid" class="product-grid"></div>
+        <footer class="product-browser-footer"><span id="categoryProductSummary" class="small text-muted"></span><nav id="categoryProductPagination" class="btn-group btn-group-sm"></nav></footer>
+    </section>
+</div>
+
 <!-- Sortable.js -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>
+    const API_BASE_URL = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(apiAddress));
+    async function loadCategoryLanguages() {
+        const response = await fetch(`${API_BASE_URL}/api/catalog-languages`);
+        const result = await response.json();
+        const select = document.getElementById('categoryLanguage');
+        const current = select.value || 'en';
+        select.innerHTML = '';
+        (result.data || []).filter(x => x.code !== 'tr').forEach(language => {
+            const option = document.createElement('option'); option.value = language.code; option.textContent = `${language.name} (${language.code})`; select.appendChild(option);
+        });
+        if ([...select.options].some(x => x.value === current)) select.value = current;
+    }
+    async function loadCategoryTranslation() {
+        const id = parseInt(document.getElementById('categoryId').value);
+        const language = document.getElementById('categoryLanguage').value;
+        document.getElementById('categoryNameEn').value = '';
+        if (id <= 0 || !language) return;
+        const response = await fetch(`${API_BASE_URL}/api/definition-translations?entityType=Category&entityId=${id}&languageCode=${encodeURIComponent(language)}`);
+        const translation = await response.json();
+        document.getElementById('categoryNameEn').value = translation.data || '';
+    }
     document.addEventListener("DOMContentLoaded", function() {
         // Init Sortable for main list
         var mainList = document.getElementById('mainCategoryList');
@@ -210,10 +272,19 @@
         });
     }
 
-    function openModal(title, id = 0, currentName = '', parentId = 0) {
+    async function openModal(title, id = 0, currentName = '', parentId = 0) {
         document.getElementById('categoryId').value = id;
         document.getElementById('modalTitle').innerText = title;
         document.getElementById('categoryName').value = currentName;
+        document.getElementById('categoryNameEn').value = '';
+        document.getElementById('categoryNameEn').disabled = id <= 0;
+        document.getElementById('categoryNameEnHint').style.display = id <= 0 ? 'block' : 'none';
+        if (id > 0) {
+            try {
+                await loadCategoryLanguages();
+                await loadCategoryTranslation();
+            } catch (_) { }
+        }
         
         let selectEl = document.getElementById('parentCategory');
         let optionExists = Array.from(selectEl.options).some(opt => opt.value == parentId);
@@ -239,7 +310,7 @@
             cancelButtonText: 'İptal'
         }).then((result) => {
             if (result.isConfirmed) {
-                fetch(@apiAddress/api/Category/, {
+                fetch(`${API_BASE_URL}/api/Category/${id}`, {
                     method: 'DELETE'
                 })
                 .then(res => res.json())
@@ -289,6 +360,14 @@
             const result = await res.json();
             
             if (result && result.isSuccess) {
+                if (id > 0) {
+                    const translationResponse = await fetch(`${API_BASE_URL}/api/definition-translations`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entityType: 'Category', entityId: id, languageCode: document.getElementById('categoryLanguage').value, translatedName: document.getElementById('categoryNameEn').value.trim() })
+                    });
+                    if (!translationResponse.ok) throw new Error('İngilizce kategori adı kaydedilemedi.');
+                }
                 closeModal();
                 const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 5000, timerProgressBar: true });
                 Toast.fire({ icon: 'success', title: 'Kategori başarıyla kaydedildi!' }).then(() => {
@@ -306,4 +385,116 @@
             btn.innerHTML = 'Kategoriyi Kaydet';
         }
     });
+
+    let categoryProducts = [];
+    let categoryProductPage = 1;
+    const categoryProductPageSize = 12;
+
+    function escapeProductText(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[character]));
+    }
+
+    async function openCategoryProducts(categoryId, categoryName) {
+        const modal = document.getElementById('categoryProductsModal');
+        const grid = document.getElementById('categoryProductGrid');
+        document.getElementById('categoryProductsTitle').textContent = categoryName;
+        document.getElementById('categoryProductSearch').value = '';
+        document.getElementById('categoryProductImageFilter').value = 'all';
+        document.getElementById('categoryProductSort').value = 'code';
+        categoryProductPage = 1;
+        categoryProducts = [];
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        grid.innerHTML = '<div class="text-center py-5 text-muted" style="grid-column:1/-1"><div class="spinner-border text-primary mb-3"></div><div>Ürünler yükleniyor...</div></div>';
+
+        try {
+            const response = await fetch(`/Category/Products?categoryId=${categoryId}`, { headers: { 'Accept': 'application/json' } });
+            const result = await response.json();
+            if (!response.ok || !result.isSuccess) throw new Error((result.errors || []).join(', ') || result.message || 'Ürünler alınamadı.');
+            categoryProducts = result.data || [];
+            fillProductPurityFilter();
+            renderCategoryProducts();
+        } catch (error) {
+            grid.innerHTML = `<div class="alert alert-danger m-0" style="grid-column:1/-1"><i class="fas fa-exclamation-circle me-2"></i>${escapeProductText(error.message)}</div>`;
+            document.getElementById('categoryProductSummary').textContent = '';
+            document.getElementById('categoryProductPagination').innerHTML = '';
+        }
+    }
+
+    function closeCategoryProducts() {
+        document.getElementById('categoryProductsModal').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    function fillProductPurityFilter() {
+        const select = document.getElementById('categoryProductPurityFilter');
+        const purities = [...new Set(categoryProducts.map(x => x.metalPurityName).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'tr'));
+        select.innerHTML = '<option value="all">Tüm ayarlar</option>' + purities.map(x => `<option value="${escapeProductText(x)}">${escapeProductText(x)}</option>`).join('');
+    }
+
+    function getFilteredCategoryProducts() {
+        const search = document.getElementById('categoryProductSearch').value.trim().toLocaleLowerCase('tr-TR');
+        const imageFilter = document.getElementById('categoryProductImageFilter').value;
+        const purity = document.getElementById('categoryProductPurityFilter').value;
+        const sort = document.getElementById('categoryProductSort').value;
+        const hasImage = product => Boolean(product.imageName || (product.images && product.images.length));
+
+        const filtered = categoryProducts.filter(product => {
+            const matchesSearch = !search || `${product.code || ''} ${product.name || ''}`.toLocaleLowerCase('tr-TR').includes(search);
+            const matchesImage = imageFilter === 'all' || (imageFilter === 'with' ? hasImage(product) : !hasImage(product));
+            const matchesPurity = purity === 'all' || product.metalPurityName === purity;
+            return matchesSearch && matchesImage && matchesPurity;
+        });
+
+        filtered.sort((a,b) => {
+            if (sort === 'name') return (a.name || '').localeCompare(b.name || '', 'tr');
+            if (sort === 'priceAsc') return (a.calculatedPrice || 0) - (b.calculatedPrice || 0);
+            if (sort === 'priceDesc') return (b.calculatedPrice || 0) - (a.calculatedPrice || 0);
+            return (a.code || '').localeCompare(b.code || '', 'tr', { numeric: true });
+        });
+        return filtered;
+    }
+
+    function renderCategoryProducts() {
+        const products = getFilteredCategoryProducts();
+        const totalPages = Math.max(1, Math.ceil(products.length / categoryProductPageSize));
+        categoryProductPage = Math.min(categoryProductPage, totalPages);
+        const start = (categoryProductPage - 1) * categoryProductPageSize;
+        const visible = products.slice(start, start + categoryProductPageSize);
+        const grid = document.getElementById('categoryProductGrid');
+
+        if (!visible.length) {
+            grid.innerHTML = '<div class="text-center text-muted py-5" style="grid-column:1/-1"><i class="fas fa-box-open fa-3x mb-3 opacity-25"></i><h5>Ürün bulunamadı</h5><div>Filtreleri değiştirerek tekrar deneyin.</div></div>';
+        } else {
+            grid.innerHTML = visible.map(product => {
+                const image = product.imageName || (product.images || [])[0];
+                const imageHtml = image
+                    ? `<img src="${escapeProductText(image)}" alt="${escapeProductText(product.code)}" loading="lazy">`
+                    : '<div class="text-muted text-center"><i class="far fa-image fa-2x mb-2"></i><div class="small">Görsel yok</div></div>';
+                const price = Number(product.calculatedPrice || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return `<article class="category-product-card"><div class="category-product-image">${imageHtml}</div><div class="p-3"><div class="fw-bold text-dark text-truncate" title="${escapeProductText(product.code)}">${escapeProductText(product.code || '-')}</div><div class="small text-muted text-truncate mb-2" title="${escapeProductText(product.name)}">${escapeProductText(product.name || 'İsimsiz ürün')}</div><div class="d-flex justify-content-between small"><span><i class="fas fa-weight-hanging text-muted me-1"></i>${Number(product.gram || 0).toLocaleString('tr-TR')} g</span><span class="fw-bold text-primary">$${price}</span></div><div class="mt-2 d-flex gap-1"><span class="badge bg-light text-secondary border">${escapeProductText(product.metalPurityName || '-')}</span><span class="badge bg-light text-secondary border">${Number(product.diamondCarat || 0).toLocaleString('tr-TR')} ct</span></div></div></article>`;
+            }).join('');
+        }
+
+        document.getElementById('categoryProductSummary').textContent = `${products.length} ürün bulundu${products.length ? ` • ${start + 1}-${Math.min(start + categoryProductPageSize, products.length)} gösteriliyor` : ''}`;
+        renderCategoryProductPagination(totalPages);
+    }
+
+    function renderCategoryProductPagination(totalPages) {
+        const nav = document.getElementById('categoryProductPagination');
+        if (totalPages <= 1) { nav.innerHTML = ''; return; }
+        const buttons = [];
+        buttons.push(`<button class="btn btn-outline-primary" ${categoryProductPage === 1 ? 'disabled' : ''} onclick="changeCategoryProductPage(${categoryProductPage - 1})"><i class="fas fa-chevron-left"></i></button>`);
+        for (let page = 1; page <= totalPages; page++) {
+            if (page === 1 || page === totalPages || Math.abs(page - categoryProductPage) <= 1) buttons.push(`<button class="btn ${page === categoryProductPage ? 'btn-primary' : 'btn-outline-primary'}" onclick="changeCategoryProductPage(${page})">${page}</button>`);
+            else if (buttons[buttons.length - 1] !== '<span class="btn btn-light disabled">…</span>') buttons.push('<span class="btn btn-light disabled">…</span>');
+        }
+        buttons.push(`<button class="btn btn-outline-primary" ${categoryProductPage === totalPages ? 'disabled' : ''} onclick="changeCategoryProductPage(${categoryProductPage + 1})"><i class="fas fa-chevron-right"></i></button>`);
+        nav.innerHTML = buttons.join('');
+    }
+
+    function changeCategoryProductPage(page) { categoryProductPage = page; renderCategoryProducts(); document.getElementById('categoryProductGrid').scrollTop = 0; }
+    ['categoryProductImageFilter','categoryProductPurityFilter','categoryProductSort'].forEach(id => document.getElementById(id).addEventListener('change', () => { categoryProductPage = 1; renderCategoryProducts(); }));
+    document.getElementById('categoryProductSearch').addEventListener('input', () => { categoryProductPage = 1; renderCategoryProducts(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && document.getElementById('categoryProductsModal').classList.contains('active')) closeCategoryProducts(); });
 </script>

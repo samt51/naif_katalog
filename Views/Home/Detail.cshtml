@@ -342,12 +342,12 @@
                                             }
                                         }
 
-                                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <tr class="stone-detail-row" style="border-bottom: 1px solid #f1f5f9;">
                                             <td class="py-3">
                                                 <div class="d-flex justify-content-center">
                                                     @if (stoneTypeName.Equals("PIRLANTA", StringComparison.OrdinalIgnoreCase) || stoneTypeName.Equals("PIRLANTA ", StringComparison.OrdinalIgnoreCase))
                                                     {
-                                                        <select id="berraklikSelect_@s.Id" onchange="recalculatePrice()" class="form-select form-select-sm shadow-none" style="width: auto; min-width: 95px; font-weight: 600; color: #334155; border: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
+                                                        <select id="berraklikSelect_@s.Id" onchange="recalculatePrice()" class="stone-clarity form-select form-select-sm shadow-none" style="width: auto; min-width: 95px; font-weight: 600; color: #334155; border: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
                                                             @if (ViewBag.Clarities != null)
                                                             {
                                                                 foreach (var c in (IEnumerable<dynamic>)ViewBag.Clarities)
@@ -375,14 +375,14 @@
                                                     }
                                                     else
                                                     {
-                                                        <span class="fw-bold text-dark">@(s.ClarityName ?? "-")</span>
+                                                        <span class="stone-clarity fw-bold text-dark">@(s.ClarityName ?? "-")</span>
                                                     }
                                                 </div>
                                             </td>
-                                            <td class="py-3 fw-medium text-dark">@(string.IsNullOrEmpty(stoneTypeName) ? "-" : stoneTypeName)</td>
-                                            <td class="py-3 fw-medium text-dark">@(s.ColorName ?? "-")</td>
-                                            <td class="py-3 fw-medium text-dark">@s.Quantity.ToString("N0")</td>
-                                            <td class="py-3 text-primary fw-bold">@s.TotalCarat.ToString("N2") ct</td>
+                                            <td class="stone-type py-3 fw-medium text-dark">@(string.IsNullOrEmpty(stoneTypeName) ? "-" : stoneTypeName)</td>
+                                            <td class="stone-color py-3 fw-medium text-dark">@(s.ColorName ?? "-")</td>
+                                            <td class="stone-quantity py-3 fw-medium text-dark">@s.Quantity.ToString("N0")</td>
+                                            <td class="stone-carat py-3 text-primary fw-bold">@s.TotalCarat.ToString("N2") ct</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -663,6 +663,20 @@
             
             var renkSelect = document.getElementById('renkSelect');
             var renk = renkSelect && renkSelect.options.length > 0 ? renkSelect.options[renkSelect.selectedIndex].text : '';
+
+            var stones = Array.from(document.querySelectorAll('.stone-detail-row')).map(function(row) {
+                var clarityElement = row.querySelector('.stone-clarity');
+                var clarity = clarityElement && clarityElement.tagName === 'SELECT'
+                    ? clarityElement.options[clarityElement.selectedIndex].text.trim()
+                    : (clarityElement ? clarityElement.textContent.trim() : '-');
+                return {
+                    clarity: clarity,
+                    type: row.querySelector('.stone-type')?.textContent.trim() || '-',
+                    color: row.querySelector('.stone-color')?.textContent.trim() || '-',
+                    quantity: row.querySelector('.stone-quantity')?.textContent.trim() || '-',
+                    totalCarat: row.querySelector('.stone-carat')?.textContent.trim() || '-'
+                };
+            });
             
             // To allow same product with different specs, generate a unique cartId
             var cartId = code + '-' + Date.now();
@@ -675,10 +689,9 @@
                 price: currentPrice,
                 ayar: ayar,
                 renk: renk,
-                gram: currentGram
+                gram: currentGram,
+                stones: stones
             });
-            
-            if(typeof updateCartUI === 'function') updateCartUI();
             
             if(typeof updateCartUI === 'function') updateCartUI();
             

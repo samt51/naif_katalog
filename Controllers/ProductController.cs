@@ -27,7 +27,9 @@ namespace naif_katalog.Controllers
         public async Task<IActionResult> ExportCatalog(string format = "excel", string lang = "tr")
         {
             format = string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase) ? "pdf" : "excel";
-            lang = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "tr";
+            lang = string.IsNullOrWhiteSpace(lang) || lang.Length > 10 || lang.Any(ch => !char.IsLetter(ch) && ch != '-')
+                ? "tr"
+                : lang.ToLowerInvariant();
             using var client = new HttpClient();
             // Web uygulaması görsellerin gerçek fiziksel konumunu bilir. API farklı bir
             // IIS klasöründe çalıştığı için export sırasında bu ortak klasörü bildir.

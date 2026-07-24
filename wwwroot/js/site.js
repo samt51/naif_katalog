@@ -340,8 +340,8 @@ document.addEventListener("DOMContentLoaded", function () {
             const ML = 0.5;                          // left margin
             const CW = 7.27;                         // content width (8.27 - 0.5 - 0.5)
             const MR_X = ML + CW;                    // right edge x
-            const COLS = 4, ROWS = 5;
-            const ITEMS_PER_PAGE = COLS * ROWS;      // 15
+            const COLS = 2, ROWS = 3;
+            const ITEMS_PER_PAGE = COLS * ROWS;      // detailed cards: 6 products per page
 
             // Header
             const LOGO_Y = 0.35, LOGO_W = 1.25, LOGO_H = 0.4;
@@ -365,7 +365,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const COL_GAP = 0.15;
             const ROW_GAP = 0.1;
             const COL_W = (CW - (COLS - 1) * COL_GAP) / COLS;
-            const TEXT_H = 0.25;  // space for product code below image
+            const IMAGE_H = 1.15;
 
             let now = new Date();
             let dateStr = now.toLocaleDateString('tr-TR') + " " + now.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
@@ -450,23 +450,65 @@ document.addEventListener("DOMContentLoaded", function () {
                 pdf.setFillColor(250, 250, 250);
                 pdf.roundedRect(x, y, cellW, cellH, 0.06, 0.06, 'FD');
 
-                // Image
+                // Product image area
                 let dataUrl = imageCache[item.image];
                 if (dataUrl) {
-                    let imgH = cellH - TEXT_H - 0.15;  // available height for image
-                    let imgW = cellW - 0.2;             // available width for image
-                    // We don't know actual aspect ratio from dataUrl, so draw stretched to fit
-                    // jsPDF will handle it
-                    let ix = x + 0.1;
+                    let imgH = IMAGE_H;
+                    let imgW = cellW - 0.24;
+                    let ix = x + 0.12;
                     let iy = y + 0.08;
                     try {
                         pdf.addImage(dataUrl, 'JPEG', ix, iy, imgW, imgH);
                     } catch(e) {}
                 }
 
-                // Product code
-                let code = item.code.length > 20 ? item.code.substring(0, 20) + '...' : item.code;
-                drawUnicodeText(pdf, code, x + cellW / 2, y + cellH - 0.06, 8, { align: 'center', bold: true });
+                // Product identity and selected specifications
+                const infoY = y + IMAGE_H + 0.16;
+                pdf.setFillColor(242, 246, 250);
+                pdf.roundedRect(x + 0.09, infoY, cellW - 0.18, 0.55, 0.04, 0.04, 'F');
+
+                let code = (item.code || '-').length > 24 ? item.code.substring(0, 24) + '...' : (item.code || '-');
+                drawUnicodeText(pdf, code, x + 0.16, infoY + 0.14, 10, { bold: true, color: '#172033' });
+                if (item.price) {
+                    drawUnicodeText(pdf, item.price, x + cellW - 0.16, infoY + 0.14, 9, { align: 'right', bold: true, color: '#168b52' });
+                }
+
+                const specs = [
+                    ['Ayar', item.ayar || '-'],
+                    ['Renk', item.renk || '-'],
+                    ['Ağırlık', item.gram || '-']
+                ];
+                const specW = (cellW - 0.32) / specs.length;
+                specs.forEach((spec, index) => {
+                    const sx = x + 0.16 + index * specW;
+                    drawUnicodeText(pdf, spec[0], sx, infoY + 0.32, 6, { color: '#8a94a5' });
+                    drawUnicodeText(pdf, spec[1], sx, infoY + 0.47, 8, { bold: true, color: '#273247' });
+                });
+
+                // Stone details preserve the values selected on the detail page (VVS, VS, etc.).
+                const stones = Array.isArray(item.stones) ? item.stones : [];
+                const stoneY = infoY + 0.66;
+                drawUnicodeText(pdf, 'Taş Detayları', x + 0.13, stoneY + 0.08, 8, { bold: true, color: '#273247' });
+
+                if (stones.length === 0) {
+                    drawUnicodeText(pdf, 'Taş detayı bulunmuyor', x + 0.13, stoneY + 0.28, 7, { color: '#9aa2af' });
+                } else {
+                    const visibleStones = stones.slice(0, 3);
+                    visibleStones.forEach((stone, index) => {
+                        const sy = stoneY + 0.18 + index * 0.29;
+                        pdf.setFillColor(index % 2 === 0 ? 248 : 242, index % 2 === 0 ? 249 : 246, index % 2 === 0 ? 251 : 250);
+                        pdf.roundedRect(x + 0.1, sy, cellW - 0.2, 0.25, 0.025, 0.025, 'F');
+
+                        drawUnicodeText(pdf, stone.type || '-', x + 0.16, sy + 0.09, 7, { bold: true, color: '#273247' });
+                        drawUnicodeText(pdf, 'Berraklık: ' + (stone.clarity || '-'), x + 1.02, sy + 0.09, 7, { color: '#3d6b99' });
+                        drawUnicodeText(pdf, stone.totalCarat || '-', x + 2.08, sy + 0.09, 7, { bold: true, color: '#168b52' });
+                        drawUnicodeText(pdf, (stone.quantity || '-') + ' adet', x + cellW - 0.16, sy + 0.09, 7, { align: 'right', color: '#586174' });
+                    });
+
+                    if (stones.length > visibleStones.length) {
+                        drawUnicodeText(pdf, '+' + (stones.length - visibleStones.length) + ' taş detayı daha', x + 0.13, stoneY + 1.08, 6, { color: '#8a94a5' });
+                    }
+                }
             }
 
             // ===== BUILD PAGES =====
@@ -590,10 +632,23 @@ function updateCartUI() {
                 detailsHtml += `<div class="text-success fw-bold" style="font-size: 12px;">${item.price}</div>`;
             }
 
+            if (Array.isArray(item.stones) && item.stones.length > 0) {
+                detailsHtml += `<div style="margin-top:7px;padding-top:6px;border-top:1px solid #e2e8f0;">`;
+                detailsHtml += `<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Taş Detayları</div>`;
+                item.stones.forEach(stone => {
+                    detailsHtml += `<div style="display:grid;grid-template-columns:1fr auto;gap:3px 8px;background:#fff;border:1px solid #edf2f7;border-radius:7px;padding:5px 7px;margin-bottom:4px;font-size:10px;line-height:1.25;">` +
+                        `<strong style="color:#334155;">${escapeCatalogHtml(stone.type)} · ${escapeCatalogHtml(stone.clarity)}</strong>` +
+                        `<strong style="color:#2563eb;">${escapeCatalogHtml(stone.totalCarat)}</strong>` +
+                        `<span style="color:#64748b;">Renk: ${escapeCatalogHtml(stone.color)}</span>` +
+                        `<span style="color:#64748b;">Adet: ${escapeCatalogHtml(stone.quantity)}</span></div>`;
+                });
+                detailsHtml += `</div>`;
+            }
+
             container.innerHTML += `
-                <div class="d-flex align-items-center mb-2 border rounded p-2 bg-light">
-                    <img src="${item.image}" width="50" height="50" style="object-fit:contain; background-color:#fff;" class="me-2 rounded border" />
-                    <div class="flex-grow-1 small">
+                <div class="d-flex align-items-start mb-2 border rounded p-2 bg-light shadow-sm">
+                    <img src="${item.image}" width="58" height="58" style="object-fit:contain; background-color:#fff;" class="me-2 rounded border" />
+                    <div class="flex-grow-1 small" style="min-width:0;">
                         <div class="fw-bold">${item.code}</div>
                         ${detailsHtml}
                     </div>
@@ -604,4 +659,8 @@ function updateCartUI() {
             `;
         });
     }
+}
+
+function escapeCatalogHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch]);
 }

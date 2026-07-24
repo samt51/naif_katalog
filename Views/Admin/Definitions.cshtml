@@ -287,6 +287,15 @@
                 <label>Tanım Adı</label>
                 <input type="text" id="defName" name="name" required placeholder="Değer giriniz..." oninput="this.value = this.value.toUpperCase()" style="text-transform: uppercase;" />
             </div>
+            <div class="form-group" id="englishNameGroup">
+                <label>Çeviri</label>
+                <div style="display:flex;gap:6px;margin-bottom:7px;">
+                    <select id="defLanguage" style="flex:1;padding:9px;border:1px solid var(--border-color);border-radius:6px;" onchange="loadDefinitionTranslation()"></select>
+                    <button type="button" class="btn-primary" style="width:auto;padding:7px 11px;" onclick="addCatalogLanguage()">+ Dil</button>
+                </div>
+                <input type="text" id="defNameEn" placeholder="Seçilen dilde karşılığı..." />
+                <small id="englishNameHint" style="color:var(--text-muted); display:none; margin-top:5px;">Önce tanımı kaydedin, ardından düzenleyerek çevirisini ekleyin.</small>
+            </div>
             <div class="form-group" id="discountGroup" style="display:none;">
                 <label>İndirim / Yüzdelik Dilim (%)</label>
                 <input type="number" step="0.01" id="defDiscountRate" name="discountRate" value="0" placeholder="0.00" />
@@ -322,12 +331,63 @@
         document.getElementById('infoModal').classList.remove('active');
     }
 
-    function openModal(type, title, id = 0, currentName = '', currentDiscount = 0) {
+    async function loadAvailableLanguages() {
+        const select = document.getElementById('defLanguage');
+        const current = select.value || 'en';
+        const response = await fetch(`${API_BASE_URL}/api/catalog-languages`);
+        const result = await response.json();
+        select.innerHTML = '';
+        (result.data || []).filter(x => x.code !== 'tr').forEach(language => {
+            const option = document.createElement('option');
+            option.value = language.code;
+            option.textContent = `${language.name} (${language.code})`;
+            select.appendChild(option);
+        });
+        if ([...select.options].some(x => x.value === current)) select.value = current;
+    }
+
+    async function loadDefinitionTranslation() {
+        const type = document.getElementById('defType').value;
+        const id = parseInt(document.getElementById('defId').value);
+        const languageCode = document.getElementById('defLanguage').value;
+        document.getElementById('defNameEn').value = '';
+        if (!type || id <= 0 || !languageCode) return;
+        const response = await fetch(`${API_BASE_URL}/api/definition-translations?entityType=${encodeURIComponent(type)}&entityId=${id}&languageCode=${encodeURIComponent(languageCode)}`);
+        const result = await response.json();
+        document.getElementById('defNameEn').value = result.data || '';
+    }
+
+    async function addCatalogLanguage() {
+        const code = (prompt('Dil kodu (örnek: it, de, ar):') || '').trim().toLowerCase();
+        if (!code) return;
+        const name = (prompt('Dil adı:') || '').trim();
+        if (!name) return;
+        const response = await fetch(`${API_BASE_URL}/api/catalog-languages`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, name })
+        });
+        if (!response.ok) { showInfoModal('Hata', 'Dil eklenemedi veya dil kodu zaten mevcut.'); return; }
+        await loadAvailableLanguages();
+        document.getElementById('defLanguage').value = code;
+        await loadDefinitionTranslation();
+    }
+
+    async function openModal(type, title, id = 0, currentName = '', currentDiscount = 0) {
         document.getElementById('defType').value = type;
         document.getElementById('defId').value = id;
         document.getElementById('btnDel').style.display = id > 0 ? "block" : "none";
         document.getElementById('modalTitle').innerText = title;
         document.getElementById('defName').value = currentName;
+        const translatable = ['StoneType','StoneScale','StoneCut','StoneClarity','Color','MetalType','MetalPurity'].includes(type);
+        document.getElementById('englishNameGroup').style.display = translatable ? 'block' : 'none';
+        document.getElementById('defNameEn').value = '';
+        document.getElementById('defNameEn').disabled = id <= 0;
+        document.getElementById('englishNameHint').style.display = translatable && id <= 0 ? 'block' : 'none';
+        if (translatable && id > 0) {
+            try {
+                await loadAvailableLanguages();
+                await loadDefinitionTranslation();
+            } catch (_) { }
+        }
         
         if(type === 'CustomerGroup') {
             document.getElementById('discountGroup').style.display = 'block';
@@ -415,6 +475,19 @@
             const result = await res.json();
             
             if (result && result.isSuccess) {
+                if (id > 0 && document.getElementById('englishNameGroup').style.display !== 'none') {
+                    const translationResponse = await fetch(`${API_BASE_URL}/api/definition-translations`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            entityType: type,
+                            entityId: id,
+                            languageCode: document.getElementById('defLanguage').value,
+                            translatedName: document.getElementById('defNameEn').value.trim()
+                        })
+                    });
+                    if (!translationResponse.ok) throw new Error('Çeviri kaydedilemedi.');
+                }
                 const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
                 Toast.fire({ icon: 'success', title: 'İşlem Başarılı' }).then(() => { location.reload(); });
             } else {

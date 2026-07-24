@@ -129,10 +129,6 @@ public class HomeController : Controller
             const int homePageSize = 12;
             if (page < 1) page = 1;
 
-            var categoriesResponsePaged = await _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
-            var categoriesListPaged = categoriesResponsePaged.isSuccess ? categoriesResponsePaged.data : new List<naif_katalog.Models.CategoryDto>();
-            var currentCategoryObjPaged = categoryId.HasValue ? categoriesListPaged.FirstOrDefault(c => c.Id == categoryId.Value) : null;
-
             var columnIndex = sortOrder switch
             {
                 "price_asc" => 6,
@@ -142,10 +138,10 @@ public class HomeController : Controller
 
             var orderBy = sortOrder == "price_desc" ? "desc" : "asc";
 
-            var productsResponsePaged = await _mediator.Send(new GetAllProductsQueryRequest
+            var productsTask = _mediator.Send(new GetAllProductsQueryRequest
             {
                 Code = search,
-                Category = currentCategoryObjPaged?.Name,
+                CategoryId = categoryId,
                 MinPrice = minPrice,
                 MaxPrice = maxPrice,
                 Page = page,
@@ -153,6 +149,12 @@ public class HomeController : Controller
                 ColumnIndex = columnIndex,
                 OrderBy = orderBy
             });
+            var categoriesTask = _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
+            await Task.WhenAll(productsTask, categoriesTask);
+            var productsResponsePaged = await productsTask;
+            var categoriesResponsePaged = await categoriesTask;
+            var categoriesListPaged = categoriesResponsePaged.isSuccess ? categoriesResponsePaged.data : new List<naif_katalog.Models.CategoryDto>();
+            var currentCategoryObjPaged = categoryId.HasValue ? categoriesListPaged.FirstOrDefault(c => c.Id == categoryId.Value) : null;
 
             var pagedProductsFromBackend = productsResponsePaged != null && productsResponsePaged.isSuccess && productsResponsePaged.data != null
                 ? productsResponsePaged.data
@@ -176,16 +178,22 @@ public class HomeController : Controller
             ViewBag.TotalCount = totalProductsPaged;
 
             try {
-                var colorsResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalTypesQueryRequest());
+                var colorsTask = _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllMetalTypesQueryRequest());
+                var claritiesTask = _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
+                var stoneTypesTask = _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
+                var stonesTask = _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
+                await Task.WhenAll(colorsTask, claritiesTask, stoneTypesTask, stonesTask);
+
+                var colorsResp = await colorsTask;
                 ViewBag.MetalTypes = (colorsResp != null && colorsResp.isSuccess) ? colorsResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto>();
 
-                var claritiesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneClaritysQueryRequest());
+                var claritiesResp = await claritiesTask;
                 ViewBag.Clarities = (claritiesResp != null && claritiesResp.isSuccess) ? claritiesResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneClarityDto>();
 
-                var stoneTypesResp = await _mediator.Send(new naif_katalog.Core.Features.DefinitionFeature.Queries.GetAllStoneTypesQueryRequest());
+                var stoneTypesResp = await stoneTypesTask;
                 ViewBag.StoneTypes = (stoneTypesResp != null && stoneTypesResp.isSuccess) ? stoneTypesResp.data : new List<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>();
 
-                var stoneResponse = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllStonesQueryRequest());
+                var stoneResponse = await stonesTask;
                 ViewBag.Stones = (stoneResponse != null && stoneResponse.isSuccess) ? stoneResponse.data : new List<naif_katalog.Models.StoneDto>();
             } catch {
                 ViewBag.MetalTypes = new List<naif_katalog.Core.Features.DefinitionFeature.Queries.MetalTypeDto>();

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using naif_katalog.Core.Features.CategoryFeature.Commands;
 using naif_katalog.Core.Features.CategoryFeature.Queries;
+using naif_katalog.Core.Features.ProductFeature.Queries;
 
 namespace naif_katalog.Controllers
 {
@@ -23,6 +24,15 @@ namespace naif_katalog.Controllers
                 return View("~/Views/Admin/Categories.cshtml", response.data);
             }
             return View("~/Views/Admin/Categories.cshtml", null);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Products(int categoryId)
+        {
+            if (categoryId <= 0) return BadRequest(new { isSuccess = false, message = "Geçersiz kategori." });
+
+            var response = await _mediator.Send(new GetProductsByCategoryIdQueryRequest { CategoryId = categoryId });
+            return Json(response);
         }
 
         [HttpPost]

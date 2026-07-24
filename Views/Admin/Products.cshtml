@@ -49,6 +49,7 @@
             <select id="catalogExportLanguage" title="Çıktı dili" style="height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-weight:600;">
                 <option value="tr">Türkçe</option>
                 <option value="en">English</option>
+                <option value="it">Italiano</option>
             </select>
             <a href="#" onclick="downloadProductCatalog('pdf');return false;" title="PDF indir" style="height:42px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600;"><i class="fas fa-file-pdf"></i> PDF</a>
             <a href="#" onclick="downloadProductCatalog('excel');return false;" title="Excel indir" style="height:42px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#16a34a;color:#fff;text-decoration:none;font-weight:600;"><i class="fas fa-file-excel"></i> Excel</a>
@@ -269,10 +270,28 @@
 
 <!-- Modal -->
 <script>
+    const EXPORT_API_BASE_URL = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(apiAddress));
     function downloadProductCatalog(format) {
         const language = document.getElementById('catalogExportLanguage')?.value || 'tr';
         window.location.href = `/Product/ExportCatalog?format=${format}&lang=${language}`;
     }
+    document.addEventListener('DOMContentLoaded', async () => {
+        const select = document.getElementById('catalogExportLanguage');
+        if (!select) return;
+        try {
+            const response = await fetch(`${EXPORT_API_BASE_URL}/api/catalog-languages`);
+            const result = await response.json();
+            if (result.isSuccess && Array.isArray(result.data)) {
+                select.innerHTML = '';
+                result.data.forEach(language => {
+                    const option = document.createElement('option');
+                    option.value = language.code;
+                    option.textContent = language.name;
+                    select.appendChild(option);
+                });
+            }
+        } catch (_) { }
+    });
 </script>
 
 <div class="modal-overlay" id="productModal">

@@ -34,6 +34,7 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
             var qs = new List<string>();
             if (!string.IsNullOrEmpty(request.Code)) qs.Add($"Code={System.Net.WebUtility.UrlEncode(request.Code)}");
             if (!string.IsNullOrEmpty(request.Category)) qs.Add($"Category={System.Net.WebUtility.UrlEncode(request.Category)}");
+            if (request.CategoryId.HasValue) qs.Add($"CategoryId={request.CategoryId.Value}");
             if (request.MinGram.HasValue) qs.Add($"MinGram={request.MinGram.Value}");
             if (request.MaxGram.HasValue) qs.Add($"MaxGram={request.MaxGram.Value}");
             if (request.MinPrice.HasValue) qs.Add($"MinPrice={request.MinPrice.Value}");

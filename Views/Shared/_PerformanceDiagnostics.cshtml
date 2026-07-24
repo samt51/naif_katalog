@@ -1,0 +1,13 @@
+<div id="performanceDiagnostics" class="perf-diagnostics">
+    <button type="button" id="perfDiagnosticsToggle" class="perf-diagnostics-toggle" title="Performans tanılama">
+        <span class="perf-status-dot"></span> Hız
+    </button>
+    <section id="perfDiagnosticsPanel" class="perf-diagnostics-panel" hidden aria-label="Performans tanılama">
+        <header><strong>Performans Tanılama</strong><button type="button" id="perfDiagnosticsClose" aria-label="Kapat">&times;</button></header>
+        <div id="perfDiagnosticsResult" class="perf-diagnostics-result">Ölçüm hazırlanıyor…</div>
+        <button type="button" id="perfDiagnosticsRefresh" class="perf-diagnostics-refresh">Tekrar ölç</button>
+        <small>DB süresi, API tarafından ayrıca raporlanmadığı için “API / DB beklemesi” birlikte değerlendirilir.</small>
+    </section>
+</div>
+<link rel="stylesheet" href="~/css/performance-diagnostics.css" asp-append-version="true" />
+<script src="~/js/performance-diagnostics.js" asp-append-version="true" defer></script>

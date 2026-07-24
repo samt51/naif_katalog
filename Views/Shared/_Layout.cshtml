@@ -13,6 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
+    <div id="app-version" data-version="v.1.0.0" hidden>v.1.0.0</div>
     <header class="sticky-top bg-white" style="z-index: 1030;">
         <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-light bg-white border-bottom box-shadow">
             <div class="container-fluid">
@@ -299,6 +300,7 @@
         body { top: 0 !important; }
         .skiptranslate, .goog-te-banner-frame { display: none !important; }
     </style>
+    <partial name="_PerformanceDiagnostics" />
 </body>
 
 </html>

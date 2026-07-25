@@ -1,0 +1,47 @@
+{
+  "data": [
+    {
+      "id": 3,
+      "name": "Samet",
+      "surname": "Bağlan",
+      "companyName": "samt",
+      "address": "tresxc",
+      "email": "samt51.m@icloud.com",
+      "phone": "5363956979",
+      "roleId": 3,
+      "customerGroupId": null,
+      "membershipExpiryDate": "2027-06-17T00:00:00",
+      "isLocked": false,
+      "pricingProfile": {
+        "customMilyem": 0.1,
+        "salesMultiplier": 1
+      },
+      "customStonePrices": [
+        {
+          "stoneId": 155,
+          "customPrice": 50,
+          "customSettingPrice": null
+        },
+        {
+          "stoneId": 157,
+          "customPrice": 400,
+          "customSettingPrice": null
+        },
+        {
+          "stoneId": 158,
+          "customPrice": 300,
+          "customSettingPrice": null
+        }
+      ],
+      "customPolishingCosts": [
+        {
+          "categoryId": null,
+          "customPrice": 1
+        }
+      ]
+    }
+  ],
+  "statusCode": 200,
+  "isSuccess": true,
+  "errors": []
+}

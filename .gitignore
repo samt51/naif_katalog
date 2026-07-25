@@ -177,7 +177,13 @@ DocProject/Help/Html2
 DocProject/Help/html
 
 # Click-Once directory
-publish/
+# publish/
+
+# Publish Web Output
+*.[Pp]ublish.xml
+*.azurePubxml
+*.pubxml
+*.publishproj
 
 # Publish Web Output
 *.[Pp]ublish.xml
@@ -361,3 +367,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# ------------------------------------------------------------
+# Publish klasörünü ve içindeki bütün dosyaları Git'e dahil et
+# ------------------------------------------------------------
+!publish/
+!publish/**

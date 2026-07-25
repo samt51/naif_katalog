@@ -210,5 +210,6 @@ namespace naif_katalog.Core.Features.ProductFeature.Queries
         public int? MetalPurityId { get; set; }
         public string MetalPurityName { get; set; }
         public decimal Gram { get; set; }
+
     }
 }

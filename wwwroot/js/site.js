@@ -290,10 +290,72 @@ document.addEventListener("DOMContentLoaded", function () {
         let lastName = document.getElementById('lastName').value;
         let phoneNumber = document.getElementById('phoneNumber').value;
 
+        const pdfLanguage = (document.getElementById('currentLangText')?.textContent || 'EN').trim().toLowerCase();
+        const pdfIsEnglish = pdfLanguage === 'en';
+        const pdfText = pdfIsEnglish ? {
+            catalog: 'CATALOG', company: 'Company', fullName: 'Full Name', phone: 'Phone',
+            purity: 'Purity', color: 'Color', weight: 'Weight', stoneDetails: 'Stone Details',
+            noStoneDetails: 'No stone details available', clarity: 'Clarity', pieces: 'pcs',
+            moreStoneDetails: 'more stone details', footer: 'Products and models are registered to Naif Jewellery and may not be used without permission.',
+            other: 'OTHER'
+        } : {
+            catalog: 'KATALOG', company: 'Firma', fullName: 'Ad Soyad', phone: 'Telefon',
+            purity: 'Ayar', color: 'Renk', weight: 'Ağırlık', stoneDetails: 'Taş Detayları',
+            noStoneDetails: 'Taş detayı bulunmuyor', clarity: 'Berraklık', pieces: 'adet',
+            moreStoneDetails: 'taş detayı daha', footer: 'Ürünler ve modeller Naif Jewellery adına tescilli olup izinsiz kullanılamaz.',
+            other: 'DİĞER'
+        };
+
+        const englishDefinitionNames = {
+            'YÜZÜK':'RING', 'YUZUK':'RING', 'KÜPE':'EARRINGS', 'KUPE':'EARRINGS',
+            'KOLYE':'NECKLACE', 'BİLEKLİK':'BRACELET', 'BILEKLIK':'BRACELET',
+            'ALYANS':'WEDDING RING', 'KOLYE UCU':'PENDANT', 'PIRLANTA':'DIAMOND',
+            'ELMAS':'DIAMOND', 'ZÜMRÜT':'EMERALD', 'ZUMRUT':'EMERALD',
+            'SAFİR':'SAPPHIRE', 'SAFIR':'SAPPHIRE', 'YAKUT':'RUBY',
+            'BEYAZ':'WHITE', 'SARI':'YELLOW', 'KIRMIZI':'RED', 'ROSE':'ROSE'
+        };
+
+        function translatePdfDefinition(value) {
+            const decoded = decodeCatalogText(value || '-');
+            if (!pdfIsEnglish) return decoded;
+            return englishDefinitionNames[decoded.trim().toLocaleUpperCase('tr-TR')] || decoded;
+        }
+
+        const definitionTranslationCache = new Map();
+        async function getPdfDefinitionTranslation(entityType, entityId, fallback) {
+            if (!pdfIsEnglish || !entityId || !window.NAIF_API_BASE_URL) return translatePdfDefinition(fallback);
+            const cacheKey = `${entityType}:${entityId}:en`;
+            if (definitionTranslationCache.has(cacheKey)) return definitionTranslationCache.get(cacheKey);
+            try {
+                const url = `${window.NAIF_API_BASE_URL}/api/definition-translations?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}&languageCode=en`;
+                const response = await fetch(url);
+                const result = await response.json();
+                const translated = result && result.data ? decodeCatalogText(result.data) : translatePdfDefinition(fallback);
+                definitionTranslationCache.set(cacheKey, translated);
+                return translated;
+            } catch (_) {
+                return translatePdfDefinition(fallback);
+            }
+        }
+
+        const pdfItems = await Promise.all(cart.map(async item => {
+            const translatedItem = { ...item };
+            translatedItem.category = await getPdfDefinitionTranslation('Category', item.categoryId, item.category || pdfText.other);
+            translatedItem.ayar = await getPdfDefinitionTranslation('MetalPurity', item.ayarId, item.ayar || '-');
+            translatedItem.renk = await getPdfDefinitionTranslation('MetalType', item.renkId, item.renk || '-');
+            translatedItem.stones = await Promise.all((item.stones || []).map(async stone => ({
+                ...stone,
+                type: await getPdfDefinitionTranslation('StoneType', stone.typeId, stone.type || '-'),
+                clarity: await getPdfDefinitionTranslation('StoneClarity', stone.clarityId, stone.clarity || '-'),
+                color: await getPdfDefinitionTranslation('Color', stone.colorId, stone.color || '-')
+            })));
+            return translatedItem;
+        }));
+
         // Group cart items by category
         let grouped = {};
-        cart.forEach(item => {
-            let cat = decodeCatalogText(item.category || 'DİĞER');
+        pdfItems.forEach(item => {
+            let cat = translatePdfDefinition(item.category || pdfText.other);
             if(!grouped[cat]) grouped[cat] = [];
             grouped[cat].push(item);
         });
@@ -408,7 +470,8 @@ document.addEventListener("DOMContentLoaded", function () {
             const IMAGE_H = 1.15;
 
             let now = new Date();
-            let dateStr = now.toLocaleDateString('tr-TR') + " " + now.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+            let dateLocale = pdfIsEnglish ? 'en-GB' : 'tr-TR';
+            let dateStr = now.toLocaleDateString(dateLocale) + " " + now.toLocaleTimeString(dateLocale, {hour:'2-digit', minute:'2-digit'});
 
             // ===== CREATE PDF =====
             let JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
@@ -424,7 +487,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 pdf.setFontSize(14);
                 pdf.setTextColor(50, 50, 50);
-                pdf.text("KATALOG", ML + LOGO_W + 0.08, LOGO_Y + LOGO_H - 0.08);
+                pdf.text(pdfText.catalog, ML + LOGO_W + 0.08, LOGO_Y + LOGO_H - 0.08);
 
                 pdf.setFontSize(10);
                 pdf.setTextColor(100, 100, 100);
@@ -446,9 +509,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 pdf.line(bx + col3, by, bx + col3, by + bh);
                 pdf.line(bx + col3 * 2, by, bx + col3 * 2, by + bh);
 
-                drawUnicodeText(pdf, 'Firma',    bx + col3 * 0.5, by + 0.14, 7, { align: 'center', color: '#999999' });
-                drawUnicodeText(pdf, 'Ad Soyad', bx + col3 * 1.5, by + 0.14, 7, { align: 'center', color: '#999999' });
-                drawUnicodeText(pdf, 'Telefon',  bx + col3 * 2.5, by + 0.14, 7, { align: 'center', color: '#999999' });
+                drawUnicodeText(pdf, pdfText.company,  bx + col3 * 0.5, by + 0.14, 7, { align: 'center', color: '#999999' });
+                drawUnicodeText(pdf, pdfText.fullName, bx + col3 * 1.5, by + 0.14, 7, { align: 'center', color: '#999999' });
+                drawUnicodeText(pdf, pdfText.phone,    bx + col3 * 2.5, by + 0.14, 7, { align: 'center', color: '#999999' });
 
                 let maxC = 24;
                 let cn = (companyName || '-');
@@ -471,7 +534,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 pdf.setFontSize(8);
                 pdf.setTextColor(150, 150, 150);
-                pdf.text("Urunler ve modeller Naif Jewellery adina tescilli olup izinsiz kullanilamaz.", ML, FOOTER_TEXT_Y);
+                drawUnicodeText(pdf, pdfText.footer, ML, FOOTER_TEXT_Y, 8, { color: '#969696' });
             }
 
             // --- Draw group title ---
@@ -514,9 +577,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
                 const specs = [
-                    ['Ayar', item.ayar || '-'],
-                    ['Renk', item.renk || '-'],
-                    ['Ağırlık', item.gram || '-']
+                    [pdfText.purity, item.ayar || '-'],
+                    [pdfText.color, translatePdfDefinition(item.renk || '-')],
+                    [pdfText.weight, item.gram || '-']
                 ];
                 const specW = (cellW - 0.32) / specs.length;
                 specs.forEach((spec, index) => {
@@ -528,10 +591,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Stone details preserve the values selected on the detail page (VVS, VS, etc.).
                 const stones = Array.isArray(item.stones) ? item.stones : [];
                 const stoneY = infoY + 0.66;
-                drawUnicodeText(pdf, 'Taş Detayları', x + 0.13, stoneY + 0.08, 8, { bold: true, color: '#273247' });
+                drawUnicodeText(pdf, pdfText.stoneDetails, x + 0.13, stoneY + 0.08, 8, { bold: true, color: '#273247' });
 
                 if (stones.length === 0) {
-                    drawUnicodeText(pdf, 'Taş detayı bulunmuyor', x + 0.13, stoneY + 0.28, 7, { color: '#9aa2af' });
+                    drawUnicodeText(pdf, pdfText.noStoneDetails, x + 0.13, stoneY + 0.28, 7, { color: '#9aa2af' });
                 } else {
                     const visibleStones = stones.slice(0, 3);
                     visibleStones.forEach((stone, index) => {
@@ -539,14 +602,14 @@ document.addEventListener("DOMContentLoaded", function () {
                         pdf.setFillColor(index % 2 === 0 ? 248 : 242, index % 2 === 0 ? 249 : 246, index % 2 === 0 ? 251 : 250);
                         pdf.roundedRect(x + 0.1, sy, cellW - 0.2, 0.25, 0.025, 0.025, 'F');
 
-                        drawUnicodeText(pdf, stone.type || '-', x + 0.16, sy + 0.09, 7, { bold: true, color: '#273247' });
-                        drawUnicodeText(pdf, 'Berraklık: ' + (stone.clarity || '-'), x + 1.02, sy + 0.09, 7, { color: '#3d6b99' });
+                        drawUnicodeText(pdf, translatePdfDefinition(stone.type || '-'), x + 0.16, sy + 0.09, 7, { bold: true, color: '#273247' });
+                        drawUnicodeText(pdf, pdfText.clarity + ': ' + (stone.clarity || '-'), x + 1.02, sy + 0.09, 7, { color: '#3d6b99' });
                         drawUnicodeText(pdf, stone.totalCarat || '-', x + 2.08, sy + 0.09, 7, { bold: true, color: '#168b52' });
-                        drawUnicodeText(pdf, (stone.quantity || '-') + ' adet', x + cellW - 0.16, sy + 0.09, 7, { align: 'right', color: '#586174' });
+                        drawUnicodeText(pdf, (stone.quantity || '-') + ' ' + pdfText.pieces, x + cellW - 0.16, sy + 0.09, 7, { align: 'right', color: '#586174' });
                     });
 
                     if (stones.length > visibleStones.length) {
-                        drawUnicodeText(pdf, '+' + (stones.length - visibleStones.length) + ' taş detayı daha', x + 0.13, stoneY + 1.08, 6, { color: '#8a94a5' });
+                        drawUnicodeText(pdf, '+' + (stones.length - visibleStones.length) + ' ' + pdfText.moreStoneDetails, x + 0.13, stoneY + 1.08, 6, { color: '#8a94a5' });
                     }
                 }
             }

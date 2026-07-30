@@ -1,6 +1,8 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+    <script>window.NAIF_API_BASE_URL = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/").TrimEnd('/')));</script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Naif Jewellery</title>
@@ -50,8 +52,8 @@
                     <!-- Language Dropdown -->
                     <div class="dropdown me-2 me-md-3">
                         <a href="#" class="text-dark text-decoration-none dropdown-toggle fw-medium d-flex align-items-center" data-bs-toggle="dropdown" style="font-size: 14px;">
-                            <img id="currentLangFlag" src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-1" style="border-radius:2px;"> 
-                            <span id="currentLangText" class="d-none d-sm-inline">TR</span>
+                            <img id="currentLangFlag" src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-1" style="border-radius:2px;">
+                            <span id="currentLangText" class="d-none d-sm-inline">EN</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="min-width: 120px; z-index: 1050;">
                             <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('tr')"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</a></li>
@@ -218,6 +220,21 @@
     <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({pageLanguage: 'tr', includedLanguages: 'tr,en', autoDisplay: false}, 'google_translate_element');
+            applyDefaultEnglishLanguage();
+        }
+
+        function applyDefaultEnglishLanguage() {
+            var attempts = 0;
+            var timer = setInterval(function() {
+                attempts++;
+                var selectField = document.querySelector('.goog-te-combo');
+                if (selectField && Array.from(selectField.options).some(function(option) { return option.value === 'en'; })) {
+                    clearInterval(timer);
+                    changeLanguage('en');
+                } else if (attempts >= 20) {
+                    clearInterval(timer);
+                }
+            }, 150);
         }
         
         function changeLanguage(lang) {

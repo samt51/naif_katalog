@@ -11,6 +11,11 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
   </ItemGroup>
 
+  <!-- Ürün görselleri sunucuda kalıcı veri olarak yönetilir; publish paketine dahil edilmez. -->
+  <ItemGroup>
+    <Content Update="wwwroot\images\**\*" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>
 
 

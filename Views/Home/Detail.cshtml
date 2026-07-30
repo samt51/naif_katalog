@@ -329,6 +329,7 @@
                                     @foreach (var s in Model.ProductStones)
                                     {
                                         string stoneTypeName = "";
+                                        int? stoneTypeId = null;
                                         if (ViewBag.Stones != null && ViewBag.StoneTypes != null) {
                                             var stonesList = (IEnumerable<naif_katalog.Models.StoneDto>)ViewBag.Stones;
                                             var stoneTypesList = (IEnumerable<naif_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>)ViewBag.StoneTypes;
@@ -338,11 +339,12 @@
                                                 var stType = stoneTypesList.FirstOrDefault(t => t.Id == st.StoneTypeId);
                                                 if (stType != null) {
                                                     stoneTypeName = stType.Name;
+                                                    stoneTypeId = stType.Id;
                                                 }
                                             }
                                         }
 
-                                        <tr class="stone-detail-row" style="border-bottom: 1px solid #f1f5f9;">
+                                        <tr class="stone-detail-row" data-stone-type-id="@stoneTypeId" data-color-id="@s.ColorId" style="border-bottom: 1px solid #f1f5f9;">
                                             <td class="py-3">
                                                 <div class="d-flex justify-content-center">
                                                     @if (stoneTypeName.Equals("PIRLANTA", StringComparison.OrdinalIgnoreCase) || stoneTypeName.Equals("PIRLANTA ", StringComparison.OrdinalIgnoreCase))
@@ -395,7 +397,7 @@
                     @if (isLoggedIn)
                     {
                         <button class="btn btn-dark action-button" id="addToCartBtn"
-                                onclick="addToCatalogFromDetail('@Model.Code', '@(Model.CategoryNames?.FirstOrDefault() ?? "")', '@mockPrice.ToString("N0") $', '@(Model.Images.Count > 0 ? Model.Images[0] : "")', '@Model.Gram.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) g', @Model.Id)">
+                                onclick="addToCatalogFromDetail('@Model.Code', '@(Model.CategoryNames?.FirstOrDefault() ?? "")', '@mockPrice.ToString("N0") $', '@(Model.Images.Count > 0 ? Model.Images[0] : "")', '@Model.Gram.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) g', @Model.Id, @(Model.CategoryIds?.FirstOrDefault() ?? 0))">
                             <i class="fas fa-plus"></i> Kataloğa Ekle
                         </button>
                     }
@@ -603,7 +605,7 @@
         const addToCartBtn = document.getElementById('addToCartBtn');
         if (addToCartBtn) {
             const displayGramStr = currentGram.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
-            addToCartBtn.setAttribute('onclick', `addToCatalogFromDetail('${productCode}', '${productCategory}', '${formattedPrice}', '${productImage}', '${displayGramStr}', @Model.Id)`);
+            addToCartBtn.setAttribute('onclick', `addToCatalogFromDetail('${productCode}', '${productCategory}', '${formattedPrice}', '${productImage}', '${displayGramStr}', @Model.Id, @(Model.CategoryIds?.FirstOrDefault() ?? 0))`);
         }
     }
 
@@ -641,7 +643,7 @@
         }
     });
 
-    function addToCatalogFromDetail(code, category, price, image, gram, productId) {
+    function addToCatalogFromDetail(code, category, price, image, gram, productId, categoryId) {
         if(!image) {
             document.getElementById('globalErrorTitle').innerText = 'Hata';
             document.getElementById('globalErrorMessage').innerText = 'Bu ürünün resmi yok, eklenemez.';
@@ -671,8 +673,11 @@
                     : (clarityElement ? clarityElement.textContent.trim() : '-');
                 return {
                     clarity: clarity,
+                    clarityId: clarityElement && clarityElement.tagName === 'SELECT' ? clarityElement.value : null,
                     type: row.querySelector('.stone-type')?.textContent.trim() || '-',
+                    typeId: row.dataset.stoneTypeId || null,
                     color: row.querySelector('.stone-color')?.textContent.trim() || '-',
+                    colorId: row.dataset.colorId || null,
                     quantity: row.querySelector('.stone-quantity')?.textContent.trim() || '-',
                     totalCarat: row.querySelector('.stone-carat')?.textContent.trim() || '-'
                 };
@@ -692,6 +697,9 @@
                 gram: currentGram,
                 stones: stones
                 ,productId: productId
+                ,categoryId: categoryId
+                ,ayarId: ayarSelect ? ayarSelect.value : null
+                ,renkId: renkSelect ? renkSelect.value : null
             });
 
             if (typeof logCatalogAction === 'function') {

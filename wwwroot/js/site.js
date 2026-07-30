@@ -4,6 +4,42 @@
 let cart = JSON.parse(sessionStorage.getItem('naif_catalog_cart')) || [];
 let pdfCanceled = false;
 
+window.logCatalogAction = function(actionType, item) {
+    if (!item) return;
+    let specs = [item.category, item.ayar, item.renk, item.gram, item.price].filter(Boolean).join(' | ');
+    fetch('/Home/LogCatalogAction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+            actionType: actionType,
+            productId: item.productId || null,
+            productCode: item.code || '',
+            details: specs
+        })
+    }).catch(function() { /* Log hatası müşterinin sepet işlemini engellememeli. */ });
+};
+
+function decodeCatalogText(value) {
+    let textarea = document.createElement('textarea');
+    textarea.innerHTML = String(value || '');
+    return textarea.value;
+}
+
+function normalizeCatalogImageUrl(value) {
+    if (!value) return '';
+    try {
+        let url = new URL(decodeCatalogText(value), window.location.href);
+        // Yerel katalog resmini mevcut site adresinden yükleyerek canvas erişimini koru.
+        if (url.pathname.toLowerCase().includes('/images/katalog/')) {
+            return url.pathname + url.search;
+        }
+        return url.href;
+    } catch (_) {
+        return decodeCatalogText(value);
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     updateCartUI();
 
@@ -140,6 +176,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!code) return;
         if (!cart.find(c => c.code === code)) {
             cart.push({ code, image, category });
+            logCatalogAction('AddProduct', cart[cart.length - 1]);
             updateCartUI();
             this.textContent = '✓ Eklendi';
             this.classList.remove('btn-dark');
@@ -178,6 +215,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if(!cart.find(c => c.code === code)) {
                 cart.push({code: code, image: image, category: category});
+                logCatalogAction('AddProduct', cart[cart.length - 1]);
                 updateCartUI();
                 
                 // Başarılı durumu
@@ -223,6 +261,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let confirmClearActionBtn = document.getElementById('confirmClearCatalogActionBtn');
     if(confirmClearActionBtn) {
         confirmClearActionBtn.addEventListener('click', function() {
+            cart.forEach(item => logCatalogAction('RemoveProduct', item));
             cart = [];
             updateCartUI();
             if(confirmClearModalInstance) {
@@ -254,7 +293,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Group cart items by category
         let grouped = {};
         cart.forEach(item => {
-            let cat = item.category || 'DİĞER';
+            let cat = decodeCatalogText(item.category || 'DİĞER');
             if(!grouped[cat]) grouped[cat] = [];
             grouped[cat].push(item);
         });
@@ -263,10 +302,11 @@ document.addEventListener("DOMContentLoaded", function () {
         function loadImage(url) {
             return new Promise(resolve => {
                 let img = new Image();
-                img.crossOrigin = 'Anonymous';
                 img.onload = () => resolve(img);
                 img.onerror = () => resolve(null);
-                img.src = url;
+                let normalizedUrl = normalizeCatalogImageUrl(url);
+                if (/^https?:\/\//i.test(normalizedUrl)) img.crossOrigin = 'anonymous';
+                img.src = normalizedUrl;
             });
         }
 
@@ -578,6 +618,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             document.getElementById('loadingOverlay').style.display = 'none';
             if (!pdfCanceled) {
+                cart.forEach(item => logCatalogAction('RemoveProduct', item));
                 cart = [];
                 updateCartUI();
             }
@@ -593,7 +634,9 @@ document.addEventListener("DOMContentLoaded", function () {
 window.removeFromCart = function(idOrCode) {
     let globalIndex = cart.findIndex(c => (c.id || c.code) === idOrCode);
     if(globalIndex !== -1) {
+        let removedItem = cart[globalIndex];
         cart.splice(globalIndex, 1);
+        logCatalogAction('RemoveProduct', removedItem);
         updateCartUI();
     }
 }

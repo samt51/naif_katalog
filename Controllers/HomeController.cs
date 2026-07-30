@@ -76,6 +76,52 @@ public class HomeController : Controller
         return RedirectToAction("Index");
     }
 
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> LogCatalogAction([FromBody] CatalogActionLogRequest request)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+            return Unauthorized();
+
+        if (request == null || (request.ActionType != "AddProduct" && request.ActionType != "RemoveProduct"))
+            return BadRequest();
+
+        var userIdClaim = User.Claims.FirstOrDefault(c =>
+            c.Type == System.Security.Claims.ClaimTypes.NameIdentifier ||
+            c.Type == "id" || c.Type == "userId" || c.Type == "sub" || c.Type == "nameid")?.Value;
+
+        if (!int.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var actionText = request.ActionType == "AddProduct" ? "sepete eklendi" : "sepetten silindi";
+        var productCode = string.IsNullOrWhiteSpace(request.ProductCode) ? "Ürün" : request.ProductCode.Trim();
+        var details = $"{productCode} kodlu ürün {actionText}.";
+        if (!string.IsNullOrWhiteSpace(request.Details))
+            details += " " + request.Details.Trim();
+
+        var productId = request.ProductId;
+        if (!productId.HasValue && !string.IsNullOrWhiteSpace(request.ProductCode))
+        {
+            if (!_memoryCache.TryGetValue("CachedProducts", out ResponseDto<List<Product>>? productsResponse))
+                productsResponse = await _mediator.Send(new GetAllProductsQueryRequest());
+
+            productId = productsResponse?.data?
+                .FirstOrDefault(p => string.Equals(p.Code, request.ProductCode.Trim(), StringComparison.OrdinalIgnoreCase))?.Id;
+        }
+
+        var response = await _mediator.Send(new naif_katalog.Core.Features.UserActionLogFeature.Commands.Create.CreateUserActionLogCommandRequest
+        {
+            UserId = userId,
+            ActionType = request.ActionType,
+            ProductId = productId,
+            Details = details,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
+            UserAgent = HttpContext.Request.Headers["User-Agent"].ToString()
+        });
+
+        return Json(response);
+    }
+
     private async Task<(Product? Product, List<Product> Products)> FindProductForDetail(int id)
     {
         if (_memoryCache.TryGetValue($"CachedProduct_{id}", out Product? cachedProduct) && cachedProduct != null)
@@ -355,5 +401,13 @@ public class HomeController : Controller
 
         return View(pagedProducts);
     }
+}
+
+public sealed class CatalogActionLogRequest
+{
+    public string ActionType { get; set; } = "";
+    public int? ProductId { get; set; }
+    public string ProductCode { get; set; } = "";
+    public string Details { get; set; } = "";
 }
 

@@ -656,6 +656,7 @@
     function addToCatalog(code, category, price, img) {
         if (!catalog.find(x => x.code === code)) {
             catalog.push({ code, category, price, img });
+            if (typeof logCatalogAction === 'function') logCatalogAction('AddProduct', catalog[catalog.length - 1]);
             localStorage.setItem('myCatalog', JSON.stringify(catalog));
             updateCartUI();
             
@@ -668,7 +669,9 @@
     }
 
     function removeFromCatalog(index) {
+        const removedItem = catalog[index];
         catalog.splice(index, 1);
+        if (typeof logCatalogAction === 'function') logCatalogAction('RemoveProduct', removedItem);
         localStorage.setItem('myCatalog', JSON.stringify(catalog));
         updateCartUI();
     }

@@ -31,7 +31,9 @@ namespace naif_katalog.Controllers
         {
             if (customerId <= 0) return BadRequest("Geçersiz müşteri.");
             format = string.Equals(format, "pdf", StringComparison.OrdinalIgnoreCase) ? "pdf" : "excel";
-            lang = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "tr";
+            lang = string.IsNullOrWhiteSpace(lang) || lang.Length > 10 || lang.Any(ch => !char.IsLetter(ch) && ch != '-')
+                ? "tr"
+                : lang.ToLowerInvariant();
             using var client = new HttpClient();
             var apiAddress = _configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/";
             if (!apiAddress.EndsWith("/")) apiAddress += "/";

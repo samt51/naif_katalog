@@ -11,8 +11,7 @@ namespace naif_katalog.Core.Features.CategoryFeature.Commands
         public CreateCategoryCommandHandler(IApiService apiService) : base(apiService) {}
         public async Task<ResponseDto<bool>> Handle(CreateCategoryCommandRequest request, CancellationToken cancellationToken)
         {
-            var result = await _apiService.PostAsync<CreateCategoryCommandRequest, object>("api/Category", request);
-            return new ResponseDto<bool> { data = result.isSuccess, isSuccess = result.isSuccess, statusCode = result.statusCode, errors = result.errors };
+            return await _apiService.PostAsync<CreateCategoryCommandRequest, bool>("api/Category", request);
         }
     }
 }

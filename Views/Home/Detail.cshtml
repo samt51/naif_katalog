@@ -395,7 +395,7 @@
                     @if (isLoggedIn)
                     {
                         <button class="btn btn-dark action-button" id="addToCartBtn"
-                                onclick="addToCatalogFromDetail('@Model.Code', '@(Model.CategoryNames?.FirstOrDefault() ?? "")', '@mockPrice.ToString("N0") $', '@(Model.Images.Count > 0 ? Model.Images[0] : "")', '@Model.Gram.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) g')">
+                                onclick="addToCatalogFromDetail('@Model.Code', '@(Model.CategoryNames?.FirstOrDefault() ?? "")', '@mockPrice.ToString("N0") $', '@(Model.Images.Count > 0 ? Model.Images[0] : "")', '@Model.Gram.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) g', @Model.Id)">
                             <i class="fas fa-plus"></i> Kataloğa Ekle
                         </button>
                     }
@@ -603,7 +603,7 @@
         const addToCartBtn = document.getElementById('addToCartBtn');
         if (addToCartBtn) {
             const displayGramStr = currentGram.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
-            addToCartBtn.setAttribute('onclick', `addToCatalogFromDetail('${productCode}', '${productCategory}', '${formattedPrice}', '${productImage}', '${displayGramStr}')`);
+            addToCartBtn.setAttribute('onclick', `addToCatalogFromDetail('${productCode}', '${productCategory}', '${formattedPrice}', '${productImage}', '${displayGramStr}', @Model.Id)`);
         }
     }
 
@@ -641,7 +641,7 @@
         }
     });
 
-    function addToCatalogFromDetail(code, category, price, image, gram) {
+    function addToCatalogFromDetail(code, category, price, image, gram, productId) {
         if(!image) {
             document.getElementById('globalErrorTitle').innerText = 'Hata';
             document.getElementById('globalErrorMessage').innerText = 'Bu ürünün resmi yok, eklenemez.';
@@ -691,7 +691,12 @@
                 renk: renk,
                 gram: currentGram,
                 stones: stones
+                ,productId: productId
             });
+
+            if (typeof logCatalogAction === 'function') {
+                logCatalogAction('AddProduct', cart[cart.length - 1]);
+            }
             
             if(typeof updateCartUI === 'function') updateCartUI();
             

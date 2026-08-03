@@ -4,9 +4,14 @@
 let cart = JSON.parse(sessionStorage.getItem('naif_catalog_cart')) || [];
 let pdfCanceled = false;
 
+function catalogAddButtonHtml() {
+    const isEnglish = document.getElementById('currentLangText')?.textContent?.trim() === 'EN';
+    return '<i class="fas fa-cart-plus"></i> <span class="notranslate" translate="no" data-cart-button-text>' + (isEnglish ? 'Add to cart' : 'Sepete Ekle') + '</span>';
+}
+
 window.logCatalogAction = function(actionType, item) {
     if (!item) return;
-    let specs = [item.category, item.ayar, item.renk, item.gram, item.price].filter(Boolean).join(' | ');
+    let specs = [item.category, item.ayar, item.renk, item.gram, item.price, `Adet: ${item.quantity || 1}`, item.note ? `Not: ${item.note}` : ''].filter(Boolean).join(' | ');
     fetch('/Home/LogCatalogAction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -15,7 +20,9 @@ window.logCatalogAction = function(actionType, item) {
             actionType: actionType,
             productId: item.productId || null,
             productCode: item.code || '',
-            details: specs
+            details: specs,
+            quantity: item.quantity || 1,
+            note: item.note || null
         })
     }).catch(function() { /* Log hatası müşterinin sepet işlemini engellememeli. */ });
 };
@@ -182,13 +189,13 @@ document.addEventListener("DOMContentLoaded", function () {
             this.classList.remove('btn-dark');
             this.classList.add('btn-success');
             setTimeout(() => {
-                this.textContent = 'Kataloğa Ekle';
+                this.innerHTML = catalogAddButtonHtml();
                 this.classList.remove('btn-success');
                 this.classList.add('btn-dark');
             }, 1500);
         } else {
             this.textContent = 'Zaten Eklendi';
-            setTimeout(() => { this.textContent = 'Kataloğa Ekle'; }, 1500);
+            setTimeout(() => { this.innerHTML = catalogAddButtonHtml(); }, 1500);
         }
     });
 
@@ -296,13 +303,13 @@ document.addEventListener("DOMContentLoaded", function () {
             catalog: 'CATALOG', company: 'Company', fullName: 'Full Name', phone: 'Phone',
             purity: 'Purity', color: 'Color', weight: 'Weight', stoneDetails: 'Stone Details',
             noStoneDetails: 'No stone details available', clarity: 'Clarity', pieces: 'pcs',
-            moreStoneDetails: 'more stone details', footer: 'Products and models are registered to Naif Jewellery and may not be used without permission.',
+            quantity: 'Quantity', note: 'Note', moreStoneDetails: 'more stone details', footer: 'Products and models are registered to Naif Jewellery and may not be used without permission.',
             other: 'OTHER'
         } : {
             catalog: 'KATALOG', company: 'Firma', fullName: 'Ad Soyad', phone: 'Telefon',
             purity: 'Ayar', color: 'Renk', weight: 'Ağırlık', stoneDetails: 'Taş Detayları',
             noStoneDetails: 'Taş detayı bulunmuyor', clarity: 'Berraklık', pieces: 'adet',
-            moreStoneDetails: 'taş detayı daha', footer: 'Ürünler ve modeller Naif Jewellery adına tescilli olup izinsiz kullanılamaz.',
+            quantity: 'Adet', note: 'Not', moreStoneDetails: 'taş detayı daha', footer: 'Ürünler ve modeller Naif Jewellery adına tescilli olup izinsiz kullanılamaz.',
             other: 'DİĞER'
         };
 
@@ -579,7 +586,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 const specs = [
                     [pdfText.purity, item.ayar || '-'],
                     [pdfText.color, translatePdfDefinition(item.renk || '-')],
-                    [pdfText.weight, item.gram || '-']
+                    [pdfText.weight, item.gram || '-'],
+                    [pdfText.quantity, String(item.quantity || 1)]
                 ];
                 const specW = (cellW - 0.32) / specs.length;
                 specs.forEach((spec, index) => {
@@ -611,6 +619,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (stones.length > visibleStones.length) {
                         drawUnicodeText(pdf, '+' + (stones.length - visibleStones.length) + ' ' + pdfText.moreStoneDetails, x + 0.13, stoneY + 1.08, 6, { color: '#8a94a5' });
                     }
+                }
+
+                if (item.note) {
+                    const noteY = stoneY + (stones.length === 0 ? 0.48 : Math.min(stones.length, 3) * 0.29 + 0.32);
+                    const shortNote = item.note.length > 70 ? item.note.substring(0, 67) + '...' : item.note;
+                    drawUnicodeText(pdf, pdfText.note + ': ' + shortNote, x + 0.13, noteY, 7, { color: '#7c3aed' });
                 }
             }
 
@@ -729,6 +743,7 @@ function updateCartUI() {
             if(item.ayar) specs.push(item.ayar);
             if(item.renk) specs.push(item.renk);
             if(item.gram) specs.push(item.gram);
+            specs.push(`${item.quantity || 1} adet`);
             
             if(specs.length > 0) {
                 detailsHtml += `<div class="text-muted" style="font-size: 11px;">${specs.join(' | ')}</div>`;
@@ -736,6 +751,11 @@ function updateCartUI() {
             
             if(item.price) {
                 detailsHtml += `<div class="text-success fw-bold" style="font-size: 12px;">${item.price}</div>`;
+            }
+
+
+            if(item.note) {
+                detailsHtml += `<div class="text-dark" style="font-size:11px;margin-top:4px;"><strong>Not:</strong> ${escapeCatalogHtml(item.note)}</div>`;
             }
 
             if (Array.isArray(item.stones) && item.stones.length > 0) {

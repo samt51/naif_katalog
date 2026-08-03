@@ -320,3 +320,42 @@ body {
     padding: 5px 8px;
   }
 }
+.customer-b2c-button {
+  border: 1px solid rgba(16, 185, 129, .35);
+  background: linear-gradient(135deg, #0f172a, #064e3b);
+  color: #fff;
+  height: 38px;
+  padding: 4px 13px 4px 5px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  box-shadow: 0 6px 15px rgba(15, 23, 42, .14);
+  transition: transform .2s ease, box-shadow .2s ease;
+  white-space: nowrap;
+}
+
+.customer-b2c-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6ee7b7;
+  background: rgba(255, 255, 255, .13);
+}
+
+.customer-b2c-button:hover {
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 9px 20px rgba(15, 23, 42, .2);
+}
+
+@media (max-width: 575.98px) {
+  .customer-b2c-button { width: 36px; height: 36px; padding: 4px; justify-content: center; }
+  .customer-b2c-icon { width: 26px; height: 26px; }
+}

@@ -115,6 +115,8 @@ public class HomeController : Controller
             ActionType = request.ActionType,
             ProductId = productId,
             Details = details,
+            Quantity = request.Quantity > 0 ? request.Quantity : null,
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
             UserAgent = HttpContext.Request.Headers["User-Agent"].ToString()
         });
@@ -409,5 +411,7 @@ public sealed class CatalogActionLogRequest
     public int? ProductId { get; set; }
     public string ProductCode { get; set; } = "";
     public string Details { get; set; } = "";
+    public int? Quantity { get; set; }
+    public string? Note { get; set; }
 }
 

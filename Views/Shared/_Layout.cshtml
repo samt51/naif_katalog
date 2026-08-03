@@ -53,13 +53,18 @@
                     <div class="dropdown me-2 me-md-3">
                         <a href="#" class="text-dark text-decoration-none dropdown-toggle fw-medium d-flex align-items-center" data-bs-toggle="dropdown" style="font-size: 14px;">
                             <img id="currentLangFlag" src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-1" style="border-radius:2px;">
-                            <span id="currentLangText" class="d-none d-sm-inline">EN</span>
+                            <span id="currentLangText" class="d-none d-sm-inline notranslate" translate="no">EN</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="min-width: 120px; z-index: 1050;">
                             <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('tr')"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</a></li>
                             <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('en')"><img src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-2" style="border-radius:2px;"> English</a></li>
                         </ul>
                     </div>
+
+                    <button type="button" class="customer-b2c-button notranslate" translate="no" id="b2cButton" aria-label="B2C" data-multiplier="@(User.Claims.FirstOrDefault(c => c.Type == "b2cMultiplier")?.Value ?? "1")">
+                        <span class="customer-b2c-icon"><i class="fas fa-store"></i></span>
+                        <span class="d-none d-sm-inline" id="pricingModeButtonText">B2C</span>
+                    </button>
 
                     <div class="d-flex align-items-center gap-2">
                         <button class="btn btn-outline-primary btn-catalog-main px-2 px-sm-3" id="myCatalogBtn" type="button" data-bs-toggle="offcanvas" data-bs-target="#catalogOffcanvas">
@@ -68,7 +73,7 @@
                                 <line x1="3" y1="5" x2="21" y2="5"></line>
                                 <path d="M16 9a4 4 0 0 1-8 0"></path>
                             </svg>
-                            <span class="d-none d-sm-inline">Kataloğum</span> (<span id="catalogCount">0</span>)
+                            <span id="catalogButtonText" class="d-none d-sm-inline notranslate" translate="no">My Cart</span> (<span id="catalogCount">0</span>)
                         </button>
 
                         @if (User.Identity?.IsAuthenticated == true)
@@ -101,7 +106,7 @@
     <!-- Offcanvas -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="catalogOffcanvas">
         <div class="offcanvas-header">
-            <h5 class="offcanvas-title">Kataloğum</h5>
+            <h5 class="offcanvas-title notranslate" translate="no" id="catalogPanelTitle">My Cart</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body d-flex flex-column">
@@ -144,6 +149,16 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="modal fade" id="b2bPasswordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow-lg">
+            <form id="b2bPasswordForm">@Html.AntiForgeryToken()
+                <div class="modal-header"><h5 class="modal-title"><i class="fas fa-lock me-2"></i>B2B Fiyatlarına Dön</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body"><label class="form-label">Giriş Şifreniz</label><input type="password" id="b2bPassword" class="form-control" autocomplete="current-password" required /><div id="b2bPasswordError" class="text-danger small mt-2 d-none"></div></div>
+                <div class="modal-footer border-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Vazgeç</button><button type="submit" class="btn btn-dark">Doğrula</button></div>
+            </form>
+        </div></div>
     </div>
 
     <footer class="border-top footer text-muted">
@@ -213,6 +228,37 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        window.naifPricingMode = sessionStorage.getItem('naif_pricing_mode') || 'b2b';
+        window.naifB2CMultiplier = Math.max(1, parseFloat(document.getElementById('b2cButton')?.dataset.multiplier || '1') || 1);
+        window.applyPricingMode = function(basePrice) { return window.naifPricingMode === 'b2c' ? basePrice * window.naifB2CMultiplier : basePrice; };
+        function refreshPricingModeUI() {
+            const isB2C = window.naifPricingMode === 'b2c';
+            document.getElementById('pricingModeButtonText').textContent = isB2C ? 'B2B' : 'B2C';
+            document.querySelectorAll('[data-b2b-price]').forEach(el => {
+                const price = window.applyPricingMode(parseFloat(el.dataset.b2bPrice) || 0);
+                el.textContent = price.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' $';
+            });
+            if (typeof recalculatePrice === 'function') recalculatePrice();
+        }
+        document.getElementById('b2cButton')?.addEventListener('click', function() {
+            if (window.naifPricingMode === 'b2b') {
+                window.naifPricingMode = 'b2c'; sessionStorage.setItem('naif_pricing_mode', 'b2c'); refreshPricingModeUI();
+            } else {
+                document.getElementById('b2bPasswordError').classList.add('d-none');
+                new bootstrap.Modal(document.getElementById('b2bPasswordModal')).show();
+            }
+        });
+        document.getElementById('b2bPasswordForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault(); const error = document.getElementById('b2bPasswordError');
+            const token = this.querySelector('input[name="__RequestVerificationToken"]').value;
+            const response = await fetch('/Account/VerifyCurrentPassword', { method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':token}, body:JSON.stringify({password:document.getElementById('b2bPassword').value}) });
+            const result = await response.json();
+            if (!response.ok || !result.isSuccess) { error.textContent = result.message || 'Şifre hatalı.'; error.classList.remove('d-none'); return; }
+            window.naifPricingMode = 'b2b'; sessionStorage.setItem('naif_pricing_mode', 'b2b'); refreshPricingModeUI(); this.reset(); bootstrap.Modal.getInstance(document.getElementById('b2bPasswordModal'))?.hide();
+        });
+        document.addEventListener('DOMContentLoaded', refreshPricingModeUI);
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 
     <!-- Google Translate Setup -->
@@ -247,9 +293,15 @@
             if(lang == 'en') {
                 document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/us.png';
                 document.getElementById('currentLangText').innerText = 'EN';
+                document.getElementById('catalogButtonText').innerText = 'My Cart';
+                document.getElementById('catalogPanelTitle').innerText = 'My Cart';
+                document.querySelectorAll('[data-cart-button-text]').forEach(function(el) { el.textContent = 'Add to cart'; });
             } else {
                 document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/tr.png';
                 document.getElementById('currentLangText').innerText = 'TR';
+                document.getElementById('catalogButtonText').innerText = 'Sepetim';
+                document.getElementById('catalogPanelTitle').innerText = 'Sepetim';
+                document.querySelectorAll('[data-cart-button-text]').forEach(function(el) { el.textContent = 'Sepete Ekle'; });
             }
         }
     </script>

@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace naif_katalog.Core.Features.CategoryFeature.Commands
 {
-    public class CreateCategoryCommandHandler : BaseHandler, IRequestHandler<CreateCategoryCommandRequest, ResponseDto<bool>>
+    public class CreateCategoryCommandHandler : BaseHandler, IRequestHandler<CreateCategoryCommandRequest, ResponseDto<CreateCategoryCommandResponse>>
     {
         public CreateCategoryCommandHandler(IApiService apiService) : base(apiService) {}
-        public async Task<ResponseDto<bool>> Handle(CreateCategoryCommandRequest request, CancellationToken cancellationToken)
+        public async Task<ResponseDto<CreateCategoryCommandResponse>> Handle(CreateCategoryCommandRequest request, CancellationToken cancellationToken)
         {
-            return await _apiService.PostAsync<CreateCategoryCommandRequest, bool>("api/Category", request);
+            return await _apiService.PostAsync<CreateCategoryCommandRequest, CreateCategoryCommandResponse>("api/Category", request);
         }
     }
 }

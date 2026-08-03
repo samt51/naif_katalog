@@ -88,5 +88,19 @@ namespace naif_katalog.Controllers
             Response.Cookies.Delete("jwtToken");
             return RedirectToAction("Login");
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyCurrentPassword([FromBody] VerifyPasswordRequest request)
+        {
+            if (User.Identity?.IsAuthenticated != true) return Unauthorized();
+            var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value;
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(request?.Password))
+                return BadRequest(new { isSuccess = false, message = "Şifre gereklidir." });
+            var response = await _apiService.PostAsync<object, string>("api/auth/login", new { Email = email, request.Password });
+            return Json(new { isSuccess = response?.isSuccess == true, message = response?.isSuccess == true ? "OK" : "Şifre hatalı." });
+        }
     }
 }
+
+public sealed class VerifyPasswordRequest { public string Password { get; set; } = string.Empty; }

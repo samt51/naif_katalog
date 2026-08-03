@@ -21,6 +21,7 @@ namespace naif_katalog.Core.Features.UsersFeature.Commands
         
         public decimal? CustomMilyem { get; set; }
         public decimal? SalesMultiplier { get; set; }
+        public decimal? B2CMultiplier { get; set; }
         public bool ClearCustomPricing { get; set; }
         public System.Collections.Generic.List<UserStonePriceDto>? CustomStonePrices { get; set; }
         public System.Collections.Generic.List<UserPolishingCostDto>? CustomPolishingCosts { get; set; }

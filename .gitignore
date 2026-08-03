@@ -373,3 +373,6 @@ FodyWeavers.xsd
 # ------------------------------------------------------------
 !publish/
 !publish/**
+
+# Product catalog images are deployed separately and must not be committed.
+/wwwroot/images/katalog/

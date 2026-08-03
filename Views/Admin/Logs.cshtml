@@ -73,6 +73,19 @@
                                         <i class="fas fa-info-circle" style="color:#cbd5e1; margin-right:4px;"></i> @log.Details
                                     </div>
                                 }
+                                @if (log.Quantity.HasValue || !string.IsNullOrWhiteSpace(log.Note))
+                                {
+                                    <div style="font-size:0.85em; color:#334155; margin-top:6px; padding-left: @(log.Product != null ? "52px" : "0");">
+                                        @if (log.Quantity.HasValue)
+                                        {
+                                            <span><strong>Adet:</strong> @log.Quantity</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(log.Note))
+                                        {
+                                            <div style="margin-top:3px;"><strong>Müşteri Notu:</strong> @log.Note</div>
+                                        }
+                                    </div>
+                                }
                             </td>
                             <td style="padding:15px; font-size:0.85em; color:#64748b;">
                                 <div>@log.IpAddress</div>

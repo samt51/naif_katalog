@@ -49,6 +49,29 @@ namespace naif_katalog.Controllers
             return File(await response.Content.ReadAsByteArrayAsync(), contentType, fileName);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword([FromBody] AdminChangePasswordRequest request)
+        {
+            if (User.Identity?.IsAuthenticated != true) return Unauthorized();
+            var idValue = User.Claims.FirstOrDefault(c =>
+                c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "nameid" ||
+                c.Type == "sub" || c.Type == "id" || c.Type == "userId")?.Value;
+            if (!int.TryParse(idValue, out var userId)) return Unauthorized();
+            if (request == null || request.NewPassword != request.ConfirmPassword || request.NewPassword?.Length < 6)
+                return BadRequest(new { message = "Yeni şifreler eşleşmeli ve en az 6 karakter olmalıdır." });
+
+            using var client = new HttpClient { BaseAddress = new Uri((_configuration["ApiAdress"] ?? "https://apib2b.naifjewellery.com/").TrimEnd('/') + "/") };
+            var apiResponse = await client.PostAsJsonAsync("api/Users/change-password", new
+            {
+                UserId = userId,
+                request.CurrentPassword,
+                request.NewPassword
+            });
+            var body = await apiResponse.Content.ReadAsStringAsync();
+            return new ContentResult { StatusCode = (int)apiResponse.StatusCode, ContentType = "application/json", Content = body };
+        }
+
 
         
 
@@ -730,4 +753,11 @@ namespace naif_katalog.Controllers
             return View();
         }
     }
+}
+
+public sealed class AdminChangePasswordRequest
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+    public string ConfirmPassword { get; set; } = string.Empty;
 }

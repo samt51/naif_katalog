@@ -19,6 +19,7 @@ namespace naif_katalog.Models
     {
         public decimal? CustomMilyem { get; set; }
         public decimal? SalesMultiplier { get; set; }
+        public decimal? B2CMultiplier { get; set; }
     }
 
     public class CategoryDto

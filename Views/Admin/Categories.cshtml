@@ -195,14 +195,32 @@
 <script>
     const API_BASE_URL = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(apiAddress));
     async function loadCategoryLanguages() {
-        const response = await fetch(`${API_BASE_URL}/api/catalog-languages`);
-        const result = await response.json();
         const select = document.getElementById('categoryLanguage');
         const current = select.value || 'en';
+        select.innerHTML = '<option value="">Diller yükleniyor...</option>';
+        let languages = [];
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/catalog-languages`, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) throw new Error(`Dil servisi: ${response.status}`);
+            const result = await response.json();
+            languages = result.data || result.Data || [];
+        } catch (error) {
+            console.error('Katalog dilleri yüklenemedi:', error);
+        }
+        // Eski yayınlarda dil tablosu henüz oluşmamışsa modal boş kalmasın.
+        if (!Array.isArray(languages) || languages.length === 0) {
+            languages = [{ code: 'en', name: 'English' }, { code: 'it', name: 'Italiano' }];
+        }
         select.innerHTML = '';
-        (result.data || []).filter(x => x.code !== 'tr').forEach(language => {
-            const option = document.createElement('option'); option.value = language.code; option.textContent = `${language.name} (${language.code})`; select.appendChild(option);
+        languages.filter(x => String(x.code || x.Code).toLowerCase() !== 'tr').forEach(language => {
+            const code = String(language.code || language.Code || '').toLowerCase();
+            if (!code) return;
+            const option = document.createElement('option');
+            option.value = code;
+            option.textContent = `${language.name || language.Name || code} (${code})`;
+            select.appendChild(option);
         });
+        if (select.options.length === 0) select.innerHTML = '<option value="en">English (en)</option>';
         if ([...select.options].some(x => x.value === current)) select.value = current;
     }
     async function loadCategoryTranslation() {
@@ -215,6 +233,7 @@
         document.getElementById('categoryNameEn').value = translation.data || '';
     }
     document.addEventListener("DOMContentLoaded", function() {
+        loadCategoryLanguages();
         // Init Sortable for main list
         var mainList = document.getElementById('mainCategoryList');
         if(mainList) {
@@ -279,12 +298,12 @@
         document.getElementById('categoryNameEn').value = '';
         document.getElementById('categoryNameEn').disabled = id <= 0;
         document.getElementById('categoryNameEnHint').style.display = id <= 0 ? 'block' : 'none';
-        if (id > 0) {
-            try {
-                await loadCategoryLanguages();
+        try {
+            await loadCategoryLanguages();
+            if (id > 0) {
                 await loadCategoryTranslation();
-            } catch (_) { }
-        }
+            }
+        } catch (_) { }
         
         let selectEl = document.getElementById('parentCategory');
         let optionExists = Array.from(selectEl.options).some(opt => opt.value == parentId);
@@ -313,9 +332,19 @@
                 fetch(`${API_BASE_URL}/api/Category/${id}`, {
                     method: 'DELETE'
                 })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.isSuccess || data.success) {
+                .then(async res => {
+                    const data = await res.json().catch(() => null);
+                    return { ok: res.ok, data };
+                })
+                .then(({ ok, data }) => {
+                    const isSuccess = ok && (
+                        data === true ||
+                        data?.isSuccess === true ||
+                        data?.success === true ||
+                        data?.data === true
+                    );
+
+                    if (isSuccess) {
                         Swal.fire(
                             'Silindi!',
                             'Kategori başarıyla silindi.',
@@ -324,7 +353,10 @@
                             location.reload();
                         });
                     } else {
-                        Swal.fire('Hata!', data.message || 'Kategori silinirken bir hata oluştu.', 'error');
+                        const message = data?.message
+                            || (Array.isArray(data?.errors) ? data.errors.join(', ') : null)
+                            || 'Kategori silinirken bir hata oluştu.';
+                        Swal.fire('Hata!', message, 'error');
                     }
                 })
                 .catch(err => {

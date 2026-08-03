@@ -9,12 +9,16 @@
     <link rel="stylesheet" href="~/css/admin.css" />
 </head>
 <body>
+    <button type="button" class="mobile-sidebar-fab" id="adminSidebarFloatingToggle" aria-label="Menüyü aç" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+    </button>
     <div id="app-version" data-version="v.1.0.0" hidden>v.1.0.0</div>
     <div class="admin-wrapper">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h3>KATALOG<span style="color:var(--primary);">ADMIN</span></h3>
+                <button type="button" class="sidebar-close" id="adminSidebarClose" aria-label="Menüyü kapat"><i class="fas fa-xmark"></i></button>
             </div>
             <div class="sidebar-menu">
                 <a href="/Admin/Dashboard" class="menu-item @(ViewContext.RouteData.Values["Action"].ToString() == "Dashboard" ? "active" : "")">
@@ -46,12 +50,22 @@
                 </a>
             </div>
         </aside>
+        <button type="button" class="sidebar-backdrop" id="adminSidebarBackdrop" aria-label="Menüyü kapat"></button>
 
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-header">
-                <h1>@ViewData["Title"]</h1>
+                <div class="admin-header-title">
+                    <button type="button" class="sidebar-toggle" id="adminSidebarToggle" aria-label="Menüyü aç" aria-expanded="false"><i class="fas fa-bars"></i></button>
+                    <h1>@ViewData["Title"]</h1>
+                </div>
                 <div class="user-profile">
+                    <button type="button" class="admin-profile-trigger" id="adminProfileTrigger" aria-label="Profil menüsü" aria-expanded="false"><i class="fas fa-user-gear"></i></button>
+                    <div class="admin-profile-dropdown" id="adminProfileDropdown">
+                        <div class="admin-profile-dropdown-title"><i class="fas fa-circle-user"></i> Profil</div>
+                        <button type="button" data-bs-toggle="modal" data-bs-target="#changePasswordModal"><i class="fas fa-key"></i> Şifre Değiştir</button>
+                        <a href="/Account/Logout"><i class="fas fa-right-from-bracket"></i> Çıkış Yap</a>
+                    </div>
                     <span>Yönetici</span>
                     <div style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;">Y</div>
                 </div>
@@ -63,7 +77,70 @@
         </main>
     </div>
     
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg">
+            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-shield-halved text-primary me-2"></i>Şifre Değiştir</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button></div>
+            <form id="adminChangePasswordForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <div class="mb-3"><label for="currentAdminPassword" class="form-label">Mevcut Şifre</label><input type="password" class="form-control" id="currentAdminPassword" autocomplete="current-password" required /></div>
+                    <div class="mb-3"><label for="newAdminPassword" class="form-label">Yeni Şifre</label><input type="password" class="form-control" id="newAdminPassword" minlength="6" autocomplete="new-password" required /><div class="form-text">En az 6 karakter kullanın.</div></div>
+                    <div><label for="confirmAdminPassword" class="form-label">Yeni Şifre Tekrar</label><input type="password" class="form-control" id="confirmAdminPassword" minlength="6" autocomplete="new-password" required /></div>
+                    <div class="alert d-none mt-3 mb-0" id="changePasswordMessage" role="alert"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Vazgeç</button><button type="submit" class="btn btn-primary" id="changePasswordSubmit"><i class="fas fa-key me-1"></i> Şifreyi Güncelle</button></div>
+            </form>
+        </div></div>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (() => {
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarToggle = document.getElementById('adminSidebarToggle');
+            const floatingToggle = document.getElementById('adminSidebarFloatingToggle');
+            const sidebarClose = document.getElementById('adminSidebarClose');
+            const sidebarBackdrop = document.getElementById('adminSidebarBackdrop');
+            const setSidebar = open => {
+                sidebar?.classList.toggle('open', open);
+                sidebarBackdrop?.classList.toggle('show', open);
+                document.body.classList.toggle('sidebar-open', open);
+                sidebarToggle?.setAttribute('aria-expanded', String(open));
+                floatingToggle?.setAttribute('aria-expanded', String(open));
+            };
+            sidebarToggle?.addEventListener('click', () => setSidebar(!sidebar?.classList.contains('open')));
+            floatingToggle?.addEventListener('click', () => setSidebar(!sidebar?.classList.contains('open')));
+            sidebarClose?.addEventListener('click', () => setSidebar(false));
+            sidebarBackdrop?.addEventListener('click', () => setSidebar(false));
+            sidebar?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { if (window.innerWidth <= 1024) setSidebar(false); }));
+            document.addEventListener('keydown', event => { if (event.key === 'Escape') setSidebar(false); });
+            window.addEventListener('resize', () => { if (window.innerWidth > 1024) setSidebar(false); });
+
+            const trigger = document.getElementById('adminProfileTrigger');
+            const dropdown = document.getElementById('adminProfileDropdown');
+            trigger?.addEventListener('click', event => { event.stopPropagation(); const open = dropdown.classList.toggle('show'); trigger.setAttribute('aria-expanded', String(open)); });
+            document.addEventListener('click', () => { dropdown?.classList.remove('show'); trigger?.setAttribute('aria-expanded', 'false'); });
+            document.getElementById('adminChangePasswordForm')?.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const currentPassword = document.getElementById('currentAdminPassword').value;
+                const newPassword = document.getElementById('newAdminPassword').value;
+                const confirmPassword = document.getElementById('confirmAdminPassword').value;
+                const message = document.getElementById('changePasswordMessage');
+                const submit = document.getElementById('changePasswordSubmit');
+                if (newPassword !== confirmPassword) { message.textContent = 'Yeni şifreler eşleşmiyor.'; message.className = 'alert alert-danger mt-3 mb-0'; return; }
+                submit.disabled = true;
+                try {
+                    const token = this.querySelector('input[name="__RequestVerificationToken"]').value;
+                    const response = await fetch('/Admin/ChangePassword', { method: 'POST', headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token }, body: JSON.stringify({ currentPassword, newPassword, confirmPassword }) });
+                    const result = await response.json();
+                    if (!response.ok || result.isSuccess === false) throw new Error(result.message || result.errors?.join(', ') || 'Şifre değiştirilemedi.');
+                    message.textContent = 'Şifreniz başarıyla değiştirildi.'; message.className = 'alert alert-success mt-3 mb-0'; this.reset();
+                } catch (error) { message.textContent = error.message || 'Şifre değiştirilemedi.'; message.className = 'alert alert-danger mt-3 mb-0'; }
+                finally { submit.disabled = false; }
+            });
+        })();
+    </script>
     <partial name="_PerformanceDiagnostics" />
 </body>
 </html>

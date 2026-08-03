@@ -520,7 +520,7 @@
                         <div class="premium-card-body">
                             <div class="premium-card-title">@p.Code</div>
                             <div class="premium-card-details fw-bold text-dark" style="font-size: 14px;">
-                                @(p.Gram.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)) g | @(p.MetalPurityName ?? "14K") | @p.CalculatedPrice.ToString("N0") $
+                                @(p.Gram.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)) g | @(p.MetalPurityName ?? "14K") | <span data-b2b-price="@p.CalculatedPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)">@p.CalculatedPrice.ToString("N0") $</span>
                             </div>
                             <a href="/Home/Detail/@p.Id" class="premium-btn-outline">
                                 Detayları İncele

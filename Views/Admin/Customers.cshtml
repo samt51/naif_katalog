@@ -132,7 +132,7 @@
                                    style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#16a34a;color:white;text-decoration:none;box-shadow:0 2px 4px rgba(22,163,74,.2)" title="Özel fiyatlı detaylı Excel indir">
                                     <i class="fas fa-file-excel"></i>
                                 </a>
-                                <button onclick="openModal('Müşteri Güncelle', @user.Id, '@user.Name', '@user.Surname', '@Html.Raw((user.CompanyName ?? "").Replace("'", "\\'"))', '@user.Email', '@user.Phone', @user.RoleId, '@(user.MembershipExpiryDate?.ToString("yyyy-MM-dd"))', '@Html.Raw((user.Address ?? "").Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))', @user.IsLocked.ToString().ToLower(), '@(user.PricingProfile?.CustomMilyem)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomStonePrices ?? new List<naif_katalog.Models.UserStonePriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomPolishingCosts ?? new List<naif_katalog.Models.UserPolishingCostDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@(user.PricingProfile?.SalesMultiplier ?? 1)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomSettingPrices ?? new List<naif_katalog.Models.UserSettingPriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))')" 
+                                <button onclick="openModal('Müşteri Güncelle', @user.Id, '@user.Name', '@user.Surname', '@Html.Raw((user.CompanyName ?? "").Replace("'", "\\'"))', '@user.Email', '@user.Phone', @user.RoleId, '@(user.MembershipExpiryDate?.ToString("yyyy-MM-dd"))', '@Html.Raw((user.Address ?? "").Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", ""))', @user.IsLocked.ToString().ToLower(), '@(user.PricingProfile?.CustomMilyem)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomStonePrices ?? new List<naif_katalog.Models.UserStonePriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomPolishingCosts ?? new List<naif_katalog.Models.UserPolishingCostDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@(user.PricingProfile?.SalesMultiplier ?? 1)', '@Html.Raw(System.Text.Json.JsonSerializer.Serialize(user.CustomSettingPrices ?? new List<naif_katalog.Models.UserSettingPriceDto>()).Replace("'", "\\'").Replace("\"", "&quot;"))', '@(user.PricingProfile?.B2CMultiplier ?? 1)')" 
                                         style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);" 
                                         title="Düzenle">
                                     <i class="fas fa-edit"></i>
@@ -388,6 +388,15 @@
                     </div>
                 </div>
 
+                <div class="pricing-section">
+                    <h4><i class="fas fa-store"></i> B2C Fiyatlandırması</h4>
+                    <div class="form-group">
+                        <label>Müşteriye Özel B2C Fiyat Çarpanı</label>
+                        <input type="number" id="B2CMultiplier" name="B2CMultiplier" min="1" step="0.01" placeholder="Örn: 2.00" value="1" />
+                        <small style="color:var(--text-muted);">B2B fiyatı bu değerle çarpılarak B2C satış fiyatı gösterilir.</small>
+                    </div>
+                </div>
+
             </div>
             </div> <!-- End tab-fiyatlandirma -->
 
@@ -598,7 +607,7 @@
         return isNaN(parsed) ? fallback : parsed.toString();
     }
 
-    function openModal(title, id = 0, firstName = '', lastName = '', companyName = '', email = '', phoneNumber = '', roleId = 3, expiryDate = '', address = '', isLocked = false, customMilyem = '', stonesJson = '[]', polishingJson = '[]', salesMultiplier = '1', settingJson = '[]') {
+    function openModal(title, id = 0, firstName = '', lastName = '', companyName = '', email = '', phoneNumber = '', roleId = 3, expiryDate = '', address = '', isLocked = false, customMilyem = '', stonesJson = '[]', polishingJson = '[]', salesMultiplier = '1', settingJson = '[]', b2cMultiplier = '1') {
         document.getElementById('modalError').style.display = 'none';
         document.getElementById('userId').value = id;
         switchTab('genel');
@@ -625,12 +634,14 @@
         const normalizedCustomMilyem = normalizeDecimalValue(customMilyem, '');
         const normalizedSalesMultiplier = normalizeDecimalValue(salesMultiplier, '1');
         const salesMultiplierNumber = parseDecimalValue(normalizedSalesMultiplier, 1);
+        const b2cMultiplierNumber = parseDecimalValue(b2cMultiplier, 1);
         const hasCustomMilyem = normalizedCustomMilyem !== '';
 
         document.getElementById('CustomMilyem').value = normalizedCustomMilyem;
         document.getElementById('SalesMultiplier').value = normalizedSalesMultiplier || '1';
+        document.getElementById('B2CMultiplier').value = normalizeDecimalValue(b2cMultiplier, '1');
 
-        let hasCustom = hasCustomMilyem || salesMultiplierNumber !== 1;
+        let hasCustom = hasCustomMilyem || salesMultiplierNumber !== 1 || b2cMultiplierNumber !== 1;
         
         try {
             let dbStones = JSON.parse(stonesJson);
@@ -762,9 +773,11 @@
             let salesVal = normalizeDecimalValue(document.getElementById('SalesMultiplier').value, '1');
             if(salesVal) formData.set('SalesMultiplier', salesVal);
             else formData.set('SalesMultiplier', '1');
+            formData.set('B2CMultiplier', normalizeDecimalValue(document.getElementById('B2CMultiplier').value, '1'));
         } else {
             formData.delete('SalesMultiplier');
             formData.delete('CustomMilyem');
+            formData.delete('B2CMultiplier');
             formData.append('ClearCustomPricing', 'true');
         }
 

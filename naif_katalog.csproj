@@ -14,6 +14,7 @@
   <!-- Ürün görselleri sunucuda kalıcı veri olarak yönetilir; publish paketine dahil edilmez. -->
   <ItemGroup>
     <Content Update="wwwroot\images\**\*" CopyToPublishDirectory="Never" />
+    <Content Update="wwwroot\images\login-bg.png" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

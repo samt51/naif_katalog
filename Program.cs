@@ -29,6 +29,7 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 });
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
+builder.Services.AddScoped<IOrderEmailService, OrderEmailService>();
 
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>

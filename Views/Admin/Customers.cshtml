@@ -60,13 +60,92 @@
     .btn-secondary:hover { background: #e2e8f0; color: #0f172a; }
     .btn-danger { background: #fee2e2; color: #ef4444; border: none; padding: 8px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
     .btn-danger:hover { background: #fecaca; }
+
+    .customers-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .customers-title { margin: 0; }
+    .customers-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .customers-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+    .customers-tabs button { flex: 1; padding: 8px 16px; border-radius: 6px; }
+    .customers-table-wrap { width: 100%; overflow: visible; }
+    .customers-table-wrap table { min-width: 0 !important; }
+
+    @@media (max-width: 767.98px) {
+        .customers-toolbar { flex-direction: column; align-items: stretch; }
+        .customers-actions { width: 100%; }
+        .customers-actions select { width: 100%; height: 40px; }
+        .customers-actions .btn-primary { width: 100%; justify-content: center; }
+        .customers-tabs { gap: 8px; }
+        .customers-tabs button { font-size: 13px; padding: 10px 8px; }
+        .form-row { flex-direction: column; gap: 10px; }
+        .modal-tabs { margin: 0 12px 12px; padding: 8px; }
+        .modal-tab { padding: 10px 12px; font-size: 13px; }
+
+        .dataTables_wrapper { overflow: visible !important; }
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            float: none !important;
+            text-align: left !important;
+            width: 100% !important;
+            margin: 8px 0 !important;
+        }
+        .dataTables_wrapper .dataTables_filter { display: flex; flex-direction: column; align-items: stretch; }
+        .dataTables_wrapper .dataTables_filter input {
+            width: 100% !important;
+            margin: 6px 0 0 !important;
+            display: block;
+            box-sizing: border-box;
+        }
+        .dataTables_wrapper .dataTables_info { white-space: normal; font-size: 12px; }
+        .dataTables_wrapper .dataTables_paginate { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+
+        #customersTable,
+        #customersTable.dataTable { width: 100% !important; min-width: 0 !important; display: block; }
+        #customersTable thead { display: none; }
+        #customersTable tbody { display: block; }
+        #customersTable tbody tr {
+            display: block;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 0 0 10px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+        }
+        #customersTable tbody td {
+            display: flex !important;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100% !important;
+            border: 0 !important;
+            padding: 7px 0 !important;
+            text-align: right;
+            word-break: break-word;
+        }
+        #customersTable tbody td:not(:last-child) { border-bottom: 1px solid #f1f5f9 !important; }
+        #customersTable tbody td::before {
+            content: attr(data-label);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            text-transform: uppercase;
+            color: #64748b;
+            text-align: left;
+            flex: 0 0 88px;
+        }
+        #customersTable tbody td:last-child { justify-content: flex-end; padding-top: 10px !important; }
+        #customersTable tbody td:last-child::before { display: none; }
+        #customersTable tbody td:last-child > div { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+    }
 </style>
 
 <div class="card">
     
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0;"><i class="fas fa-users" style="color:var(--primary); margin-right:10px;"></i> Müşteriler</h2>
-        <div style="display:flex;align-items:center;gap:8px;">
+    <div class="customers-toolbar">
+        <h2 class="customers-title"><i class="fas fa-users" style="color:var(--primary); margin-right:10px;"></i> Müşteriler</h2>
+        <div class="customers-actions">
             <select id="customerCatalogExportLanguage" title="Müşteri katalog çıktı dili" style="height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-weight:600;">
                 <option value="tr">Diller yükleniyor...</option>
             </select>
@@ -76,20 +155,11 @@
         </div>
     </div>
 
-    <!-- Müşteri Listesi Sekmeleri -->
-    <div style="display:flex; gap:10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-        <button id="tabAllCustomers" onclick="filterCustomers(false)" class="btn-primary" style="padding: 8px 16px; border-radius: 6px;">Tüm Müşteriler</button>
-        <button id="tabCustomPriced" onclick="filterCustomers(true)" class="btn-secondary" style="padding: 8px 16px; border-radius: 6px;">Özel Fiyatlı Müşteriler</button>
+    <div class="customers-tabs">
+        <button id="tabAllCustomers" onclick="filterCustomers(false)" class="btn-primary">Tüm Müşteriler</button>
+        <button id="tabCustomPriced" onclick="filterCustomers(true)" class="btn-secondary">Özel Fiyatlı Müşteriler</button>
     </div>
-
-
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <div style="display:flex; gap:15px; align-items:center;">
-            
-        </div>
-    </div>
-
-    <div class="table-responsive">
+    <div class="customers-table-wrap">
         <table class="table table-striped" id="customersTable" style="width:100%">
             <thead>
                 <tr>
@@ -115,14 +185,14 @@
                     <tr data-has-custom-pricing="@hasCustomPricing.ToString().ToLower()">
 
 
-                        <td>@user.Name @user.Surname
+                        <td data-label="Ad Soyad">@user.Name @user.Surname
                             @if(user.IsLocked) { <span class="badge bg-danger" style="margin-left:5px; font-size:10px;">Kilitli</span> }
                         </td>
-                        <td>@user.CompanyName</td>
-                        <td>@user.Email</td>
-                        <td>@user.Phone</td>
+                        <td data-label="Firma Adı">@user.CompanyName</td>
+                        <td data-label="Email">@user.Email</td>
+                        <td data-label="Telefon">@user.Phone</td>
                                                 
-                        <td>
+                        <td data-label="İşlemler">
                             <div style="display:flex; gap:8px;">
                                 <a href="#" onclick="downloadCustomerCatalog(@user.Id, 'pdf');return false;"
                                    style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#dc2626;color:white;text-decoration:none;box-shadow:0 2px 4px rgba(220,38,38,.2)" title="Özel fiyatlı detaylı PDF indir">
@@ -998,13 +1068,20 @@
 
         var table = $('#customersTable').DataTable({
             pageLength: 50,
+            autoWidth: false,
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tümü"]],
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
             },
             columnDefs: [
                 { "orderable": false, "targets": 4 }
-            ]
+            ],
+            createdRow: function (row) {
+                const labels = ['Ad Soyad', 'Firma Adı', 'Email', 'Telefon', 'İşlemler'];
+                $('td', row).each(function (index) {
+                    if (!$(this).attr('data-label')) $(this).attr('data-label', labels[index] || '');
+                });
+            }
         });
 
         $('#groupFilter').on('change', function() {

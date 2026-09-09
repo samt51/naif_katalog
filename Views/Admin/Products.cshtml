@@ -40,27 +40,132 @@
     .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); }
     
     .page-link, .paginate_button, table.dataTable thead th { cursor: pointer !important; user-select: none !important; }
+
+    .products-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .products-title { margin: 0; }
+    .products-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .products-lang { height: 42px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #334155; font-weight: 600; }
+    .products-export { height: 42px; padding: 0 15px; display: inline-flex; align-items: center; gap: 7px; border-radius: 8px; color: #fff; text-decoration: none; font-weight: 600; }
+    .products-export-pdf { background: #dc2626; }
+    .products-export-excel { background: #16a34a; }
+    .products-new-btn { width: auto; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; }
+    .products-filter-toggle {
+        background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; padding: 8px 15px;
+        border-radius: 6px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; width: 100%;
+    }
+    .products-filters-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: end; }
+    .products-table-wrap { width: 100%; overflow: visible; }
+    .products-table-wrap table { min-width: 0 !important; }
+
+    @@media (max-width: 1100px) {
+        .products-filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @@media (max-width: 767.98px) {
+        .products-toolbar { flex-direction: column; align-items: stretch; margin-bottom: 14px; }
+        .products-title { font-size: 20px; }
+        .products-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .products-lang { width: 100%; height: 40px; grid-column: 1 / -1; }
+        .products-export { justify-content: center; height: 40px; padding: 0 10px; font-size: 13px; }
+        .products-new-btn { grid-column: 1 / -1; justify-content: center; }
+        .products-filters-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+        .products-filters-grid > div[style*="grid-column"] { grid-column: 1 / -1 !important; }
+        .products-filters-actions { flex-direction: column; }
+        .products-filters-actions a,
+        .products-filters-actions button { width: 100%; justify-content: center; }
+
+        .dataTables_wrapper { overflow: visible !important; }
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            float: none !important;
+            text-align: left !important;
+            width: 100% !important;
+            margin: 8px 0 !important;
+        }
+        .dataTables_wrapper .dataTables_filter { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+        .dataTables_wrapper .dataTables_filter label { width: 100%; }
+        .dataTables_wrapper .dataTables_filter input {
+            width: 100% !important;
+            margin: 6px 0 0 !important;
+            display: block;
+            box-sizing: border-box;
+        }
+        .dataTables_wrapper .dataTables_info { white-space: normal; font-size: 12px; color: #64748b; }
+        .dataTables_wrapper .dataTables_paginate { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+        .dataTables_wrapper .dataTables_paginate .paginate_button { margin: 0 !important; }
+
+        #productsTable,
+        #productsTable.dataTable {
+            width: 100% !important;
+            min-width: 0 !important;
+            display: block;
+        }
+        #productsTable thead { display: none; }
+        #productsTable tbody { display: block; }
+        #productsTable tbody tr {
+            display: block;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 0 0 10px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+        }
+        #productsTable tbody td {
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100% !important;
+            border: 0 !important;
+            padding: 7px 0 !important;
+            text-align: right;
+        }
+        #productsTable tbody td:not(:last-child) { border-bottom: 1px solid #f1f5f9 !important; }
+        #productsTable tbody td::before {
+            content: attr(data-label);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            text-transform: uppercase;
+            color: #64748b;
+            text-align: left;
+            flex: 0 0 auto;
+        }
+        #productsTable tbody td:first-child { justify-content: flex-start; }
+        #productsTable tbody td:first-child::before { display: none; }
+        #productsTable tbody td:last-child { justify-content: flex-end; padding-top: 10px !important; }
+        #productsTable tbody td:last-child::before { display: none; }
+        #productsTable tbody td:last-child > div { width: 100%; justify-content: flex-end; }
+    }
 </style>
 
 <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0;"><i class="fas fa-box" style="color:var(--primary); margin-right:10px;"></i> Ürünler</h2>
-        <div style="display:flex; align-items:center; gap:8px;">
-            <select id="catalogExportLanguage" title="Çıktı dili" style="height:42px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-weight:600;">
+    <div class="products-toolbar">
+        <h2 class="products-title"><i class="fas fa-box" style="color:var(--primary); margin-right:10px;"></i> Ürünler</h2>
+        <div class="products-actions">
+            <select id="catalogExportLanguage" class="products-lang" title="Çıktı dili">
                 <option value="tr">Diller yükleniyor...</option>
             </select>
-            <a href="#" onclick="downloadProductCatalog('pdf');return false;" title="PDF indir" style="height:42px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#dc2626;color:#fff;text-decoration:none;font-weight:600;"><i class="fas fa-file-pdf"></i> PDF</a>
-            <a href="#" onclick="downloadProductCatalog('excel');return false;" title="Excel indir" style="height:42px;padding:0 15px;display:inline-flex;align-items:center;gap:7px;border-radius:8px;background:#16a34a;color:#fff;text-decoration:none;font-weight:600;"><i class="fas fa-file-excel"></i> Excel</a>
-            <button onclick="openModal(0)" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;"><i class="fas fa-plus"></i> Yeni Ürün</button>
+            <a href="#" class="products-export products-export-pdf" onclick="downloadProductCatalog('pdf');return false;" title="PDF indir"><i class="fas fa-file-pdf"></i> PDF</a>
+            <a href="#" class="products-export products-export-excel" onclick="downloadProductCatalog('excel');return false;" title="Excel indir"><i class="fas fa-file-excel"></i> Excel</a>
+            <button onclick="openModal(0)" class="btn-primary products-new-btn"><i class="fas fa-plus"></i> Yeni Ürün</button>
         </div>
     </div>
 
     <div style="margin-bottom: 20px;">
-        <button type="button" id="btnToggleFilters" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:8px 15px; border-radius:6px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px; margin-bottom:10px; transition:0.2s;">
+        <button type="button" id="btnToggleFilters" class="products-filter-toggle">
             <i class="fas fa-filter"></i> Filtreleri Göster/Gizle
         </button>
         <form method="GET" action="/Product/Index" id="filterCollapse" style="display:none; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: end;">
+            <div class="products-filters-grid">
                 
                 <div>
                     <label style="display:block; font-size:13px; font-weight:600; color:#475569; margin-bottom:8px;">Kod / İsim</label>
@@ -150,7 +255,7 @@
                     </select>
                 </div>
 
-                <div style="grid-column: 1 / -1; display:flex; justify-content: flex-end; gap:10px; margin-top:10px; border-top:1px solid #e2e8f0; padding-top:20px;">
+                <div class="products-filters-actions" style="grid-column: 1 / -1; display:flex; justify-content: flex-end; gap:10px; margin-top:10px; border-top:1px solid #e2e8f0; padding-top:20px;">
                     <a href="/Product/Index" class="btn btn-light" style="padding:10px 20px; border-radius:8px; font-weight:600; border:1px solid #cbd5e1; text-decoration:none; color:#475569; display:flex; align-items:center; gap:8px;">
                         <i class="fas fa-times"></i> Temizle
                     </a>
@@ -207,6 +312,7 @@
         </script>
     </div>
 
+    <div class="products-table-wrap">
     <table class="table table-striped" id="productsTable" style="width:100%">
         <thead>
             <tr>
@@ -264,6 +370,7 @@
             }
         </tbody>
     </table>
+    </div>
 </div>
 
 <!-- Modal -->
@@ -1345,6 +1452,7 @@
             serverSide: true,
             stateSave: false,
             pageLength: 10,
+            autoWidth: false,
             lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
             ajax: {
                 url: '/Product/IndexData',
@@ -1428,6 +1536,12 @@
                     }
                 }
             ],
+            createdRow: function (row) {
+                const labels = ['Resim', 'Ürün Adı', 'Kod', 'Kategori', 'Karat', 'Ağırlık', 'Maliyet', 'İşlemler'];
+                $('td', row).each(function (index) {
+                    $(this).attr('data-label', labels[index] || '');
+                });
+            },
             language: {
                 "sDecimal":        ",",
                 "sEmptyTable":     "Tabloda herhangi bir veri mevcut değil",

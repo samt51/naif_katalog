@@ -10,140 +10,256 @@
 }
 
 <style>
+    .product-detail-page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 8px 0 24px;
+    }
+    .detail-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #475569;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 0 14px;
+    }
+    .detail-back:hover { color: #0f172a; }
     .product-detail-container {
         background: #fff;
         border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+        box-shadow: 0 10px 40px rgba(15,23,42,0.06);
         overflow: hidden;
-        margin-top: 40px;
-        margin-bottom: 40px;
+        margin-bottom: 16px;
+        border: 1px solid #eef2f6;
     }
     .detail-image-gallery {
         background: #fff;
-        padding: 40px;
+        padding: 28px;
         position: relative;
     }
     .gallery-sticky-wrapper {
         position: sticky;
-        top: 120px;
+        top: 96px;
         display: flex;
         flex-direction: column;
         width: 100%;
-        height: auto;
     }
-    .main-image {
+    .detail-hero {
+        overflow: hidden;
+        border-radius: 16px;
+        background: #f8fafc;
         width: 100%;
-        transition: transform 0.3s ease;
-    }
-    .main-image:hover {
-        transform: scale(1.02);
+        aspect-ratio: 1 / 1.05;
+        box-shadow: 0 8px 30px rgba(15,23,42,0.06);
     }
     .thumbnail-container {
         display: flex;
-        gap: 15px;
-        margin-top: 25px;
+        gap: 10px;
+        margin-top: 14px;
         overflow-x: auto;
-        padding-bottom: 10px;
+        padding-bottom: 4px;
+        justify-content: center;
     }
     .thumbnail {
-        width: 80px;
-        height: 80px;
-        border-radius: 8px;
+        width: 64px;
+        height: 64px;
+        border-radius: 10px;
         object-fit: cover;
         cursor: pointer;
         border: 2px solid transparent;
+        flex-shrink: 0;
         transition: all 0.2s;
     }
     .thumbnail:hover, .thumbnail.active {
-        border-color: #10b981;
-        opacity: 0.8;
+        border-color: #0f172a;
     }
     .detail-info {
-        padding: 40px;
+        padding: 32px 36px 36px;
         background: #fff;
         user-select: none;
-        cursor: default;
+    }
+    .detail-heading {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px 16px;
+        margin-bottom: 18px;
     }
     .badge-category {
-        background: #e2e8f0;
+        background: #f1f5f9;
         color: #475569;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
         letter-spacing: 1px;
         text-transform: uppercase;
         display: inline-block;
-        margin-bottom: 15px;
-        cursor: default;
+        margin-bottom: 8px;
     }
     .product-title {
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 800;
-        color: #1e293b;
-        margin-bottom: 10px;
-        letter-spacing: -0.5px;
-        cursor: default;
-    }
-    .product-code {
-        color: #64748b;
-        font-size: 16px;
-        margin-bottom: 30px;
-        cursor: default;
+        color: #0f172a;
+        margin: 0;
+        letter-spacing: -0.4px;
+        line-height: 1.15;
     }
     .price-tag {
-        font-size: 36px;
+        font-size: 30px;
         font-weight: 800;
-        color: #10b981;
-        margin-bottom: 30px;
-        cursor: default;
+        color: #047857;
+        margin: 0;
+        letter-spacing: -0.4px;
+        white-space: nowrap;
     }
     .specs-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-bottom: 40px;
+        gap: 10px;
+        margin-bottom: 22px;
     }
     .spec-item {
         background: #f8fafc;
-        padding: 15px 20px;
+        padding: 12px 14px;
         border-radius: 12px;
+        border: 1px solid #eef2f6;
         display: flex;
         flex-direction: column;
-        cursor: default;
+        min-width: 0;
     }
     .spec-label {
-        font-size: 12px;
+        font-size: 10px;
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: 4px;
-        cursor: default;
+        font-weight: 700;
     }
     .spec-value {
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 700;
-        color: #1e293b;
-        cursor: default;
+        color: #0f172a;
+    }
+    .spec-select {
+        font-weight: 700;
+        color: #0f172a;
+        border: 0;
+        background-color: transparent;
+        padding: 0;
+        padding-right: 22px;
+        font-size: 15px;
+        box-shadow: none;
+        background-position: right 0 center;
+        min-width: 0;
+    }
+    .spec-select:focus {
+        box-shadow: none;
+        border: 0;
+    }
+    .stone-block { margin-bottom: 20px; }
+    .stone-block-title {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: #0f172a;
+        margin-bottom: 10px;
+    }
+    .stone-table-wrap {
+        border: 1px solid #eef2f6;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+    }
+    .stone-clarity {
+        width: auto;
+        min-width: 84px;
+        font-weight: 600;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        background-color: #fff;
+        border-radius: 8px;
+    }
+    .detail-cta { display: grid; gap: 12px; }
+    .detail-order-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 12px;
+    }
+    .detail-field-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #334155;
+        margin-bottom: 6px;
+        display: block;
+    }
+    .qty-stepper {
+        display: flex;
+        align-items: center;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        height: 44px;
+    }
+    .qty-stepper button {
+        width: 40px;
+        height: 44px;
+        border: 0;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .qty-stepper input {
+        border: 0;
+        text-align: center;
+        font-weight: 700;
+        box-shadow: none;
+        height: 44px;
+    }
+    .qty-stepper input:focus { box-shadow: none; }
+    .detail-note {
+        border-radius: 12px;
+        border-color: #e2e8f0;
+        min-height: 44px;
+        resize: vertical;
     }
     .action-button {
-        padding: 16px 32px;
-        font-size: 18px;
-        font-weight: 600;
-        border-radius: 50px;
-        transition: all 0.3s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        padding: 14px 24px;
+        font-size: 15px;
+        font-weight: 700;
+        border-radius: 14px;
+        letter-spacing: 0.4px;
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        cursor: pointer;
+        gap: 8px;
+        text-transform: none;
     }
     .action-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(15,23,42,0.12);
+    }
+    .detail-description {
+        margin-top: 16px;
+        padding: 14px 16px;
+        background: #f8fafc;
+        border: 1px solid #eef2f6;
+        border-radius: 14px;
+    }
+    .detail-description h6 {
+        font-size: 12px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        font-weight: 800;
+        margin-bottom: 6px;
     }
     .related-carousel {
         position: relative;
@@ -151,27 +267,24 @@
     }
     .related-carousel-track {
         display: flex;
-        gap: 20px;
+        gap: 14px;
         overflow-x: auto;
         scroll-snap-type: x mandatory;
         scroll-behavior: smooth;
         scrollbar-width: none;
-        -ms-overflow-style: none;
-        padding: 6px 0 18px;
+        padding: 6px 0 12px;
     }
-    .related-carousel-track::-webkit-scrollbar {
-        display: none;
-    }
+    .related-carousel-track::-webkit-scrollbar { display: none; }
     .related-carousel-item {
-        flex: 0 0 220px;
+        flex: 0 0 200px;
         scroll-snap-align: start;
     }
     .related-carousel-btn {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         border: 1px solid #e2e8f0;
         border-radius: 50%;
         background: #fff;
@@ -180,48 +293,108 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 8px 22px rgba(15,23,42,0.08);
-        transition: all 0.2s;
         z-index: 2;
     }
-    .related-carousel-btn:hover {
-        background: #0f172a;
-        color: #fff;
-        border-color: #0f172a;
-    }
-    .related-carousel-btn.prev {
-        left: 0;
-    }
-    .related-carousel-btn.next {
-        right: 0;
-    }
-    @@media (max-width: 768px) {
-        .related-carousel {
-            padding: 0 38px;
+    .related-carousel-btn.prev { left: 0; }
+    .related-carousel-btn.next { right: 0; }
+
+    @@media (max-width: 991.98px) {
+        .product-detail-page { padding: 0 0 24px; }
+        .detail-back { padding: 4px 2px 10px; }
+        .product-detail-container {
+            border-radius: 16px;
+            box-shadow: none;
+            border: 0;
+            margin-bottom: 8px;
         }
-        .related-carousel-item {
-            flex-basis: 190px;
+        .detail-image-gallery {
+            padding: 0 0 8px;
+            border-right: 0 !important;
         }
+        .gallery-sticky-wrapper { position: static; }
+        .detail-hero {
+            border-radius: 14px;
+            aspect-ratio: 1 / 1;
+            box-shadow: none;
+            border: 1px solid #eef2f6;
+        }
+        .thumbnail { width: 52px; height: 52px; }
+        .detail-info { padding: 8px 2px 8px; }
+        .detail-heading { margin-bottom: 12px; align-items: center; }
+        .product-title { font-size: 22px; }
+        .price-tag { font-size: 22px; }
+        .specs-grid { gap: 8px; margin-bottom: 16px; }
+        .spec-item { padding: 10px 12px; border-radius: 10px; }
+        .spec-value, .spec-select { font-size: 14px; }
+        .stone-table-wrap { border: 0; overflow: visible; background: transparent; }
+        .stone-table thead { display: none; }
+        .stone-table, .stone-table tbody, .stone-table tr, .stone-table td {
+            display: block;
+            width: 100%;
+        }
+        .stone-table tbody { display: grid; gap: 8px; }
+        .stone-table tr {
+            background: #f8fafc;
+            border: 1px solid #eef2f6;
+            border-radius: 12px;
+            padding: 10px 12px 8px;
+        }
+        .stone-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            text-align: right !important;
+            padding: 6px 0 !important;
+            border: 0;
+        }
+        .stone-table td::before {
+            content: attr(data-label);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            color: #64748b;
+            text-align: left;
+        }
+        .stone-table td .d-flex { justify-content: flex-end !important; }
+        .detail-order-row { grid-template-columns: 1fr; }
+        .detail-cta {
+            position: sticky;
+            bottom: 0;
+            z-index: 1035;
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(10px);
+            margin: 12px -12px 0;
+            padding: 10px 64px 14px 12px;
+            border-top: 1px solid #eef2f6;
+            box-shadow: 0 -10px 24px rgba(15,23,42,0.06);
+        }
+        .related-carousel-item .card-img-top,
+        .related-carousel-item .bg-light { height: 118px !important; }
+        .action-button { border-radius: 12px; padding: 13px 16px; font-size: 14px; }
+        .related-carousel { padding: 0 34px; }
+        .related-carousel-item { flex-basis: calc(50% - 8px); }
+        body:has(.product-detail-page) .whatsapp-float { bottom: 78px; }
     }
 </style>
 
-<div class="container">
-    <!-- Back Button -->
-    <a href="/Home/Index" class="btn btn-light rounded-pill mt-4 mb-2" style="font-weight: 600; padding: 10px 20px;">
-        <i class="fas fa-arrow-left me-2"></i> Kataloğa Dön
+<div class="product-detail-page">
+    <a href="/Home/Index" class="detail-back">
+        <i class="fas fa-arrow-left"></i> Kataloğa dön
     </a>
 
     <div class="product-detail-container row g-0">
-        <!-- Image Gallery -->
         <div class="col-lg-6 detail-image-gallery border-end">
             <div class="gallery-sticky-wrapper">
                 @if (Model.Images.Count > 0)
                 {
-                    <div class="img-magnifier-container" id="imageContainer" style="overflow:hidden; border-radius: 16px; cursor:crosshair; width:100%; aspect-ratio: 1/1.1; max-height: 800px; box-shadow: 0 8px 30px rgba(0,0,0,0.08);">
+                    <div class="detail-hero img-magnifier-container" id="imageContainer" style="cursor:crosshair;">
                         <img src="@Model.Images[0]" id="mainImage" class="w-100 h-100" style="object-fit: cover; transition: transform 0.1s ease-out; transform-origin: center center;" alt="@Model.Name" />
                     </div>
                     @if (Model.Images.Count > 1)
                     {
-                        <div class="thumbnail-container" style="justify-content: center;">
+                        <div class="thumbnail-container">
                             @foreach (var img in Model.Images)
                             {
                                 <img src="@img" class="thumbnail" onclick="changeImage(this.src)" />
@@ -231,29 +404,26 @@
                 }
                 else
                 {
-                    <div class="d-flex align-items-center justify-content-center w-100" style="background: #f8fafc; border-radius: 16px; aspect-ratio: 1/1.1;">
+                    <div class="detail-hero d-flex align-items-center justify-content-center">
                         <div class="text-center text-muted">
                             <i class="fas fa-image fa-3x mb-3"></i>
-                            <p>Resim Yok</p>
+                            <p class="mb-0">Resim yok</p>
                         </div>
                     </div>
                 }
             </div>
         </div>
 
-        <!-- Product Info -->
         <div class="col-lg-6 detail-info">
             <div>
                 <span class="badge-category">@string.Join(", ", Model.CategoryNames)</span>
-                <h1 class="product-title">@Model.Code</h1>
-             
-                
-                @if (isLoggedIn)
-                {
-                    <div class="price-tag" id="productPriceDisplay"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:#cbd5e1;"></i></div>
-                }
-
-
+                <div class="detail-heading">
+                    <h1 class="product-title">@Model.Code</h1>
+                    @if (isLoggedIn)
+                    {
+                        <div class="price-tag" id="productPriceDisplay"><i class="fas fa-spinner fa-spin" style="font-size:18px; color:#cbd5e1;"></i></div>
+                    }
+                </div>
 
                 <div class="specs-grid">
                     <div class="spec-item">
@@ -262,7 +432,7 @@
                     </div>
                     <div class="spec-item">
                         <span class="spec-label">Ayar</span>
-                        <select id="ayarSelect" onchange="recalculatePrice()" class="form-select" style="font-weight:700; color:#1e293b; border:none; background-color:transparent; padding:0; padding-right:24px; cursor:default; font-size:16px; background-position: right 0 center;">
+                        <select id="ayarSelect" onchange="recalculatePrice()" class="form-select spec-select">
                             @if (ViewBag.Karats != null)
                             {
                                 var defaultKarat = Model.ProductMetals?.FirstOrDefault()?.MetalPurityName ?? Model.Karat;
@@ -289,7 +459,7 @@
                     </div>
                     <div class="spec-item">
                         <span class="spec-label">Renk</span>
-                        <select id="renkSelect" class="form-select" style="font-weight:700; color:#1e293b; border:none; background-color:transparent; padding:0; padding-right:24px; cursor:default; font-size:16px; background-position: right 0 center;">
+                        <select id="renkSelect" class="form-select spec-select">
                             @if (ViewBag.MetalTypes != null)
                             {
                                 var defaultColor = Model.ProductMetals?.FirstOrDefault()?.MetalTypeName ?? Model.ColorName;
@@ -312,17 +482,17 @@
 
                 @if (Model.ProductStones != null && Model.ProductStones.Count > 0)
                 {
-                    <div class="mb-4">
-                        <h6 class="fw-bold text-dark mb-3"><i class="fas fa-gem me-1 text-primary"></i> Taş Bilgileri</h6>
-                        <div class="table-responsive rounded border border-light shadow-sm">
-                            <table class="table table-borderless table-hover text-center align-middle mb-0" style="font-size:14px;">
+                    <div class="stone-block">
+                        <h6 class="stone-block-title"><i class="fas fa-gem me-1"></i> Taş bilgileri</h6>
+                        <div class="stone-table-wrap">
+                            <table class="table table-borderless text-center align-middle mb-0 stone-table" style="font-size:14px;">
                                 <thead class="table-light border-bottom">
                                     <tr>
-                                        <th class="py-3 text-secondary fw-bold" style="letter-spacing: 0.5px;">Berraklık</th>
-                                        <th class="py-3 text-secondary fw-bold" style="letter-spacing: 0.5px;">Taş Türü</th>
-                                        <th class="py-3 text-secondary fw-bold" style="letter-spacing: 0.5px;">Renk</th>
-                                        <th class="py-3 text-secondary fw-bold" style="letter-spacing: 0.5px;">Adet</th>
-                                        <th class="py-3 text-secondary fw-bold" style="letter-spacing: 0.5px;">Toplam Kr.</th>
+                                        <th class="py-3 text-secondary fw-bold">Berraklık</th>
+                                        <th class="py-3 text-secondary fw-bold">Taş türü</th>
+                                        <th class="py-3 text-secondary fw-bold">Renk</th>
+                                        <th class="py-3 text-secondary fw-bold">Adet</th>
+                                        <th class="py-3 text-secondary fw-bold">Toplam Kr.</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -344,12 +514,12 @@
                                             }
                                         }
 
-                                        <tr class="stone-detail-row" data-stone-type-id="@stoneTypeId" data-color-id="@s.ColorId" style="border-bottom: 1px solid #f1f5f9;">
-                                            <td class="py-3">
+                                        <tr class="stone-detail-row" data-stone-type-id="@stoneTypeId" data-color-id="@s.ColorId">
+                                            <td class="py-3" data-label="Berraklık">
                                                 <div class="d-flex justify-content-center">
                                                     @if (stoneTypeName.Equals("PIRLANTA", StringComparison.OrdinalIgnoreCase) || stoneTypeName.Equals("PIRLANTA ", StringComparison.OrdinalIgnoreCase))
                                                     {
-                                                        <select id="berraklikSelect_@s.Id" onchange="recalculatePrice()" class="stone-clarity form-select form-select-sm shadow-none" style="width: auto; min-width: 95px; font-weight: 600; color: #334155; border: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
+                                                        <select id="berraklikSelect_@s.Id" onchange="recalculatePrice()" class="stone-clarity form-select form-select-sm shadow-none">
                                                             @if (ViewBag.Clarities != null)
                                                             {
                                                                 foreach (var c in (IEnumerable<dynamic>)ViewBag.Clarities)
@@ -381,10 +551,10 @@
                                                     }
                                                 </div>
                                             </td>
-                                            <td class="stone-type py-3 fw-medium text-dark">@(string.IsNullOrEmpty(stoneTypeName) ? "-" : stoneTypeName)</td>
-                                            <td class="stone-color py-3 fw-medium text-dark">@(s.ColorName ?? "-")</td>
-                                            <td class="stone-quantity py-3 fw-medium text-dark">@s.Quantity.ToString("N0")</td>
-                                            <td class="stone-carat py-3 text-primary fw-bold">@s.TotalCarat.ToString("N2") ct</td>
+                                            <td class="stone-type py-3 fw-medium text-dark" data-label="Taş türü">@(string.IsNullOrEmpty(stoneTypeName) ? "-" : stoneTypeName)</td>
+                                            <td class="stone-color py-3 fw-medium text-dark" data-label="Renk">@(s.ColorName ?? "-")</td>
+                                            <td class="stone-quantity py-3 fw-medium text-dark" data-label="Adet">@s.Quantity.ToString("N0")</td>
+                                            <td class="stone-carat py-3 fw-bold" data-label="Toplam Kr.">@s.TotalCarat.ToString("N2") ct</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -393,20 +563,24 @@
                     </div>
                 }
 
-                <div class="mt-4">
+                <div class="detail-cta">
                     @if (isLoggedIn)
                     {
-                        <div class="row g-3 mb-3">
-                            <div class="col-sm-4">
-                                <label for="catalogQuantity" class="form-label fw-semibold text-dark">Adet</label>
-                                <input type="number" id="catalogQuantity" class="form-control" value="1" min="1" max="999" step="1" inputmode="numeric"
-                                       onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault();"
-                                       oninput="if (this.value !== '' && (!Number.isInteger(Number(this.value)) || Number(this.value) < 1)) this.value = 1;"
-                                       onblur="if (!Number.isInteger(Number(this.value)) || Number(this.value) < 1) this.value = 1;" />
+                        <div class="detail-order-row">
+                            <div>
+                                <label for="catalogQuantity" class="detail-field-label">Adet</label>
+                                <div class="qty-stepper">
+                                    <button type="button" onclick="stepQuantity(-1)" aria-label="Azalt">−</button>
+                                    <input type="number" id="catalogQuantity" class="form-control" value="1" min="1" max="999" step="1" inputmode="numeric"
+                                           onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault();"
+                                           oninput="if (this.value !== '' && (!Number.isInteger(Number(this.value)) || Number(this.value) < 1)) this.value = 1;"
+                                           onblur="if (!Number.isInteger(Number(this.value)) || Number(this.value) < 1) this.value = 1;" />
+                                    <button type="button" onclick="stepQuantity(1)" aria-label="Artır">+</button>
+                                </div>
                             </div>
-                            <div class="col-sm-8">
-                                <label for="catalogNote" class="form-label fw-semibold text-dark">Müşteri Açıklaması</label>
-                                <textarea id="catalogNote" class="form-control" maxlength="500" rows="2" placeholder="Ürün için özel notunuzu yazabilirsiniz..."></textarea>
+                            <div>
+                                <label for="catalogNote" class="detail-field-label">Not</label>
+                                <textarea id="catalogNote" class="form-control detail-note" maxlength="500" rows="2" placeholder="Ürün için özel notunuz..."></textarea>
                             </div>
                         </div>
                         <button class="btn btn-dark action-button" id="addToCartBtn"
@@ -417,13 +591,13 @@
                     else
                     {
                         <a href="https://wa.me/@adminWhatsAppPhone?text=Merhaba, @Model.Code kodlu ürününüzün fiyat bilgisini öğrenebilir miyim?" target="_blank" class="btn btn-success action-button">
-                            <i class="fab fa-whatsapp"></i> Fiyat Sor
+                            <i class="fab fa-whatsapp"></i> Fiyat sor
                         </a>
                     }
                 </div>
 
-                <div class="mt-4 p-3" style="background:#fffbeb; border-left:4px solid #f59e0b; border-radius:0 8px 8px 0;">
-                    <h6 class="fw-bold text-dark mb-1"><i class="fas fa-info-circle me-1 text-warning"></i> Açıklama</h6>
+                <div class="detail-description">
+                    <h6 class="text-dark"><i class="fas fa-info-circle me-1"></i> Açıklama</h6>
                     <p class="text-muted mb-0" style="line-height: 1.6; font-size:14px; white-space: pre-wrap;">
                         @(string.IsNullOrEmpty(Model.Description) ? "Bu ürün için henüz bir açıklama eklenmemiştir." : Model.Description)
                     </p>
@@ -435,9 +609,9 @@
         <!-- Slider Section (Full Width at Bottom) -->
         @if(ViewBag.RelatedProducts != null && ((IEnumerable<dynamic>)ViewBag.RelatedProducts).Any())
         {
-            <div class="col-12 p-4 p-lg-5" style="border-top: 1px solid #f1f5f9; background: #fafaf9;">
+            <div class="col-12 px-3 py-4 px-lg-5" style="border-top: 1px solid #f1f5f9; background: #fafaf9;">
                 <div class="container-fluid px-0">
-                    <h4 class="fw-bold mb-4 text-center" style="color: #1e293b; font-size: 22px;"><i class="fas fa-layer-group me-2 text-primary"></i> Diğer Ürünlerimiz</h4>
+                    <h4 class="fw-bold mb-3 text-center" style="color: #1e293b; font-size: 18px;">Diğer ürünler</h4>
                     <div class="related-carousel" id="relatedProductsCarousel">
                         <button type="button" class="related-carousel-btn prev" data-related-direction="-1" aria-label="Önceki ürün">
                             <i class="fas fa-chevron-left"></i>
@@ -623,6 +797,13 @@
         }
     }
 
+    function stepQuantity(delta) {
+        const input = document.getElementById('catalogQuantity');
+        if (!input) return;
+        const next = (parseInt(input.value, 10) || 1) + delta;
+        input.value = Math.min(999, Math.max(1, next));
+    }
+
     function changeImage(src) {
         document.getElementById('mainImage').src = src;
         
@@ -637,7 +818,7 @@
         const container = document.getElementById('imageContainer');
         const img = document.getElementById('mainImage');
 
-        if(container && img) {
+        if(container && img && window.matchMedia('(pointer: fine)').matches) {
             container.addEventListener('mousemove', function(e) {
                 const rect = container.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -706,32 +887,27 @@
                 };
             });
             
-            // To allow same product with different specs, generate a unique cartId
-            var cartId = code + '-' + Date.now();
+            if (typeof upsertCartItem !== 'function') {
+                alert("Katalog sistemi yüklenemedi.");
+                return;
+            }
 
-            cart.push({
-                id: cartId, 
-                code: code, 
-                image: image, 
-                category: category, 
+            upsertCartItem({
+                code: code,
+                image: image,
+                category: category,
                 price: currentPrice,
                 ayar: ayar,
                 renk: renk,
                 gram: currentGram,
-                stones: stones
-                ,productId: productId
-                ,categoryId: categoryId
-                ,ayarId: ayarSelect ? ayarSelect.value : null
-                ,renkId: renkSelect ? renkSelect.value : null
-                ,quantity: quantity
-                ,note: customerNote
+                stones: stones,
+                productId: productId,
+                categoryId: categoryId,
+                ayarId: ayarSelect ? ayarSelect.value : null,
+                renkId: renkSelect ? renkSelect.value : null,
+                quantity: quantity,
+                note: customerNote
             });
-
-            if (typeof logCatalogAction === 'function') {
-                logCatalogAction('AddProduct', cart[cart.length - 1]);
-            }
-            
-            if(typeof updateCartUI === 'function') updateCartUI();
             
             // Butonda görsel geri bildirim ver (modal yerine)
             var btn = document.getElementById('addToCartBtn');

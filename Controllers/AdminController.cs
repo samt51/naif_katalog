@@ -3,11 +3,11 @@ using naif_katalog.Core.Features.StoneFeature.Queries;
 using naif_katalog.Core.Features.CategoryFeature.Queries;
 using MediatR;
 using naif_katalog.Core.Features.ProductFeature.Queries;
-using naif_katalog.Core.Features.CategoryFeature.Queries;
 using naif_katalog.Core.Features.UsersFeature.Queries;
 using Microsoft.Extensions.Caching.Memory;
 using naif_katalog.Core.Features.DefinitionFeature.Queries;
 using naif_katalog.Core.Features.DefinitionFeature.Commands;
+using naif_katalog.Models;
 using System.Dynamic;
 
 namespace naif_katalog.Controllers
@@ -81,30 +81,41 @@ namespace naif_katalog.Controllers
 
         public async Task<IActionResult> Dashboard()
         {
-            // Products
-            if (!_cache.TryGetValue("CachedProducts", out naif_katalog.Models.ResponseDto<List<naif_katalog.Models.Product>> prodResponse))
+            var productsTask = _mediator.Send(new GetAllProductsQueryRequest
             {
-                prodResponse = await _mediator.Send(new naif_katalog.Core.Features.ProductFeature.Queries.GetAllProductsQueryRequest());
-                if (prodResponse != null && prodResponse.isSuccess)
-                {
-                    _cache.Set("CachedProducts", prodResponse, TimeSpan.FromMinutes(10));
-                }
-            }
-            int productCount = prodResponse?.data?.Count ?? 0;
-            var recentProducts = prodResponse?.data?.OrderByDescending(p => p.Id).Take(5).ToList() ?? new List<naif_katalog.Models.Product>();
+                Page = 1,
+                PageSize = 24,
+                OrderBy = "desc",
+                ApplyCustomerPricing = false
+            });
+            var usersTask = _mediator.Send(new GetAllUsersQueryRequest());
+            var categoriesTask = _mediator.Send(new GetAllCategoriesQueryRequest());
+            await Task.WhenAll(productsTask, usersTask, categoriesTask);
 
-            // Users
-            var usersResponse = await _mediator.Send(new GetAllUsersQueryRequest());
-            int userCount = usersResponse?.data?.Count ?? 0;
+            var productsResponse = await productsTask;
+            var usersResponse = await usersTask;
+            var categoriesResponse = await categoriesTask;
 
-            // Categories
-            var categoriesResponse = await _mediator.Send(new GetAllCategoriesQueryRequest());
-            int categoryCount = categoriesResponse?.data?.Count ?? 0;
+            var users = usersResponse?.data ?? new List<UsersDto>();
+            var today = DateTime.Today;
+            var lockedCount = users.Count(u => u.IsLocked);
+            var expiredCount = users.Count(u => u.MembershipExpiryDate.HasValue && u.MembershipExpiryDate.Value.Date < today);
+            var expiringSoonCount = users.Count(u =>
+                u.MembershipExpiryDate.HasValue &&
+                u.MembershipExpiryDate.Value.Date >= today &&
+                u.MembershipExpiryDate.Value.Date <= today.AddDays(14));
 
-            ViewBag.ProductCount = productCount;
-            ViewBag.UserCount = userCount;
-            ViewBag.CategoryCount = categoryCount;
-            ViewBag.RecentProducts = recentProducts;
+            var alertSummaries = new List<string>();
+            if (lockedCount > 0) alertSummaries.Add($"{lockedCount} kilitli müşteri");
+            if (expiredCount > 0) alertSummaries.Add($"{expiredCount} süresi dolmuş üyelik");
+            if (expiringSoonCount > 0) alertSummaries.Add($"{expiringSoonCount} üyelik 14 gün içinde dolacak");
+
+            ViewBag.ProductCount = productsResponse?.count > 0 ? productsResponse.count : productsResponse?.data?.Count ?? 0;
+            ViewBag.UserCount = users.Count;
+            ViewBag.CategoryCount = categoriesResponse?.data?.Count ?? 0;
+            ViewBag.AlertCount = lockedCount + expiredCount + expiringSoonCount;
+            ViewBag.AlertSummaries = alertSummaries;
+            ViewBag.RecentProducts = productsResponse?.data?.ToList() ?? new List<Product>();
 
             return View();
         }

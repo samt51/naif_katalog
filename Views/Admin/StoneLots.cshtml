@@ -25,17 +25,107 @@
     .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
     .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
     .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+    .stones-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .stones-title { margin: 0; }
+    .stones-new-btn { width: auto; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; }
+    .stones-table-wrap { width: 100%; overflow: visible; }
+    .stones-table-wrap table { min-width: 0 !important; }
+
+    @@media (max-width: 767.98px) {
+        .stones-toolbar { flex-direction: column; align-items: stretch; }
+        .stones-title { font-size: 20px; }
+        .stones-new-btn { width: 100%; justify-content: center; }
+        .form-row { flex-direction: column; gap: 10px; }
+
+        .dataTables_wrapper { overflow: visible !important; }
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            float: none !important;
+            text-align: left !important;
+            width: 100% !important;
+            margin: 8px 0 !important;
+        }
+        .dataTables_wrapper .dataTables_filter { display: flex; flex-direction: column; align-items: stretch; }
+        .dataTables_wrapper .dataTables_filter input {
+            width: 100% !important;
+            margin: 6px 0 0 !important;
+            display: block;
+            box-sizing: border-box;
+        }
+        .dataTables_wrapper .dataTables_info { white-space: normal; font-size: 12px; }
+        .dataTables_wrapper .dataTables_paginate { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+
+        #stonesTable,
+        #stonesTable.dataTable { width: 100% !important; min-width: 0 !important; display: block; }
+        #stonesTable thead { display: none; }
+        #stonesTable tbody { display: block; }
+        #stonesTable tbody tr {
+            display: block;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 0 0 10px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+        }
+        #stonesTable tbody tr.dtrg-group,
+        #stonesTable tbody tr.dtrg-start {
+            background: #f1f5f9;
+            border: 0;
+            box-shadow: none;
+            padding: 10px 12px;
+            margin: 14px 0 8px;
+        }
+        #stonesTable tbody td {
+            display: flex !important;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100% !important;
+            border: 0 !important;
+            padding: 7px 0 !important;
+            text-align: right;
+            word-break: break-word;
+        }
+        #stonesTable tbody td:not(:last-child) { border-bottom: 1px solid #f1f5f9 !important; }
+        #stonesTable tbody td::before {
+            content: attr(data-label);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            text-transform: uppercase;
+            color: #64748b;
+            text-align: left;
+            flex: 0 0 110px;
+        }
+        #stonesTable tbody td:nth-child(4) { display: none !important; }
+        #stonesTable tbody td:last-child { justify-content: flex-end; padding-top: 10px !important; }
+        #stonesTable tbody td:last-child::before { display: none; }
+        #stonesTable tbody td:last-child > div { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+        #stonesTable tbody tr.dtrg-group td,
+        #stonesTable tbody tr.dtrg-start td {
+            display: block !important;
+            text-align: left;
+            padding: 0 !important;
+            border: 0 !important;
+        }
+        #stonesTable tbody tr.dtrg-group td::before,
+        #stonesTable tbody tr.dtrg-start td::before { display: none; }
+    }
 </style>
 
 <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0;"><i class="fas fa-gem" style="color:var(--primary); margin-right:10px;"></i> Taş Partileri</h2>
-        <button onclick="openModal('Yeni Taş Partisi')" class="btn-primary" style="width:auto; padding:10px 20px; display:inline-flex; align-items:center; gap:8px;">
+    <div class="stones-toolbar">
+        <h2 class="stones-title"><i class="fas fa-gem" style="color:var(--primary); margin-right:10px;"></i> Taş Partileri</h2>
+        <button onclick="openModal('Yeni Taş Partisi')" class="btn-primary stones-new-btn">
             <i class="fas fa-plus"></i> Yeni Parti
         </button>
     </div>
 
-    <div class="table-responsive">
+    <div class="stones-table-wrap">
         <table class="table table-striped" id="stonesTable" style="width:100%">
             <thead>
                 <tr>
@@ -73,16 +163,16 @@
                         }
 
                         <tr>
-                            <td>
+                            <td data-label="Parti Adı">
                                 @stone.StoneScale?.Name
                             </td>
-                            <td>@stoneTypeName</td>
-                            <td>@unitName</td>
-                            <td>@clarityName</td>
-                            <td>$@stone.CostPrice.ToString("N2")</td>
-                            <td>@(stone.StoneSetting != null ? "$" + stone.StoneSetting.SettingPrice.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " (" + stone.StoneSetting.SettingType + ")" : "-")</td>
+                            <td data-label="Taş Türü">@stoneTypeName</td>
+                            <td data-label="Birim">@unitName</td>
+                            <td data-label="Berraklık">@clarityName</td>
+                            <td data-label="Ürün Fiyat ($)">$@stone.CostPrice.ToString("N2")</td>
+                            <td data-label="Mıhlama Fiyatı">@(stone.StoneSetting != null ? "$" + stone.StoneSetting.SettingPrice.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) + " (" + stone.StoneSetting.SettingType + ")" : "-")</td>
                             
-                            <td>
+                            <td data-label="İşlemler">
                                 <div style="display:flex; gap:8px;">
                                     <button onclick="openModal('Parti Güncelle', @stone.Id, '', @stone.StoneTypeId, @stone.UnitId, @(stone.StoneClarityId ?? 0), @stone.CostPrice.ToString().Replace(',','.'), @(stone.StoneSettingId ?? 0), @(stone.StoneScaleId ?? 0))" 
                                             style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:8px; background-color: #f59e0b; border:none; color:white; cursor:pointer; transition:0.2s; box-shadow:0 2px 4px rgba(245,158,11,0.2);" 
@@ -306,6 +396,7 @@
     $(document).ready(function() {
         $('#stonesTable').DataTable({
             pageLength: 50,
+            autoWidth: false,
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tümü"]],
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
@@ -321,7 +412,13 @@
                 { "visible": false, "targets": 3 },
                 { "orderable": false, "targets": 5 }
             ],
-            order: [[3, 'asc']]
+            order: [[3, 'asc']],
+            createdRow: function (row) {
+                const labels = ['Parti Adı', 'Taş Türü', 'Birim', 'Berraklık', 'Ürün Fiyat ($)', 'Mıhlama Fiyatı', 'İşlemler'];
+                $('td', row).each(function (index) {
+                    if (!$(this).attr('data-label')) $(this).attr('data-label', labels[index] || '');
+                });
+            }
         });
     });
 </script>

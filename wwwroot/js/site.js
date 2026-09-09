@@ -181,22 +181,15 @@ document.addEventListener("DOMContentLoaded", function () {
         let image = this.getAttribute('data-image');
         let category = this.getAttribute('data-category') || 'DİĞER';
         if (!code) return;
-        if (!cart.find(c => c.code === code)) {
-            cart.push({ code, image, category });
-            logCatalogAction('AddProduct', cart[cart.length - 1]);
-            updateCartUI();
-            this.textContent = '✓ Eklendi';
-            this.classList.remove('btn-dark');
-            this.classList.add('btn-success');
-            setTimeout(() => {
-                this.innerHTML = catalogAddButtonHtml();
-                this.classList.remove('btn-success');
-                this.classList.add('btn-dark');
-            }, 1500);
-        } else {
-            this.textContent = 'Zaten Eklendi';
-            setTimeout(() => { this.innerHTML = catalogAddButtonHtml(); }, 1500);
-        }
+        upsertCartItem({ code, image, category, quantity: 1 });
+        this.textContent = '✓ Eklendi';
+        this.classList.remove('btn-dark');
+        this.classList.add('btn-success');
+        setTimeout(() => {
+            this.innerHTML = catalogAddButtonHtml();
+            this.classList.remove('btn-success');
+            this.classList.add('btn-dark');
+        }, 1500);
     });
 
     document.querySelectorAll('.btn-add-cart').forEach(btn => {
@@ -220,27 +213,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            if(!cart.find(c => c.code === code)) {
-                cart.push({code: code, image: image, category: category});
-                logCatalogAction('AddProduct', cart[cart.length - 1]);
-                updateCartUI();
-                
-                // Başarılı durumu
-                self.className = 'btn btn-sm btn-success btn-add-cart';
-                self.innerHTML = '<i class="fas fa-check"></i> Eklendi';
-                setTimeout(() => {
-                    self.className = originalClass;
-                    self.innerHTML = originalHtml;
-                }, 1500);
-            } else {
-                // Zaten ekli durumu
-                self.className = 'btn btn-sm btn-warning btn-add-cart text-dark';
-                self.innerHTML = '<i class="fas fa-exclamation"></i> Zaten Ekli';
-                setTimeout(() => {
-                    self.className = originalClass;
-                    self.innerHTML = originalHtml;
-                }, 1500);
-            }
+            upsertCartItem({ code, image, category, quantity: 1 });
+            self.className = 'btn btn-sm btn-success btn-add-cart';
+            self.innerHTML = '<i class="fas fa-check"></i> Eklendi';
+            setTimeout(() => {
+                self.className = originalClass;
+                self.innerHTML = originalHtml;
+            }, 1500);
         });
     });
 
@@ -296,6 +275,37 @@ document.addEventListener("DOMContentLoaded", function () {
         let firstName = document.getElementById('firstName').value;
         let lastName = document.getElementById('lastName').value;
         let phoneNumber = document.getElementById('phoneNumber').value;
+
+        try {
+            await fetch('/Home/ConfirmOrder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    companyName,
+                    firstName,
+                    lastName,
+                    phoneNumber,
+                    items: cart.map(item => ({
+                        code: item.code || '',
+                        category: item.category || '',
+                        price: item.price || '',
+                        ayar: item.ayar || '',
+                        renk: item.renk || '',
+                        gram: item.gram || '',
+                        quantity: item.quantity || 1,
+                        note: item.note || '',
+                        stones: (item.stones || []).map(stone => ({
+                            type: stone.type || '',
+                            clarity: stone.clarity || '',
+                            color: stone.color || '',
+                            quantity: stone.quantity || '',
+                            totalCarat: stone.totalCarat || ''
+                        }))
+                    }))
+                })
+            });
+        } catch (e) { }
 
         const pdfLanguage = (document.getElementById('currentLangText')?.textContent || 'EN').trim().toLowerCase();
         const pdfIsEnglish = pdfLanguage === 'en';
@@ -708,6 +718,49 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+function cartItemKey(item) {
+    const stonesKey = (item.stones || []).map(s => `${s.typeId || s.type}|${s.clarityId || s.clarity}|${s.colorId || s.color}`).join(';');
+    return [item.productId || item.code || '', item.ayarId || item.ayar || '', item.renkId || item.renk || '', stonesKey].join('::');
+}
+
+function consolidateCart() {
+    const merged = [];
+    cart.forEach(item => {
+        const existing = merged.find(c => cartItemKey(c) === cartItemKey(item));
+        if (existing) {
+            existing.quantity = Math.min(999, (existing.quantity || 1) + (item.quantity || 1));
+            if (!existing.note && item.note) existing.note = item.note;
+        } else {
+            merged.push({ ...item, quantity: item.quantity || 1 });
+        }
+    });
+    cart = merged;
+}
+
+window.upsertCartItem = function(incoming) {
+    if (!incoming) return { merged: false, item: null };
+    const qty = Number.isInteger(incoming.quantity) && incoming.quantity > 0 ? incoming.quantity : 1;
+    incoming.quantity = qty;
+    const existing = cart.find(c => cartItemKey(c) === cartItemKey(incoming));
+    if (existing) {
+        existing.quantity = Math.min(999, (existing.quantity || 1) + qty);
+        existing.price = incoming.price || existing.price;
+        existing.gram = incoming.gram || existing.gram;
+        existing.image = incoming.image || existing.image;
+        existing.stones = incoming.stones || existing.stones;
+        if (incoming.note && !existing.note) existing.note = incoming.note;
+        logCatalogAction('AddProduct', existing);
+        updateCartUI();
+        return { merged: true, item: existing };
+    }
+
+    if (!incoming.id) incoming.id = (incoming.code || 'item') + '-' + Date.now();
+    cart.push(incoming);
+    logCatalogAction('AddProduct', incoming);
+    updateCartUI();
+    return { merged: false, item: incoming };
+};
+
 window.removeFromCart = function(idOrCode) {
     let globalIndex = cart.findIndex(c => (c.id || c.code) === idOrCode);
     if(globalIndex !== -1) {
@@ -719,8 +772,10 @@ window.removeFromCart = function(idOrCode) {
 }
 
 function updateCartUI() {
+    consolidateCart();
     sessionStorage.setItem('naif_catalog_cart', JSON.stringify(cart));
-    document.getElementById('catalogCount').innerText = cart.length;
+    const totalQty = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    document.getElementById('catalogCount').innerText = totalQty;
     
     let container = document.getElementById('catalogItemsOffcanvas');
     container.innerHTML = '';

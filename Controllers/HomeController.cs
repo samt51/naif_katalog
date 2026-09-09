@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using naif_katalog.Models;
 using MediatR;
 using naif_katalog.Core.Features.ProductFeature.Queries;
+using naif_katalog.Services.Abstract;
 
 namespace naif_katalog.Controllers;
 
@@ -10,11 +11,13 @@ public class HomeController : Controller
 {
     private readonly IMediator _mediator;
     private readonly IMemoryCache _memoryCache;
+    private readonly IOrderEmailService _orderEmailService;
 
-    public HomeController(IMediator mediator, IMemoryCache memoryCache)
+    public HomeController(IMediator mediator, IMemoryCache memoryCache, IOrderEmailService orderEmailService)
     {
         _mediator = mediator;
         _memoryCache = memoryCache;
+        _orderEmailService = orderEmailService;
     }
 
     public async Task<IActionResult> Detail(int id)
@@ -122,6 +125,32 @@ public class HomeController : Controller
         });
 
         return Json(response);
+    }
+
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> ConfirmOrder([FromBody] ConfirmOrderRequest request)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+            return Unauthorized();
+
+        if (request == null || request.Items == null || request.Items.Count == 0)
+            return BadRequest(new { isSuccess = false, message = "Sipariş ürünü bulunamadı." });
+
+        var accountName = string.Join(" ", new[]
+        {
+            User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.GivenName)?.Value,
+            User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Surname)?.Value,
+            User.Identity?.Name
+        }.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct());
+        var accountEmail = User.Claims.FirstOrDefault(c =>
+            c.Type == System.Security.Claims.ClaimTypes.Email || c.Type == "email")?.Value;
+
+        var sent = await _orderEmailService.SendNewOrderAsync(request, accountName, accountEmail);
+        if (!sent)
+            return StatusCode(500, new { isSuccess = false, message = "Sipariş maili gönderilemedi." });
+
+        return Json(new { isSuccess = true });
     }
 
     private async Task<(Product? Product, List<Product> Products)> FindProductForDetail(int id)

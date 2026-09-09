@@ -309,4 +309,16 @@ body {
     margin-bottom: 24px;
 }
 
+.dashboard-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    margin-bottom: 24px;
+}
+
+.dashboard-grid > .card {
+    margin-bottom: 0 !important;
+    min-width: 0;
+}
+
 

@@ -7,8 +7,46 @@
     if (apiAddress.EndsWith("/")) apiAddress = apiAddress.Substring(0, apiAddress.Length - 1);
 }
 
-<!-- CSS for Modal -->
 <style>
+    .def-page { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .def-card { margin-bottom: 0; }
+    .def-card-title {
+        display: flex; align-items: center; gap: 10px;
+        margin: 0 0 16px; padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 16px;
+    }
+    .def-card-title i {
+        width: 34px; height: 34px; border-radius: 10px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: #eff6ff; color: var(--primary);
+    }
+    .def-section { margin-bottom: 16px; }
+    .def-section:last-child { margin-bottom: 0; }
+    .def-section-head {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 8px; margin-bottom: 10px;
+    }
+    .def-section-head h4 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+    .def-add {
+        width: 32px; height: 32px; border: 0; border-radius: 8px;
+        background: #eff6ff; color: var(--primary); cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .def-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .def-item {
+        background: #f8fafc; padding: 8px 12px; border-radius: 999px; font-size: 13px;
+        border: 1px solid #e2e8f0; cursor: pointer; user-select: none;
+        display: inline-flex; align-items: center; min-height: 36px; line-height: 1.2;
+        max-width: 100%; word-break: break-word;
+    }
+    .def-item:hover { background: #e2e8f0; }
+    .def-item-amber { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+    .def-item-pink { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
+    .def-item-indigo { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+    .def-item-green { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .def-hint { display: block; color: var(--text-muted); margin-top: 8px; line-height: 1.4; font-size: 12px; }
+
     .modal-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0, 0, 0, 0.5);
@@ -19,6 +57,7 @@
     .modal-content {
         background: var(--card-bg); padding: 24px; border-radius: 12px;
         width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        max-height: 90vh; overflow-y: auto;
     }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .modal-header h3 { margin: 0; font-size: 18px; }
@@ -27,25 +66,28 @@
     .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
     .form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
     .form-group input:focus { border-color: var(--primary); }
-    .def-item {
-        background:#f1f5f9; padding:4px 10px; border-radius:12px; font-size:13px; border:1px solid #e2e8f0;
-        cursor: pointer; user-select: none; transition: all 0.2s; display: inline-block;
+
+    @@media (max-width: 1024px) {
+        .def-page { grid-template-columns: 1fr; gap: 12px; }
     }
-    .def-item:hover { background: #e2e8f0; }
+    @@media (max-width: 767.98px) {
+        .def-card { padding: 14px; }
+        .def-card-title { font-size: 15px; }
+        .def-item { min-height: 40px; padding: 9px 12px; }
+        .modal-overlay { padding: 10px; align-items: flex-start; overflow-y: auto; }
+        .modal-content { max-width: 100%; margin-top: 24px; }
+    }
 </style>
 
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px;">
-    <!-- TAŞ TANIMLARI -->
-    <div class="card">
-        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
-            <i class="fas fa-gem" style="color:var(--primary);"></i> Taş & Kesim Tanımları
-        </h3>
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Taş Tipleri</h4>
-                <button onclick="openModal('StoneType', 'Taş Tipi Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+<div class="def-page">
+    <div class="card def-card">
+        <h3 class="def-card-title"><i class="fas fa-gem"></i> Taş & Kesim Tanımları</h3>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Taş Tipleri</h4>
+                <button type="button" class="def-add" onclick="openModal('StoneType', 'Taş Tipi Ekle')" aria-label="Taş tipi ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.StoneTypes != null) {
                     foreach(var item in Model.StoneTypes) {
                         <span class="def-item" onclick="openModal('StoneType', 'Taş Tipi Güncelle', @item.Id, '@item.Name')">@item.Name</span>
@@ -53,12 +95,12 @@
                 }
             </div>
         </div>
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Taş Ayarları (Boyut)</h4>
-                <button onclick="openModal('StoneScale', 'Taş Ayarı Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Taş Ayarları (Boyut)</h4>
+                <button type="button" class="def-add" onclick="openModal('StoneScale', 'Taş Ayarı Ekle')" aria-label="Taş ayarı ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.StoneScales != null) {
                     foreach(var item in Model.StoneScales) {
                         <span class="def-item" onclick="openModal('StoneScale', 'Taş Ayarı Güncelle', @item.Id, '@item.Name')">@item.Name</span>
@@ -66,14 +108,12 @@
                 }
             </div>
         </div>
-
-
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Taş Kesimleri</h4>
-                <button onclick="openModal('StoneCut', 'Taş Kesimi Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Taş Kesimleri</h4>
+                <button type="button" class="def-add" onclick="openModal('StoneCut', 'Taş Kesimi Ekle')" aria-label="Taş kesimi ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.StoneCuts != null) {
                     foreach(var item in Model.StoneCuts) {
                         <span class="def-item" onclick="openModal('StoneCut', 'Taş Kesimi Güncelle', @item.Id, '@item.Name')">@item.Name</span>
@@ -81,13 +121,12 @@
                 }
             </div>
         </div>
-
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Taş Berraklığı</h4>
-                <button onclick="openModal('StoneClarity', 'Taş Berraklığı Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Taş Berraklığı</h4>
+                <button type="button" class="def-add" onclick="openModal('StoneClarity', 'Taş Berraklığı Ekle')" aria-label="Taş berraklığı ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.StoneClarities != null) {
                     foreach(var item in Model.StoneClarities) {
                         <span class="def-item" onclick="openModal('StoneClarity', 'Taş Berraklığı Güncelle', @item.Id, '@item.Name')">@item.Name</span>
@@ -95,13 +134,12 @@
                 }
             </div>
         </div>
-
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Renkler (Taş Rengi)</h4>
-                <button onclick="openModal('Color', 'Renk Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Renkler (Taş Rengi)</h4>
+                <button type="button" class="def-add" onclick="openModal('Color', 'Renk Ekle')" aria-label="Renk ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.Colors != null) {
                     foreach(var item in Model.Colors) {
                         if(item.ColorType == "Stone") {
@@ -111,34 +149,29 @@
                 }
             </div>
         </div>
-
     </div>
 
-    <!-- MADEN TANIMLARI -->
-    <div class="card">
-        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
-            <i class="fas fa-ring" style="color:var(--primary);"></i> Maden Tanımları
-        </h3>
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Maden Tipleri</h4>
-                <button onclick="openModal('MetalType', 'Maden Tipi Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+    <div class="card def-card">
+        <h3 class="def-card-title"><i class="fas fa-ring"></i> Maden Tanımları</h3>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Maden Tipleri</h4>
+                <button type="button" class="def-add" onclick="openModal('MetalType', 'Maden Tipi Ekle')" aria-label="Maden tipi ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.MetalTypes != null) {
                     foreach(var item in Model.MetalTypes) {
-                        <span class="def-item" onclick="openModal('MetalType', 'Maden Tipi Güncelle', @item.Id, '@item.Name')" style="background:#fef3c7; color:#92400e; border-color:#fde68a;">@item.Name</span>
+                        <span class="def-item def-item-amber" onclick="openModal('MetalType', 'Maden Tipi Güncelle', @item.Id, '@item.Name')">@item.Name</span>
                     }
                 }
             </div>
         </div>
-
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Maden Ayarları</h4>
-                <button onclick="openModal('MetalPurity', 'Maden Ayarı Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Maden Ayarları</h4>
+                <button type="button" class="def-add" onclick="openModal('MetalPurity', 'Maden Ayarı Ekle')" aria-label="Maden ayarı ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.MetalPurities != null) {
                     foreach(var item in Model.MetalPurities) {
                         <span class="def-item" onclick="openModal('MetalPurity', 'Maden Ayarı Güncelle', @item.Id, '@item.Name')">@item.Name</span>
@@ -146,76 +179,63 @@
                 }
             </div>
         </div>
-
-
-
     </div>
 
-    <!-- CİLA / RODAJ MALİYETLERİ -->
-    <div class="card">
-        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
-            <i class="fas fa-paint-brush" style="color:var(--primary);"></i> Cila/Rodaj Maliyetleri
-        </h3>
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Kategoriye Göre Maliyetler</h4>
-                <button onclick="openPolishingModal()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+    <div class="card def-card">
+        <h3 class="def-card-title"><i class="fas fa-paint-brush"></i> Cila/Rodaj Maliyetleri</h3>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Kategoriye Göre Maliyetler</h4>
+                <button type="button" class="def-add" onclick="openPolishingModal()" aria-label="Cila maliyeti ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.PolishingCosts != null) {
                     foreach(var item in Model.PolishingCosts) {
-                        <span class="def-item" onclick="openPolishingModal(@item.Id, @item.CategoryId, @item.CostPrice.ToString(System.Globalization.CultureInfo.InvariantCulture))" style="background:#fce7f3; color:#9d174d; border-color:#fbcfe8;">@item.CategoryName (Ü: $@item.CostPrice.ToString("N2", new System.Globalization.CultureInfo("tr-TR")))</span>
+                        <span class="def-item def-item-pink" onclick="openPolishingModal(@item.Id, @item.CategoryId, @item.CostPrice.ToString(System.Globalization.CultureInfo.InvariantCulture))">@item.CategoryName (Ü: $@item.CostPrice.ToString("N2", new System.Globalization.CultureInfo("tr-TR")))</span>
                     }
                 }
             </div>
         </div>
-
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Mıhlama Tipleri ve Fiyatları</h4>
-                <button onclick="openStoneSettingModal()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Mıhlama Tipleri ve Fiyatları</h4>
+                <button type="button" class="def-add" onclick="openStoneSettingModal()" aria-label="Mıhlama tipi ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.StoneSettings != null) {
                     foreach(var item in Model.StoneSettings) {
-                        <span class="def-item" onclick="openStoneSettingModal(@item.Id, @item.UnitId, @item.SettingPrice.ToString(System.Globalization.CultureInfo.InvariantCulture))" style="background:#e0e7ff; color:#3730a3; border-color:#c7d2fe;">@item.SettingType ($@item.SettingPrice.ToString("N2", new System.Globalization.CultureInfo("tr-TR")))</span>
+                        <span class="def-item def-item-indigo" onclick="openStoneSettingModal(@item.Id, @item.UnitId, @item.SettingPrice.ToString(System.Globalization.CultureInfo.InvariantCulture))">@item.SettingType ($@item.SettingPrice.ToString("N2", new System.Globalization.CultureInfo("tr-TR")))</span>
                     }
                 }
             </div>
         </div>
     </div>
 
-    <!-- SİSTEM TANIMLARI -->
-    <div class="card">
-        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
-            <i class="fas fa-users-cog" style="color:var(--primary);"></i> Sistem Tanımları
-        </h3>
-
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Birimler</h4>
-                <button onclick="openModal('Unit', 'Birim Ekle')" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+    <div class="card def-card">
+        <h3 class="def-card-title"><i class="fas fa-users-cog"></i> Sistem Tanımları</h3>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Birimler</h4>
+                <button type="button" class="def-add" onclick="openModal('Unit', 'Birim Ekle')" aria-label="Birim ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div class="def-tags">
                 @if(Model.Units != null) {
                     foreach(var item in Model.Units) {
-                        <span class="def-item" onclick="openModal('Unit', 'Birim Güncelle', @item.Id, '@item.Name')" style="background:#dcfce7; color:#166534; border-color:#bbf7d0;">@item.Name</span>
+                        <span class="def-item def-item-green" onclick="openModal('Unit', 'Birim Güncelle', @item.Id, '@item.Name')">@item.Name</span>
                     }
                 }
             </div>
         </div>
-
-        <div style="margin-bottom:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="font-size:14px; color:var(--text-muted);">Katalog Dilleri</h4>
-                <button type="button" onclick="openLanguageModal()" title="Yeni dil ekle" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-plus"></i></button>
+        <div class="def-section">
+            <div class="def-section-head">
+                <h4>Katalog Dilleri</h4>
+                <button type="button" class="def-add" onclick="openLanguageModal()" title="Yeni dil ekle" aria-label="Dil ekle"><i class="fas fa-plus"></i></button>
             </div>
-            <div id="catalogLanguageList" style="display:flex; flex-wrap:wrap; gap:8px;">
+            <div id="catalogLanguageList" class="def-tags">
                 <span style="color:var(--text-muted);font-size:13px;">Diller yükleniyor...</span>
             </div>
-            <small style="display:block;color:var(--text-muted);margin-top:9px;line-height:1.4;">Buraya eklenen diller tanım çevirilerinde ve tüm katalog PDF/Excel çıktılarında kullanılır.</small>
+            <small class="def-hint">Buraya eklenen diller tanım çevirilerinde ve tüm katalog PDF/Excel çıktılarında kullanılır.</small>
         </div>
-
     </div>
 </div>
 

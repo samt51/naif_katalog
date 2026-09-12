@@ -256,18 +256,41 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    document.getElementById('openCustomerModalBtn')?.addEventListener('click', function() {
+        if (cart.length === 0) {
+            document.getElementById('globalErrorMessage').innerText = 'Kataloğunuz boş.';
+            new bootstrap.Modal(document.getElementById('globalErrorModal')).show();
+            return;
+        }
+        document.getElementById('orderFormError').textContent = '';
+        new bootstrap.Modal(document.getElementById('customerModal')).show();
+    });
+
     document.getElementById('cancelPdfBtn').addEventListener('click', function() {
         pdfCanceled = true;
         document.getElementById('loadingOverlay').style.display = 'none';
     });
 
-    document.getElementById('completePdfBtn').addEventListener('click', async function () {
+    document.getElementById('customerOrderForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const button = document.getElementById('completePdfBtn');
+        if (button.disabled) return;
+        const errorBox = document.getElementById('orderFormError');
+        errorBox.textContent = '';
+        for (const field of this.querySelectorAll('input[required]')) field.value = field.value.trim();
+        if (!this.reportValidity()) return;
+        const orderItems = structuredClone(cart);
         if(cart.length === 0) {
             document.getElementById('globalErrorMessage').innerText = 'Kataloğunuz boş.';
             new bootstrap.Modal(document.getElementById('globalErrorModal')).show();
             return;
         }
 
+        button.disabled = true;
+        button.textContent = 'Preparing…';
+        bootstrap.Modal.getInstance(document.getElementById('customerModal'))?.hide();
+        bootstrap.Offcanvas.getInstance(document.getElementById('catalogOffcanvas'))?.hide();
+        try {
         pdfCanceled = false;
         document.getElementById('loadingOverlay').style.display = 'flex';
 
@@ -276,36 +299,23 @@ document.addEventListener("DOMContentLoaded", function () {
         let lastName = document.getElementById('lastName').value;
         let phoneNumber = document.getElementById('phoneNumber').value;
 
-        try {
-            await fetch('/Home/ConfirmOrder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    companyName,
-                    firstName,
-                    lastName,
-                    phoneNumber,
-                    items: cart.map(item => ({
-                        code: item.code || '',
-                        category: item.category || '',
-                        price: item.price || '',
-                        ayar: item.ayar || '',
-                        renk: item.renk || '',
-                        gram: item.gram || '',
-                        quantity: item.quantity || 1,
-                        note: item.note || '',
-                        stones: (item.stones || []).map(stone => ({
-                            type: stone.type || '',
-                            clarity: stone.clarity || '',
-                            color: stone.color || '',
-                            quantity: stone.quantity || '',
-                            totalCarat: stone.totalCarat || ''
-                        }))
-                    }))
-                })
-            });
-        } catch (e) { }
+        const orderPayload = {
+            companyName, firstName, lastName, phoneNumber,
+            items: orderItems.map(item => ({
+                productId: item.productId || null, code: item.code || '', productName: item.name || item.productName || '',
+                category: item.category || '', price: String(item.price || ''), ayar: item.ayar || '', renk: item.renk || '',
+                gram: String(item.gram || ''), quantity: item.quantity || 1, note: item.note || '', imageUrl: item.image || '',
+                stones: (item.stones || []).map(stone => ({ type: stone.type || '', clarity: stone.clarity || '', color: stone.color || '', quantity: String(stone.quantity || ''), totalCarat: String(stone.totalCarat || '') }))
+            }))
+        };
+        const fingerprint = JSON.stringify(orderPayload);
+        let pending;
+        try { pending = JSON.parse(sessionStorage.getItem('naif_pending_order')); } catch (_) { }
+        if (!pending || pending.fingerprint !== fingerprint) {
+            pending = { fingerprint, requestId: crypto.randomUUID() };
+            sessionStorage.setItem('naif_pending_order', JSON.stringify(pending));
+        }
+        orderPayload.requestId = pending.requestId;
 
         const pdfLanguage = (document.getElementById('currentLangText')?.textContent || 'EN').trim().toLowerCase();
         const pdfIsEnglish = pdfLanguage === 'en';
@@ -355,7 +365,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        const pdfItems = await Promise.all(cart.map(async item => {
+        const pdfItems = await Promise.all(orderItems.map(async item => {
             const translatedItem = { ...item };
             translatedItem.category = await getPdfDefinitionTranslation('Category', item.categoryId, item.category || pdfText.other);
             translatedItem.ayar = await getPdfDefinitionTranslation('MetalPurity', item.ayarId, item.ayar || '-');
@@ -435,7 +445,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Pre-load all product images
         let imageCache = {};
-        for (let item of cart) {
+        for (let item of orderItems) {
             if (item.image && !imageCache[item.image]) {
                 let img = await loadImage(item.image);
                 imageCache[item.image] = img ? imgToDataUrl(img) : null;
@@ -700,20 +710,46 @@ document.addEventListener("DOMContentLoaded", function () {
                 pdf.text(i + " / " + totalPages, MR_X - 0.1, FOOTER_TEXT_Y, null, null, 'right');
             }
 
-            // Save
-            pdf.save('Katalog.pdf');
-
-            document.getElementById('loadingOverlay').style.display = 'none';
-            if (!pdfCanceled) {
-                cart.forEach(item => logCatalogAction('RemoveProduct', item));
-                cart = [];
-                updateCartUI();
-            }
-        } catch(err) {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            document.getElementById('globalErrorMessage').innerText = 'PDF oluşturulurken bir hata oluştu.';
-            new bootstrap.Modal(document.getElementById('globalErrorModal')).show();
+            if (pdfCanceled) return;
+            // PDF must exist before committing the order. Save failures never clear the cart.
+            orderPayload.pdfBase64 = pdf.output('datauristring').split(',')[1];
+            button.textContent = 'Confirming…';
+            document.getElementById('cancelPdfBtn').disabled = true;
+            const response = await fetch('/Home/ConfirmOrder', {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': this.querySelector('[name="__RequestVerificationToken"]').value },
+                body: JSON.stringify(orderPayload)
+            });
+            if (response.redirected) throw new Error('Oturumunuz sona erdi. Lütfen yeniden giriş yapın.');
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.isSuccess) throw new Error(result.message || 'Sipariş kaydedilemedi. Lütfen tekrar deneyin.');
+            const saved = result.data;
+            // Download the archived document, including on an idempotent retry.
+            const pdfResponse = await fetch('/Orders/Pdf/' + saved.id);
+            if (!pdfResponse.ok || pdfResponse.redirected) throw new Error('Sipariş kaydedildi ancak PDF indirilemedi. Aynı bilgileri tekrar onaylayarak PDF alabilirsiniz; tekrar sipariş oluşmaz.');
+            const blob = await pdfResponse.blob();
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl; link.download = saved.orderNumber + '.pdf';
+            document.body.appendChild(link); link.click(); link.remove();
+            setTimeout(() => URL.revokeObjectURL(downloadUrl), 60000);
+            cart = [];
+            updateCartUI();
+            sessionStorage.removeItem('naif_pending_order');
+            document.getElementById('orderSuccessText').textContent = saved.orderNumber + ' — Siparişiniz alındı ve beklemede. Siparişlerim sayfasından takip edebilirsiniz.';
+            const savedLink = document.getElementById('orderSuccessPdf');
+            savedLink.href = '/Orders/Pdf/' + saved.id;
+            new bootstrap.Modal(document.getElementById('orderSuccessModal')).show();
+        } catch(err) { throw err; }
+        } catch (err) {
+            errorBox.textContent = err.message || 'Sipariş tamamlanamadı. Sepetiniz korundu; lütfen tekrar deneyin.';
+            new bootstrap.Modal(document.getElementById('customerModal')).show();
             console.error(err);
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('cancelPdfBtn').disabled = false;
+            button.disabled = false;
+            button.textContent = 'Confirm and PDF';
         }
     });
 });

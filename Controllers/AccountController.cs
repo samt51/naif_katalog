@@ -20,6 +20,7 @@ namespace naif_katalog.Controllers
         [HttpGet]
         public IActionResult Login()
         {
+            if (User.Identity?.IsAuthenticated == true) return RedirectToAction("Welcome", "Home");
             return View();
         }
 
@@ -44,7 +45,17 @@ namespace naif_katalog.Controllers
                 var handler = new JwtSecurityTokenHandler();
                 var jwtToken = handler.ReadJwtToken(token);
 
-                var claimsIdentity = new ClaimsIdentity(jwtToken.Claims, "Cookies");
+                var claims = jwtToken.Claims.Select(claim =>
+                    claim.Type is "role" or "roles"
+                        ? new Claim(ClaimTypes.Role, claim.Value)
+                        : claim).ToList();
+                if (!claims.Any(c => c.Type == ClaimTypes.Role))
+                {
+                    var rawRole = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+                    if (!string.IsNullOrWhiteSpace(rawRole))
+                        claims.Add(new Claim(ClaimTypes.Role, rawRole));
+                }
+                var claimsIdentity = new ClaimsIdentity(claims, "Cookies", ClaimTypes.Name, ClaimTypes.Role);
                 var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
                 await HttpContext.SignInAsync("Cookies", claimsPrincipal);
@@ -71,7 +82,7 @@ namespace naif_katalog.Controllers
                 var roleClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
                 if (roleClaim == "3")
                 {
-                    return RedirectToAction("Index", "Home");
+                    return RedirectToAction("Welcome", "Home");
                 }
 
                 return RedirectToAction("Dashboard", "Admin");
@@ -87,6 +98,16 @@ namespace naif_katalog.Controllers
             await HttpContext.SignOutAsync("Cookies");
             Response.Cookies.Delete("jwtToken");
             return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            if (User.Identity?.IsAuthenticated != true)
+                return RedirectToAction(nameof(Login));
+            var role = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")?.Value;
+            ViewBag.HomeUrl = role == "3" ? "/Home/Welcome" : "/Admin/Dashboard";
+            return View();
         }
 
         [HttpPost]

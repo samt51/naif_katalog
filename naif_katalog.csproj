@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.18.0" />
   </ItemGroup>
 
@@ -15,9 +16,11 @@
   <ItemGroup>
     <Content Update="wwwroot\images\**\*" CopyToPublishDirectory="Never" />
     <Content Update="wwwroot\images\login-bg.png" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="wwwroot\images\home\**\*" CopyToPublishDirectory="PreserveNewest" />
+    <Content Remove="App_Data\**\*" />
+    <None Update="App_Data\**\*" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
 </Project>
-
 
 

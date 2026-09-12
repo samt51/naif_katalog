@@ -1,0 +1,163 @@
+@model naif_katalog.Models.OrderSummary
+@{
+    ViewData["Title"] = Model.OrderNumber;
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var message = TempData["OrderMessage"] as string;
+    var messageOk = TempData["OrderMessageOk"] as bool? == true;
+}
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; flex-wrap:wrap;">
+    <div>
+        <a href="/Orders/Index" style="color:#64748b; text-decoration:none; font-size:13px; font-weight:600;">← Siparişler</a>
+        <h2 style="margin:8px 0 4px;">@Model.OrderNumber</h2>
+        <div style="color:#64748b; font-size:13px;">@Model.CreatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+        <div style="margin-top:10px;"><span class="orders-status orders-status-@((Model.Status ?? "Pending").ToLowerInvariant())">@OrderStatuses.Label(Model.Status)</span></div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        @if ((Model.Status ?? "Pending") != OrderStatuses.Accepted)
+        {
+            <form method="post" action="/Orders/UpdateStatus">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="status" value="Accepted" />
+                <button type="submit" class="btn btn-success" style="width:auto; padding:10px 16px;">Kabul et</button>
+            </form>
+        }
+        @if ((Model.Status ?? "Pending") != OrderStatuses.Cancelled)
+        {
+            <form method="post" action="/Orders/UpdateStatus">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="status" value="Cancelled" />
+                <button type="submit" class="btn btn-outline-danger" style="width:auto; padding:10px 16px;">İptal et</button>
+            </form>
+        }
+        @if ((Model.Status ?? "Pending") != OrderStatuses.Pending)
+        {
+            <form method="post" action="/Orders/UpdateStatus">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="status" value="Pending" />
+                <button type="submit" class="btn btn-outline-secondary" style="width:auto; padding:10px 16px;">Beklemede yap</button>
+            </form>
+        }
+        @if (Model.HasPdf)
+        {
+            <a href="/Orders/Pdf/@Model.Id" class="btn btn-dark" style="width:auto; padding:10px 16px; transform:none;">PDF İndir</a>
+        }
+        <form method="post" action="/Orders/RetryEmail/@Model.Id">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-primary" style="width:auto; padding:10px 16px;">Maili tekrar gönder</button>
+        </form>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @(messageOk ? "alert-success" : "alert-warning")">@message</div>
+}
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:16px;">
+    <div class="card" style="background:white; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.08);">
+        <div style="font-size:11px; letter-spacing:.8px; text-transform:uppercase; color:#64748b; font-weight:800; margin-bottom:12px;">Siparişi veren hesap</div>
+        <div style="font-weight:700; font-size:16px;">@(string.IsNullOrWhiteSpace(Model.AccountName) ? "-" : Model.AccountName)</div>
+        <div style="color:#475569; margin-top:6px;">Firma: @(string.IsNullOrWhiteSpace(Model.AccountCompany) ? "-" : Model.AccountCompany)</div>
+        <div style="color:#475569;">E-posta: @(string.IsNullOrWhiteSpace(Model.AccountEmail) ? "-" : Model.AccountEmail)</div>
+        <div style="color:#94a3b8; font-size:12px; margin-top:8px;">Hesap ID: @Model.AccountId</div>
+    </div>
+    <div class="card" style="background:white; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.08);">
+        <div style="font-size:11px; letter-spacing:.8px; text-transform:uppercase; color:#64748b; font-weight:800; margin-bottom:12px;">Customer Information (form)</div>
+        <div style="font-weight:700; font-size:16px;">@Model.FirstName @Model.LastName</div>
+        <div style="color:#475569; margin-top:6px;">Firma: @Model.CompanyName</div>
+        <div style="color:#475569;">Telefon: @Model.PhoneNumber</div>
+        <div style="margin-top:10px;">
+            @if (Model.EmailStatus == "Sent")
+            {
+                <span class="badge bg-success">Mail gönderildi</span>
+                if (Model.EmailSentUtc.HasValue)
+                {
+                    <span style="color:#64748b; font-size:12px; margin-left:6px;">@Model.EmailSentUtc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                }
+            }
+            else if (Model.EmailStatus == "Failed")
+            {
+                <span class="badge bg-danger">Mail gönderilemedi</span>
+            }
+            else
+            {
+                <span class="badge bg-warning text-dark">Mail bekliyor</span>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card" style="background:white; border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.08); overflow:hidden;">
+    <div style="padding:16px 20px; border-bottom:1px solid #e2e8f0; font-weight:700;">Sipariş edilen ürünler · @Model.TotalQuantity adet</div>
+    <div class="table-responsive">
+        <table class="table" style="margin-bottom:0;">
+            <thead style="background:#f8fafc;">
+                <tr>
+                    <th style="padding:12px 16px;"></th>
+                    <th style="padding:12px 16px;">Kod</th>
+                    <th style="padding:12px 16px;">Kategori / Özellik</th>
+                    <th style="padding:12px 16px;">Taşlar</th>
+                    <th style="padding:12px 16px;">Adet</th>
+                    <th style="padding:12px 16px; text-align:right;">Fiyat</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    var specs = string.Join(" · ", new[] { item.Ayar, item.Renk, item.Gram }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                    <tr style="border-bottom:1px solid #e2e8f0; vertical-align:top;">
+                        <td style="padding:12px 16px;">
+                            @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                            {
+                                <img src="@item.ImageUrl" alt="@item.Code" class="orders-thumb" />
+                            }
+                            else
+                            {
+                                <span class="orders-thumb orders-thumb-empty"><i class="fas fa-gem"></i></span>
+                            }
+                        </td>
+                        <td style="padding:12px 16px;">
+                            <div style="font-weight:700;">@item.Code</div>
+                            @if (!string.IsNullOrWhiteSpace(item.ProductName))
+                            {
+                                <div style="color:#64748b; font-size:12px;">@item.ProductName</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(item.Note))
+                            {
+                                <div style="color:#92400e; font-size:12px; margin-top:4px;">Not: @item.Note</div>
+                            }
+                        </td>
+                        <td style="padding:12px 16px;">
+                            <div>@(item.Category ?? "-")</div>
+                            @if (!string.IsNullOrWhiteSpace(specs))
+                            {
+                                <div style="color:#64748b; font-size:12px; margin-top:4px;">@specs</div>
+                            }
+                        </td>
+                        <td style="padding:12px 16px; font-size:13px;">
+                            @if (item.Stones == null || item.Stones.Count == 0)
+                            {
+                                <span style="color:#94a3b8;">Taş yok</span>
+                            }
+                            else
+                            {
+                                foreach (var stone in item.Stones)
+                                {
+                                    var title = string.Join(" · ", new[] { stone.Type, stone.Clarity, stone.Color }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                                    var meta = string.Join(" · ", new[] { stone.Quantity, stone.TotalCarat }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                                    <div style="margin-bottom:4px;">@title @(string.IsNullOrWhiteSpace(meta) ? "" : $"({meta})")</div>
+                                }
+                            }
+                        </td>
+                        <td style="padding:12px 16px; font-weight:700;">@(item.Quantity > 0 ? item.Quantity : 1)</td>
+                        <td style="padding:12px 16px; text-align:right; font-weight:700; color:#047857;">@(item.Price ?? "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

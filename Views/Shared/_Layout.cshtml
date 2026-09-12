@@ -12,10 +12,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/naif_katalog.styles.css" asp-append-version="true" />
+    @if (ViewData["IsHomePage"] is true)
+    {
+        <link rel="stylesheet" href="~/css/home.css" asp-append-version="true" />
+    }
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
-<body class="customer-site">
+<body class="customer-site @(ViewData["IsHomePage"] is true ? "home-page" : "")">
     <div id="app-version" data-version="v.1.0.0" hidden>v.1.0.0</div>
     <header class="customer-header sticky-top bg-white">
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
@@ -31,10 +35,20 @@
                     </button>
                 }
 
-                <a class="navbar-brand customer-nav-logo" asp-area="" asp-controller="Home" asp-action="Index">
+                @if (ViewData["IsHomePage"] is true)
+                {
+                    <div class="home-navigation" aria-label="Ana sayfa bağlantıları">
+                        <a href="/Home/Index">Tüm ürünler</a>
+                        <a href="#new-arrivals">Yeni eklenenler</a>
+                        <a href="#categories">Kategoriler</a>
+                    </div>
+                }
+
+                <a class="navbar-brand customer-nav-logo" asp-area="" asp-controller="Home" asp-action="Welcome">
                     <img src="https://static.wixstatic.com/media/3afb87_01283146a20c43eda2fa6ba343107de9~mv2.png/v1/fill/w_299,h_95,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/1730592442899-7c4af1dc-40ee-4adf-80ba-dd9cd7379dee_1-Photoroom.png" alt="Naif Jewellery" height="40" />
                 </a>
 
+                <div class="customer-nav-tools">
                 <form class="search-form customer-search-form" action="@Url.Action("Index", "Home")" method="get" id="searchForm">
                     <div class="search-wrapper">
                         <input type="text" name="search" id="searchInput" class="search-input" placeholder="Ürün ara..." autocomplete="off"
@@ -66,6 +80,14 @@
                         <span class="d-none d-lg-inline" id="pricingModeButtonText">B2C</span>
                     </button>
 
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a href="/Orders/Mine" class="btn btn-outline-dark btn-catalog-main customer-orders-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Mine" || ViewContext.RouteData.Values["action"]?.ToString() == "MineDetail" ? "active" : "")">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 5v15a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5l-3-3z"></path><path d="M3 5h18"></path><path d="M8 10h8"></path><path d="M8 14h5"></path></svg>
+                            <span class="d-none d-lg-inline">Siparişlerim</span>
+                        </a>
+                    }
+
                     <button class="btn btn-outline-primary btn-catalog-main" id="myCatalogBtn" type="button" data-bs-toggle="offcanvas" data-bs-target="#catalogOffcanvas">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M6 2L3 5v15a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5l-3-3z"></path>
@@ -96,6 +118,7 @@
                         </a>
                     }
                 </div>
+                </div>
             </div>
         </nav>
     </header>
@@ -115,7 +138,7 @@
             <div id="catalogItemsOffcanvas" class="flex-grow-1 overflow-auto mb-3"></div>
             <div class="d-flex gap-2 mt-auto">
                 <button class="btn btn-outline-danger w-50" id="clearCatalogBtn">Temizle</button>
-                <button class="btn btn-success w-50" data-bs-toggle="modal" data-bs-target="#customerModal">Onayla</button>
+                <button type="button" class="btn btn-success w-50" id="openCustomerModalBtn">Onayla</button>
             </div>
         </div>
     </div>
@@ -123,34 +146,50 @@
     <!-- Modal -->
     <div class="modal fade" id="customerModal" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content">
+            <form class="modal-content" id="customerOrderForm">
+                @Html.AntiForgeryToken()
                 <div class="modal-header">
                     <h5 class="modal-title">Müşteri Bilgileri</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <p class="text-muted small mb-3">Bu bilgiler zorunludur. Başka biri adına sipariş veriyorsanız o kişinin bilgilerini yazın.</p>
                     <div class="mb-3">
-                        <label>Firma Adı</label>
-                        <input type="text" id="companyName" class="form-control" />
+                        <label for="companyName">Firma Adı <span class="text-danger">*</span></label>
+                        <input type="text" id="companyName" name="companyName" class="form-control" required maxlength="200" autocomplete="organization" />
                     </div>
                     <div class="mb-3">
-                        <label>Ad</label>
-                        <input type="text" id="firstName" class="form-control" />
+                        <label for="firstName">Ad <span class="text-danger">*</span></label>
+                        <input type="text" id="firstName" name="firstName" class="form-control" required maxlength="100" autocomplete="given-name" />
                     </div>
                     <div class="mb-3">
-                        <label>Soyad</label>
-                        <input type="text" id="lastName" class="form-control" />
+                        <label for="lastName">Soyad <span class="text-danger">*</span></label>
+                        <input type="text" id="lastName" name="lastName" class="form-control" required maxlength="100" autocomplete="family-name" />
                     </div>
                     <div class="mb-3">
-                        <label>Telefon Numarası</label>
-                        <input type="text" id="phoneNumber" class="form-control" />
+                        <label for="phoneNumber">Telefon Numarası <span class="text-danger">*</span></label>
+                        <input type="tel" id="phoneNumber" minlength="7" name="phoneNumber" class="form-control" required maxlength="40" autocomplete="tel" />
                     </div>
                 </div>
+                <div id="orderFormError" class="text-danger px-3" role="alert"></div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary w-100" id="completePdfBtn">Tamam (PDF İndir)</button>
+                    <button type="submit" class="btn btn-primary w-100 notranslate" translate="no" id="completePdfBtn">Confirm and PDF</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="orderSuccessModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Sipariş alındı</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p id="orderSuccessText" role="status"></p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a id="orderSuccessPdf" class="btn btn-outline-dark" href="#">PDF'yi tekrar indir</a>
+                    <a class="btn btn-dark" href="/Orders/Mine">Siparişlerim</a>
                 </div>
             </div>
-        </div>
+        </div></div>
     </div>
 
     <div class="modal fade" id="b2bPasswordModal" tabindex="-1" aria-hidden="true">

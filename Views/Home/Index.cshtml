@@ -654,6 +654,7 @@
                 @{
                     var currentSort = ViewBag.CurrentSort as string;
                 }
+                <option value="newest" selected="@(currentSort == "newest")">En yeni eklenenler</option>
                 @if (currentSort == "price_asc") {
                     <option value="">Sıralama: Önerilen</option>
                     <option value="price_asc" selected>Fiyata Göre Artan</option>
@@ -663,7 +664,7 @@
                     <option value="price_asc">Fiyata Göre Artan</option>
                     <option value="price_desc" selected>Fiyata Göre Azalan</option>
                 } else {
-                    <option value="" selected>Sıralama: Önerilen</option>
+                    <option value="" selected="@(currentSort != "newest")">Sıralama: Önerilen</option>
                     <option value="price_asc">Fiyata Göre Artan</option>
                     <option value="price_desc">Fiyata Göre Azalan</option>
                 }
@@ -867,5 +868,4 @@
     // Initialize UI
     updateCartUI();
 </script>
-
 

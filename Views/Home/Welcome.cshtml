@@ -1,0 +1,117 @@
+@model naif_katalog.Models.HomePageViewModel
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Ana Sayfa";
+    ViewData["IsHomePage"] = true;
+    var firstName = User.FindFirstValue(ClaimTypes.GivenName) ?? User.FindFirstValue("given_name") ?? "";
+    var lastName = User.FindFirstValue(ClaimTypes.Surname) ?? User.FindFirstValue("family_name") ?? "";
+    var email = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email") ?? "";
+}
+
+<section class="home-hero" aria-labelledby="hero-title">
+    <img class="home-hero-image" src="~/images/home/naif-hero.png" asp-append-version="true" alt="Pırlanta küpe ve yüzüklerle Naif'in zamansız zarafeti" fetchpriority="high" width="1774" height="887" />
+    <div class="home-hero-shade"></div>
+    <div class="home-hero-copy">
+        <p class="home-eyebrow">NAIF JEWELLERY</p>
+        <h1 id="hero-title">Zamansız bir ışıltı.</h1>
+        <p>Her detayında zarafet. Her parçasında yeni bir ilham.</p>
+        <a class="home-hero-button" href="/Home/Index">ÜRÜNLERİ KEŞFET</a>
+    </div>
+    <a href="#new-arrivals" class="home-scroll-cue" aria-label="Yeni eklenen ürünlere git">↓</a>
+</section>
+
+<section class="home-section home-arrivals" id="new-arrivals" aria-labelledby="arrivals-title">
+    <div class="home-section-heading">
+        <h2 id="arrivals-title">Yeni eklenenler</h2>
+        <a class="home-text-link" href="/Home/Index?sortOrder=newest">TÜMÜNÜ GÖR <span aria-hidden="true">↗</span></a>
+    </div>
+    @if (Model.LoadFailed)
+    {
+        <p class="home-status" role="status">Bazı içerikler şu anda yüklenemedi. <a href="/Home/Welcome">Tekrar deneyin</a>.</p>
+    }
+    @if (Model.NewProducts.Count > 0)
+    {
+        <div class="home-slider" role="region" aria-roledescription="karusel" aria-label="Yeni eklenen ürünler">
+            <div class="home-product-track" id="new-products" tabindex="0" aria-label="Ürünler; kaydırarak diğer ürünleri görebilirsiniz">
+                @foreach (var product in Model.NewProducts)
+                {
+                    <article class="home-product-card">
+                        <a href="@Url.Action("Detail", "Home", new { id = product.Id })" class="home-product-link">
+                            <div class="home-product-image">
+                                @if (product.Images?.FirstOrDefault() is string productImage)
+                                {
+                                    <img src="@productImage" alt="@product.Name @product.Code" loading="lazy" decoding="async" />
+                                }
+                                else
+                                {
+                                    <div class="home-image-pending"><span class="home-monogram notranslate" translate="no">naif</span><span>Görsel hazırlanıyor</span></div>
+                                }
+                            </div>
+                            <div class="home-product-info">
+                                <span>@(string.IsNullOrWhiteSpace(product.Name) ? product.Code : product.Name)<small>@product.Code</small></span>
+                                <span class="home-product-price notranslate" translate="no" data-b2b-price="@product.CalculatedPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)">@product.CalculatedPrice.ToString("N0") $</span>
+                            </div>
+                        </a>
+                    </article>
+                }
+            </div>
+            <button class="home-slider-arrow home-slider-prev" type="button" aria-label="Önceki ürünler" aria-controls="new-products">‹</button>
+            <button class="home-slider-arrow home-slider-next" type="button" aria-label="Sonraki ürünler" aria-controls="new-products">›</button>
+        </div>
+        <div class="home-slider-bottom"><span>YENİ DETAYLAR, YENİ İLHAM</span><span id="slider-position" aria-live="polite"></span></div>
+    }
+    else if (!Model.LoadFailed)
+    {
+        <p class="home-status">Yeni ürünler eklendiğinde burada görebilirsiniz.</p>
+    }
+</section>
+
+<section class="home-section home-categories" id="categories" aria-labelledby="categories-title">
+    <div class="home-centered-heading"><p class="home-eyebrow">KEŞFEDİN</p><h2 id="categories-title">Kategoriler</h2></div>
+    <div class="home-category-grid">
+        @foreach (var category in Model.Categories)
+        {
+            <a href="@Url.Action("Index", "Home", new { categoryId = category.Id })" class="home-category-card">
+                @if (category.ImageUrl != null)
+                {
+                    <img src="@category.ImageUrl" alt="@category.Name" loading="lazy" decoding="async" />
+                }
+                else
+                {
+                    <span class="home-category-placeholder notranslate" translate="no" aria-hidden="true">naif<span>FINE JEWELLERY</span></span>
+                }
+                <span class="home-category-name">@category.Name <span aria-hidden="true">↗</span></span>
+            </a>
+        }
+    </div>
+    @if (Model.Categories.Count == 0 && !Model.LoadFailed)
+    {
+        <p class="home-status">Kategoriler yakında burada.</p>
+    }
+</section>
+
+<section class="home-newsletter" aria-labelledby="newsletter-title">
+    <div class="home-newsletter-copy"><h2 id="newsletter-title">Güncel kalın</h2><p>Yeni ürünlerden ve Naif dünyasından ilham veren yeniliklerden haberdar olun.</p></div>
+    <form asp-action="Subscribe" asp-controller="Home" method="post" class="home-newsletter-form" id="newsletter-form">
+        <div class="home-newsletter-names">
+            <div><label class="visually-hidden" for="newsletter-first">Ad</label><input id="newsletter-first" name="FirstName" placeholder="Ad" value="@firstName" autocomplete="given-name" maxlength="80" required /></div>
+            <div><label class="visually-hidden" for="newsletter-last">Soyad</label><input id="newsletter-last" name="LastName" placeholder="Soyad" value="@lastName" autocomplete="family-name" maxlength="80" required /></div>
+        </div>
+        <label class="visually-hidden" for="newsletter-email">E-posta adresi</label>
+        <input type="email" id="newsletter-email" name="Email" placeholder="E-posta adresiniz" value="@email" autocomplete="email" maxlength="254" required />
+        <button type="submit">ABONE OL</button>
+        <p class="home-newsletter-message" id="newsletter-message" role="status" aria-live="polite"></p>
+    </form>
+</section>
+
+<div class="home-brand-strip"><span>ZAMANSIZ TASARIMLAR</span><span>ÖZENLİ İŞÇİLİK</span><span>İLHAM VEREN DETAYLAR</span><span>NAIF JEWELLERY</span></div>
+<div class="home-footer">
+    <a href="/Home/Welcome" class="home-footer-logo notranslate" translate="no" aria-label="Naif ana sayfa">naif<span>FINE JEWELLERY</span></a>
+    <div><h2>Keşfedin</h2><a href="/Home/Index">Tüm ürünler</a><a href="#new-arrivals">Yeni eklenenler</a><a href="#categories">Kategoriler</a></div>
+    <div><h2>Naif dünyası</h2><a href="#newsletter-title">Bültenimize katılın</a><p>Her detayında zarafet.</p></div>
+    <a class="home-back-top" href="#hero-title" aria-label="Sayfanın başına dön">↑</a>
+</div>
+
+@section Scripts {
+    <script src="~/js/home.js" asp-append-version="true"></script>
+}

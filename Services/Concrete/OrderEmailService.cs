@@ -19,7 +19,7 @@ namespace naif_katalog.Services.Concrete
             _logger = logger;
         }
 
-        public async Task<bool> SendNewOrderAsync(ConfirmOrderRequest order, string? accountName, string? accountEmail, CancellationToken cancellationToken = default)
+        public async Task<bool> SendNewOrderAsync(OrderRecord order, CancellationToken cancellationToken = default)
         {
             var to = _configuration["Email:OrderNotifyTo"];
             var host = _configuration["Email:Host"];
@@ -35,8 +35,8 @@ namespace naif_katalog.Services.Concrete
             }
 
             var port = _configuration.GetValue("Email:Port", 587);
-            var orderNo = "NAIF-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-            var html = BuildHtml(order, accountName, accountEmail, orderNo);
+            var orderNo = order.OrderNumber;
+            var html = BuildHtml(order, orderNo);
 
             using var message = new MailMessage
             {
@@ -69,14 +69,14 @@ namespace naif_katalog.Services.Concrete
             }
         }
 
-        private static string BuildHtml(ConfirmOrderRequest order, string? accountName, string? accountEmail, string orderNo)
+        private static string BuildHtml(OrderRecord order, string orderNo)
         {
             var enc = HtmlEncoder.Default;
             var company = Display(order.CompanyName);
             var customer = string.Join(" ", new[] { order.FirstName, order.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)));
             var phone = Display(order.PhoneNumber);
-            var account = Display(accountName);
-            var accountMail = Display(accountEmail);
+            var account = Display(string.Join(" ", new[] { order.AccountCompany, order.AccountName }.Where(x => !string.IsNullOrWhiteSpace(x))));
+            var accountMail = Display(order.AccountEmail);
             var when = DateTime.Now.ToString("dd.MM.yyyy HH:mm", new CultureInfo("tr-TR"));
             var items = order.Items ?? new List<ConfirmOrderItem>();
             var totalQty = items.Sum(i => i.Quantity > 0 ? i.Quantity : 1);
@@ -142,7 +142,7 @@ namespace naif_katalog.Services.Concrete
                       <td style='padding:4px 0;color:#0f172a;font-size:13px;font-weight:700;'>{phone}</td>
                     </tr>
                     <tr>
-                      <td style='padding:4px 0;color:#64748b;font-size:13px;'>Hesap</td>
+                      <td style='padding:4px 0;color:#64748b;font-size:13px;'>Siparişi veren hesap</td>
                       <td style='padding:4px 0;color:#0f172a;font-size:13px;font-weight:700;'>{account} {(accountMail == "-" ? "" : $"({accountMail})")}</td>
                     </tr>
                   </table>

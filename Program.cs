@@ -30,13 +30,28 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
 builder.Services.AddScoped<IOrderEmailService, OrderEmailService>();
+builder.Services.AddSingleton<naif_katalog.Services.Concrete.HomeContentStore>();
+builder.Services.AddSingleton<naif_katalog.Services.Abstract.IOrderStore, naif_katalog.Services.Concrete.OrderStore>();
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 30 * 1024 * 1024);
 
 builder.Services.AddAuthentication("Cookies")
     .AddCookie("Cookies", options =>
     {
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
     });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Admin", policy => policy.RequireAssertion(context =>
+        context.User.Identity?.IsAuthenticated == true &&
+        context.User.Claims.Any(claim =>
+            (claim.Type == System.Security.Claims.ClaimTypes.Role
+             || claim.Type.Equals("role", StringComparison.OrdinalIgnoreCase)
+             || claim.Type.Equals("roles", StringComparison.OrdinalIgnoreCase)
+             || claim.Type.EndsWith("/role", StringComparison.OrdinalIgnoreCase))
+            && (claim.Value == "1" || claim.Value == "2"))));
+});
 
 var app = builder.Build();
 
@@ -60,4 +75,3 @@ app.MapControllerRoute(
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
-

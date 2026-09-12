@@ -21,8 +21,14 @@
                 <button type="button" class="sidebar-close" id="adminSidebarClose" aria-label="Menüyü kapat"><i class="fas fa-xmark"></i></button>
             </div>
             <div class="sidebar-menu">
+                <a href="/HomeContent/Index" class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "HomeContent" ? "active" : "")">
+                    <i class="fas fa-image"></i> Ana Sayfa İçerikleri
+                </a>
                 <a href="/Admin/Dashboard" class="menu-item @(ViewContext.RouteData.Values["Action"].ToString() == "Dashboard" ? "active" : "")">
                     <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="/Orders/Index" class="menu-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Orders" ? "active" : "")">
+                    <i class="fas fa-shopping-bag"></i> Siparişler
                 </a>
                 <a href="/Product/Index" class="menu-item @(ViewContext.RouteData.Values["Controller"].ToString() == "Product" ? "active" : "")">
                     <i class="fas fa-ring"></i> Ürün Yönetimi
@@ -144,5 +150,3 @@
     <partial name="_PerformanceDiagnostics" />
 </body>
 </html>
-
-

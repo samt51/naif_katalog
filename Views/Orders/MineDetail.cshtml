@@ -1,0 +1,100 @@
+@model naif_katalog.Models.OrderSummary
+@{
+    ViewData["Title"] = Model.OrderNumber;
+    var orderedAt = Model.CreatedUtc.ToLocalTime();
+}
+
+<div class="my-orders">
+    <a class="my-orders-back" href="/Orders/Mine">← Siparişlerim</a>
+    <div class="my-order-detail-head">
+        <div>
+            <h1>@Model.OrderNumber</h1>
+            <p>@orderedAt.ToString("dd.MM.yyyy HH:mm")</p>
+        </div>
+        <span class="orders-status orders-status-@((Model.Status ?? "Pending").ToLowerInvariant())">@OrderStatuses.Label(Model.Status)</span>
+    </div>
+
+    <div class="my-order-info-grid">
+        <section>
+            <h2>Teslim / müşteri bilgileri</h2>
+            <p><strong>@Model.FirstName @Model.LastName</strong></p>
+            <p>@Model.CompanyName</p>
+            <p>@Model.PhoneNumber</p>
+        </section>
+        <section>
+            <h2>Durum</h2>
+            @if ((Model.Status ?? "Pending") == OrderStatuses.Accepted)
+            {
+                <p>Siparişiniz kabul edildi.</p>
+            }
+            else if ((Model.Status ?? "Pending") == OrderStatuses.Cancelled)
+            {
+                <p>Bu sipariş iptal edildi.</p>
+            }
+            else
+            {
+                <p>Siparişiniz incelenecek. Kabul veya iptal olunca burada güncellenir.</p>
+            }
+            @if (Model.HasPdf)
+            {
+                <a href="/Orders/Pdf/@Model.Id" class="btn btn-outline-dark btn-sm rounded-pill px-3 mt-2">PDF indir</a>
+            }
+        </section>
+    </div>
+
+    <section class="my-order-items">
+        <h2>Sipariş edilen ürünler</h2>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Kod</th>
+                        <th>Özellik</th>
+                        <th>Taş</th>
+                        <th>Adet</th>
+                        <th class="text-end">Fiyat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        var specs = string.Join(" · ", new[] { item.Ayar, item.Renk, item.Gram }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                {
+                                    <img src="@item.ImageUrl" alt="@item.Code" class="my-order-thumb" />
+                                }
+                                else
+                                {
+                                    <span class="my-order-thumb my-order-thumb-empty"><i class="fas fa-gem"></i></span>
+                                }
+                            </td>
+                            <td>
+                                <strong>@item.Code</strong>
+                                @if (!string.IsNullOrWhiteSpace(item.Note))
+                                {
+                                    <div class="text-muted small">Not: @item.Note</div>
+                                }
+                            </td>
+                            <td>@(item.Category ?? "-")@(string.IsNullOrWhiteSpace(specs) ? "" : " · " + specs)</td>
+                            <td>
+                                @if (item.Stones == null || item.Stones.Count == 0)
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                                else
+                                {
+                                    @string.Join(", ", item.Stones.Select(s => string.Join(" ", new[] { s.Type, s.Clarity, s.TotalCarat }.Where(x => !string.IsNullOrWhiteSpace(x)))))
+                                }
+                            </td>
+                            <td>@(item.Quantity > 0 ? item.Quantity : 1)</td>
+                            <td class="text-end">@(item.Price ?? "-")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

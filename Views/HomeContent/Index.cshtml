@@ -1,0 +1,50 @@
+@model List<naif_katalog.Models.HomeCategoryCard>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Ana Sayfa İçerikleri";
+    var subscribers = ViewBag.Subscribers as List<naif_katalog.Models.NewsletterSubscription> ?? [];
+}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div><h1 class="h3">Ana Sayfa İçerikleri</h1><p class="text-muted mb-0">Ana kategori görselleri ve bülten abonelikleri</p></div>
+    <a href="/Home/Welcome" class="btn btn-outline-dark">Ana sayfayı görüntüle</a>
+</div>
+@if (TempData["ContentSuccess"] != null) { <div class="alert alert-success" role="status">@TempData["ContentSuccess"]</div> }
+@if (TempData["ContentError"] != null) { <div class="alert alert-danger" role="alert">@TempData["ContentError"]</div> }
+@if (ViewBag.LoadFailed == true) { <div class="alert alert-warning">Kategoriler yüklenemedi. Lütfen sayfayı yenileyin.</div> }
+<p>Görseller <strong>5:8</strong> oranında gösterilir. Önerilen boyut <strong>1000 × 1600 piksel</strong>; JPG, PNG veya WebP, en fazla 8 MB. Farklı oranlar ortadan kırpılır. Kategori adı görselin altına otomatik yerleşir.</p>
+<div class="row g-4 mb-5">
+@foreach (var category in Model)
+{
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100">
+            @if (category.ImageUrl != null)
+            {
+                <img src="@category.ImageUrl" alt="@category.Name" style="aspect-ratio:5/8;object-fit:cover;width:100%;" />
+            }
+            else { <div class="d-flex align-items-center justify-content-center bg-light text-muted" style="aspect-ratio:5/8;">Görsel henüz tanımlanmadı</div> }
+            <div class="card-body">
+                <h2 class="h5">@category.Name</h2>
+                <form asp-action="UploadCategoryImage" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="categoryId" value="@category.Id" />
+                    <label for="image-@category.Id" class="form-label">Kategori görseli</label>
+                    <input id="image-@category.Id" type="file" name="file" accept="image/jpeg,image/png,image/webp" class="form-control mb-3" required />
+                    <button class="btn btn-dark w-100" type="submit">Görseli kaydet</button>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+</div>
+<h2 class="h4">Bülten aboneleri <span class="text-muted">(@subscribers.Count)</span></h2>
+<p class="text-muted">Bu bölüm abonelik kayıtlarını toplar. Bülten gönderimi ayrıca yapılır.</p>
+<div class="table-responsive">
+    <table class="table bg-white"><thead><tr><th>Ad</th><th>Soyad</th><th>E-posta</th><th>Kayıt tarihi (UTC)</th></tr></thead>
+        <tbody>
+        @foreach (var subscriber in subscribers.OrderByDescending(s => s.SubscribedAt))
+        {
+            <tr><td>@subscriber.FirstName</td><td>@subscriber.LastName</td><td>@subscriber.Email</td><td>@subscriber.SubscribedAt.ToString("dd.MM.yyyy HH:mm")</td></tr>
+        }
+        @if (subscribers.Count == 0) { <tr><td colspan="4" class="text-muted">Henüz bülten aboneliği bulunmuyor.</td></tr> }
+        </tbody>
+    </table>
+</div>

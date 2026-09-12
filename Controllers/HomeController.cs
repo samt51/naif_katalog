@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using naif_katalog.Models;
@@ -18,6 +19,43 @@ public class HomeController : Controller
         _mediator = mediator;
         _memoryCache = memoryCache;
         _orderEmailService = orderEmailService;
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> Welcome([FromServices] naif_katalog.Services.Concrete.HomeContentStore store)
+    {
+        var productsTask = _mediator.Send(new GetAllProductsQueryRequest
+        {
+            Page = 1, PageSize = 12, ColumnIndex = 0, OrderBy = "desc"
+        });
+        var categoriesTask = _mediator.Send(new naif_katalog.Core.Features.CategoryFeature.Queries.GetAllCategoriesQueryRequest());
+        await Task.WhenAll(productsTask, categoriesTask);
+        var products = await productsTask;
+        var categories = await categoriesTask;
+        return View(new HomePageViewModel
+        {
+            NewProducts = products?.isSuccess == true ? products.data ?? [] : [],
+            Categories = (categories?.data ?? []).Where(c => c.ParentId == 0).OrderBy(c => c.OrderIndex)
+                .Select(c => new HomeCategoryCard(c.Id, c.Name, store.CategoryImage(c.Id))).ToList(),
+            LoadFailed = products?.isSuccess != true || categories?.isSuccess != true
+        });
+    }
+
+    [HttpPost, Microsoft.AspNetCore.Authorization.Authorize, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Subscribe(NewsletterSubscription subscription,
+        [FromServices] naif_katalog.Services.Concrete.HomeContentStore store)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(new { message = "Ad, soyad ve geçerli bir e-posta adresi girin." });
+        try
+        {
+            await store.Subscribe(subscription);
+            return Json(new { message = "Teşekkürler! Bülten aboneliğiniz kaydedildi." });
+        }
+        catch (IOException)
+        {
+            return StatusCode(503, new { message = "Abonelik şu anda kaydedilemedi. Lütfen tekrar deneyin." });
+        }
     }
 
     public async Task<IActionResult> Detail(int id)
@@ -128,29 +166,62 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    [IgnoreAntiforgeryToken]
-    public async Task<IActionResult> ConfirmOrder([FromBody] ConfirmOrderRequest request)
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(30 * 1024 * 1024)]
+    public async Task<IActionResult> ConfirmOrder([FromBody] ConfirmOrderRequest request, [FromServices] IOrderStore orders)
     {
-        if (User.Identity?.IsAuthenticated != true)
-            return Unauthorized();
+        if (request == null || !ModelState.IsValid || request.RequestId == Guid.Empty)
+            return BadRequest(new { isSuccess = false, message = "Firma, ad, soyad, telefon ve sipariş bilgileri zorunludur." });
 
-        if (request == null || request.Items == null || request.Items.Count == 0)
-            return BadRequest(new { isSuccess = false, message = "Sipariş ürünü bulunamadı." });
+        var account = AccountFromUser();
+        if (account.Id <= 0)
+            return Unauthorized(new { isSuccess = false, message = "Oturumunuz sona erdi. Lütfen yeniden giriş yapın." });
 
-        var accountName = string.Join(" ", new[]
+        OrderRecord saved;
+        try
         {
-            User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.GivenName)?.Value,
-            User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Surname)?.Value,
+            saved = await orders.CreateOrGetAsync(request, account);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { isSuccess = false, message = ex.Message });
+        }
+        catch (IOException)
+        {
+            return StatusCode(503, new { isSuccess = false, message = "Sipariş şu anda kaydedilemedi. Lütfen tekrar deneyin." });
+        }
+
+        if (!string.Equals(saved.EmailStatus, "Sent", StringComparison.OrdinalIgnoreCase))
+        {
+            var sent = await _orderEmailService.SendNewOrderAsync(saved);
+            saved = await orders.UpdateEmailStatusAsync(saved.Id, sent) ?? saved;
+        }
+
+        return Json(new { isSuccess = true, data = saved.ToSummary() });
+    }
+
+    private OrderAccountSnapshot AccountFromUser()
+    {
+        var userIdClaim = User.Claims.FirstOrDefault(c =>
+            c.Type == ClaimTypes.NameIdentifier || c.Type == "id" || c.Type == "userId" || c.Type == "sub" || c.Type == "nameid")?.Value;
+        int.TryParse(userIdClaim, out var accountId);
+        var name = string.Join(" ", new[]
+        {
+            User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value,
+            User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Surname)?.Value,
             User.Identity?.Name
         }.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct());
-        var accountEmail = User.Claims.FirstOrDefault(c =>
-            c.Type == System.Security.Claims.ClaimTypes.Email || c.Type == "email")?.Value;
-
-        var sent = await _orderEmailService.SendNewOrderAsync(request, accountName, accountEmail);
-        if (!sent)
-            return StatusCode(500, new { isSuccess = false, message = "Sipariş maili gönderilemedi." });
-
-        return Json(new { isSuccess = true });
+        var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value ?? "";
+        var company = User.Claims.FirstOrDefault(c =>
+            c.Type == "companyName" || c.Type == "company" || c.Type == "firma")?.Value ?? "";
+        return new OrderAccountSnapshot
+        {
+            Id = accountId,
+            Name = string.IsNullOrWhiteSpace(name) ? (email.Length > 0 ? email : "Hesap " + accountId) : name,
+            Email = email,
+            Company = company
+        };
     }
 
     private async Task<(Product? Product, List<Product> Products)> FindProductForDetail(int id)
@@ -213,7 +284,7 @@ public class HomeController : Controller
                 _ => 0
             };
 
-            var orderBy = sortOrder == "price_desc" ? "desc" : "asc";
+            var orderBy = sortOrder is "price_desc" or "newest" ? "desc" : "asc";
 
             var productsTask = _mediator.Send(new GetAllProductsQueryRequest
             {
@@ -443,4 +514,3 @@ public sealed class CatalogActionLogRequest
     public int? Quantity { get; set; }
     public string? Note { get; set; }
 }
-

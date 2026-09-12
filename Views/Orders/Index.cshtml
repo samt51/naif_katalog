@@ -1,0 +1,299 @@
+@model List<naif_katalog.Models.OrderSummary>
+@{
+    ViewData["Title"] = "Siparişler";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    var currentPage = (int)(ViewBag.Page ?? 1);
+    var totalPages = (int)(ViewBag.TotalPages ?? 1);
+    var total = (int)(ViewBag.Total ?? 0);
+    var filter = ViewBag.Filter as naif_katalog.Models.OrderListFilter ?? new();
+    var chips = new List<(string Label, string Value)>();
+    if (filter.FromDate.HasValue || filter.ToDate.HasValue)
+    {
+        var fromText = filter.FromDate?.ToString("dd.MM.yyyy") ?? "…";
+        var toText = filter.ToDate?.ToString("dd.MM.yyyy") ?? "…";
+        chips.Add(("Tarih", fromText == toText ? fromText : fromText + " – " + toText));
+    }
+    if (!string.IsNullOrWhiteSpace(filter.OrderNumber)) chips.Add(("Sipariş no", filter.OrderNumber));
+    if (!string.IsNullOrWhiteSpace(filter.Account)) chips.Add(("Hesap", filter.Account));
+    if (!string.IsNullOrWhiteSpace(filter.Customer)) chips.Add(("Müşteri", filter.Customer));
+    if (!string.IsNullOrWhiteSpace(filter.Phone)) chips.Add(("Telefon", filter.Phone));
+    if (!string.IsNullOrWhiteSpace(filter.ProductCode)) chips.Add(("Ürün", filter.ProductCode));
+    if (!string.IsNullOrWhiteSpace(filter.EmailStatus)) chips.Add(("Mail", filter.EmailStatus switch
+    {
+        "Sent" => "Gönderildi",
+        "Failed" => "Gönderilemedi",
+        "Pending" => "Bekliyor",
+        _ => filter.EmailStatus
+    }));
+    if (!string.IsNullOrWhiteSpace(filter.Status)) chips.Add(("Durum", OrderStatuses.Label(filter.Status)));
+    if (!string.IsNullOrWhiteSpace(filter.Search)) chips.Add(("Arama", filter.Search));
+}
+
+<div class="orders-page">
+    <div class="orders-hero">
+        <div>
+            <h2>Siparişler</h2>
+            <p>Toplam <strong>@total</strong> kayıt. Siparişi veren hesap ile formdaki müşteri bilgileri ayrı tutulur.</p>
+        </div>
+    </div>
+
+    <form method="get" action="/Orders/Index" class="orders-filter" id="ordersFilterForm">
+        <details class="orders-filter-panel" @(filter.HasAny ? "open" : null)>
+            <summary>
+                <span class="orders-filter-summary-main">
+                    <i class="fas fa-sliders"></i>
+                    <strong>Filtreler</strong>
+                    @if (chips.Count > 0)
+                    {
+                        <span class="orders-filter-count">@chips.Count</span>
+                    }
+                </span>
+                <span class="orders-filter-chips">
+                    @foreach (var chip in chips)
+                    {
+                        <span class="orders-chip"><em>@chip.Label</em> @chip.Value</span>
+                    }
+                </span>
+                <span class="orders-filter-toggle">@((filter.HasAny ? "Düzenle" : "Aç")) <i class="fas fa-chevron-down"></i></span>
+            </summary>
+
+            <div class="orders-filter-body">
+                <div class="orders-filter-grid">
+                    <label>
+                        <span>Başlangıç tarihi</span>
+                        <input type="date" name="fromDate" value="@(filter.FromDate?.ToString("yyyy-MM-dd"))" />
+                    </label>
+                    <label>
+                        <span>Bitiş tarihi</span>
+                        <input type="date" name="toDate" value="@(filter.ToDate?.ToString("yyyy-MM-dd"))" />
+                    </label>
+                    <label>
+                        <span>Sipariş no</span>
+                        <input type="text" name="orderNumber" value="@filter.OrderNumber" placeholder="NAIF-20260912-0001" />
+                    </label>
+                    <label>
+                        <span>Ürün kodu</span>
+                        <input type="text" name="productCode" value="@filter.ProductCode" placeholder="NFYZ00003" />
+                    </label>
+                    <label>
+                        <span>Siparişi veren hesap</span>
+                        <input type="text" name="account" value="@filter.Account" placeholder="E-posta veya hesap adı" />
+                    </label>
+                    <label>
+                        <span>Müşteri / firma</span>
+                        <input type="text" name="customer" value="@filter.Customer" placeholder="Ad, soyad veya firma" />
+                    </label>
+                    <label>
+                        <span>Telefon</span>
+                        <input type="text" name="phone" value="@filter.Phone" placeholder="538…" />
+                    </label>
+                    <label>
+                        <span>Sipariş durumu</span>
+                        <select name="status">
+                            <option value="">Tümü</option>
+                            <option value="Pending" selected="@(filter.Status == "Pending")">Beklemede</option>
+                            <option value="Accepted" selected="@(filter.Status == "Accepted")">Kabul</option>
+                            <option value="Cancelled" selected="@(filter.Status == "Cancelled")">İptal</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>Mail durumu</span>
+                        <select name="emailStatus">
+                            <option value="">Tümü</option>
+                            <option value="Sent" selected="@(filter.EmailStatus == "Sent")">Gönderildi</option>
+                            <option value="Failed" selected="@(filter.EmailStatus == "Failed")">Gönderilemedi</option>
+                            <option value="Pending" selected="@(filter.EmailStatus == "Pending")">Bekliyor</option>
+                        </select>
+                    </label>
+                    <label class="orders-filter-span">
+                        <span>Genel arama</span>
+                        <input type="search" name="search" value="@filter.Search" placeholder="Sipariş no, hesap, müşteri, telefon, ürün" />
+                    </label>
+                </div>
+                <div class="orders-filter-actions">
+                    <button type="submit" class="btn btn-primary">Filtrele</button>
+                    @if (filter.HasAny)
+                    {
+                        <a href="/Orders/Index" class="btn btn-light">Temizle</a>
+                    }
+                </div>
+            </div>
+        </details>
+    </form>
+
+    <div class="orders-table-card">
+        <div class="table-responsive">
+            <table class="table orders-table">
+                <thead>
+                    <tr>
+                        <th class="orders-col-photo"></th>
+                        <th>Sipariş</th>
+                        <th>Durum</th>
+                        <th>Hesap</th>
+                        <th>Müşteri</th>
+                        <th>Adet</th>
+                        <th>Mail</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        foreach (var order in Model)
+                        {
+                            var orderedAt = order.CreatedUtc.ToLocalTime();
+                            var accountTip = "order-account-" + order.Id.ToString("N");
+                            var customerTip = "order-customer-" + order.Id.ToString("N");
+                            <tr class="orders-main">
+                                <td class="orders-col-photo" data-label="">
+                                    @if (!string.IsNullOrWhiteSpace(order.PreviewImageUrl))
+                                    {
+                                        <img src="@order.PreviewImageUrl" alt="" class="orders-thumb" />
+                                    }
+                                    else
+                                    {
+                                        <span class="orders-thumb orders-thumb-empty"><i class="fas fa-gem"></i></span>
+                                    }
+                                </td>
+                                <td data-label="Sipariş">
+                                    <div class="orders-code">@order.OrderNumber</div>
+                                    <div class="orders-time">@orderedAt.ToString("dd.MM.yyyy") · @orderedAt.ToString("HH:mm")</div>
+                                </td>
+                                <td data-label="Durum">
+                                    <span class="orders-status orders-status-@((order.Status ?? "Pending").ToLowerInvariant())">@OrderStatuses.Label(order.Status)</span>
+                                </td>
+                                <td class="orders-tip-cell" data-label="Hesap">
+                                    <button type="button" class="orders-clip" data-orders-tip="@accountTip" aria-expanded="false" aria-controls="@accountTip">
+                                        <span class="orders-strong">@(string.IsNullOrWhiteSpace(order.AccountName) ? "-" : order.AccountName)</span>
+                                        <span class="orders-muted">@(string.IsNullOrWhiteSpace(order.AccountCompany) ? order.AccountEmail : order.AccountCompany)</span>
+                                    </button>
+                                    <div class="orders-tip" id="@accountTip" hidden>
+                                        <strong>@(string.IsNullOrWhiteSpace(order.AccountName) ? "-" : order.AccountName)</strong>
+                                        <span>@(string.IsNullOrWhiteSpace(order.AccountEmail) ? "-" : order.AccountEmail)</span>
+                                        @if (!string.IsNullOrWhiteSpace(order.AccountCompany))
+                                        {
+                                            <span>@order.AccountCompany</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="orders-tip-cell" data-label="Müşteri">
+                                    <button type="button" class="orders-clip" data-orders-tip="@customerTip" aria-expanded="false" aria-controls="@customerTip">
+                                        <span class="orders-strong">@order.FirstName @order.LastName</span>
+                                        <span class="orders-muted">@order.CompanyName · @order.PhoneNumber</span>
+                                    </button>
+                                    <div class="orders-tip" id="@customerTip" hidden>
+                                        <strong>@order.FirstName @order.LastName</strong>
+                                        <span>@order.CompanyName</span>
+                                        <span>@order.PhoneNumber</span>
+                                    </div>
+                                </td>
+                                <td data-label="Adet">
+                                    <div class="orders-qty">@order.ItemCount kalem · @order.TotalQuantity adet</div>
+                                </td>
+                                <td data-label="Mail">
+                                    @if (order.EmailStatus == "Sent")
+                                    {
+                                        <span class="orders-mail orders-mail-sent">Gönderildi</span>
+                                    }
+                                    else if (order.EmailStatus == "Failed")
+                                    {
+                                        <span class="orders-mail orders-mail-failed">Gönderilemedi</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="orders-mail orders-mail-pending">Bekliyor</span>
+                                    }
+                                </td>
+                                <td data-label="">
+                                    <div class="orders-row-actions">
+                                        @if (order.HasPdf)
+                                        {
+                                            <a href="/Orders/Pdf/@order.Id" class="btn btn-sm btn-outline-dark">PDF</a>
+                                        }
+                                        @if ((order.Status ?? "Pending") != "Accepted")
+                                        {
+                                            <form method="post" action="/Orders/UpdateStatus">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@order.Id" />
+                                                <input type="hidden" name="status" value="Accepted" />
+                                                <input type="hidden" name="returnUrl" value="index" />
+                                                <button type="submit" class="btn btn-sm btn-success">Kabul</button>
+                                            </form>
+                                        }
+                                        @if ((order.Status ?? "Pending") != "Cancelled")
+                                        {
+                                            <form method="post" action="/Orders/UpdateStatus">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@order.Id" />
+                                                <input type="hidden" name="status" value="Cancelled" />
+                                                <input type="hidden" name="returnUrl" value="index" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">İptal</button>
+                                            </form>
+                                        }
+                                        <a href="/Orders/Detail/@order.Id" class="btn btn-sm btn-primary orders-detail-btn">Detay</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="orders-empty">@(filter.HasAny ? "Bu filtrelere uygun sipariş bulunamadı." : "Henüz sipariş bulunmuyor.")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (totalPages > 1)
+    {
+        <nav class="orders-pager">
+            @if (currentPage > 1)
+            {
+                <a class="btn btn-light" href="@("/Orders/Index?" + filter.Query(currentPage - 1))">Önceki</a>
+            }
+            <span>@currentPage / @totalPages</span>
+            @if (currentPage < totalPages)
+            {
+                <a class="btn btn-light" href="@("/Orders/Index?" + filter.Query(currentPage + 1))">Sonraki</a>
+            }
+        </nav>
+    }
+</div>
+<script>
+    (() => {
+        const closeTips = except => {
+            document.querySelectorAll('.orders-tip:not([hidden])').forEach(tip => {
+                if (tip === except) return;
+                tip.hidden = true;
+                document.querySelector(`[data-orders-tip="${tip.id}"]`)?.setAttribute('aria-expanded', 'false');
+            });
+        };
+        const placeTip = (button, tip) => {
+            const box = button.getBoundingClientRect();
+            const width = 280;
+            const spaceRight = window.innerWidth - box.right;
+            const left = spaceRight > width + 16 ? box.right + 8 : Math.max(12, box.left);
+            const top = Math.min(box.top, window.innerHeight - 120);
+            tip.style.left = left + 'px';
+            tip.style.top = top + 'px';
+        };
+        document.querySelectorAll('[data-orders-tip]').forEach(button => {
+            button.addEventListener('click', event => {
+                event.stopPropagation();
+                const tip = document.getElementById(button.getAttribute('data-orders-tip'));
+                if (!tip) return;
+                const open = tip.hidden;
+                closeTips(open ? tip : null);
+                tip.hidden = !open;
+                button.setAttribute('aria-expanded', String(open));
+                if (open) placeTip(button, tip);
+            });
+        });
+        document.addEventListener('click', () => closeTips());
+        document.addEventListener('keydown', event => { if (event.key === 'Escape') closeTips(); });
+        window.addEventListener('scroll', () => closeTips(), true);
+    })();
+</script>

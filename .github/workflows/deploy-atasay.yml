@@ -1,0 +1,81 @@
+name: Deploy Atasay to Production
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-atasay
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore Atasay
+        run: dotnet restore frontends/atasay_katalog/atasay_katalog.csproj
+
+      - name: Build Atasay
+        run: dotnet build frontends/atasay_katalog/atasay_katalog.csproj -c Release --no-restore
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy Atasay
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" <<'EOFSSH'
+              set -e
+
+              cd /opt/apps/naif_katalog
+              git fetch origin master
+              git checkout master
+              git pull --ff-only origin master
+
+              cd /opt/apps/deploy
+
+              docker compose build atasay
+              docker compose up -d --no-deps atasay
+
+              echo "Waiting for ATASAY..."
+              sleep 15
+
+              docker compose ps atasay
+          EOFSSH
+
+      - name: Verify Atasay container
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "curl -fsS http://127.0.0.1:5003/ > /dev/null"

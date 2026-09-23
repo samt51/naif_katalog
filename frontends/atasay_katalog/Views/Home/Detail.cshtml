@@ -1,0 +1,920 @@
+@model atasay_katalog.Models.Product
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@{
+    ViewData["Title"] = Model.Name + " - Detay";
+    bool isLoggedIn = User.Identity?.IsAuthenticated == true;
+    string adminWhatsAppPhone = "";
+    decimal mockPrice = Model.CalculatedPrice;
+}
+
+<style>
+    .product-detail-page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 8px 0 24px;
+    }
+    .detail-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #475569;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 8px 0 14px;
+    }
+    .detail-back:hover { color: #0f172a; }
+    .product-detail-container {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(15,23,42,0.06);
+        overflow: hidden;
+        margin-bottom: 16px;
+        border: 1px solid #eef2f6;
+    }
+    .detail-image-gallery {
+        background: #fff;
+        padding: 28px;
+        position: relative;
+    }
+    .gallery-sticky-wrapper {
+        position: sticky;
+        top: 96px;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    .detail-hero {
+        overflow: hidden;
+        border-radius: 16px;
+        background: #f8fafc;
+        width: 100%;
+        aspect-ratio: 1 / 1.05;
+        box-shadow: 0 8px 30px rgba(15,23,42,0.06);
+    }
+    .thumbnail-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        justify-content: center;
+    }
+    .thumbnail {
+        width: 64px;
+        height: 64px;
+        border-radius: 10px;
+        object-fit: cover;
+        cursor: pointer;
+        border: 2px solid transparent;
+        flex-shrink: 0;
+        transition: all 0.2s;
+    }
+    .thumbnail:hover, .thumbnail.active {
+        border-color: #0f172a;
+    }
+    .detail-info {
+        padding: 32px 36px 36px;
+        background: #fff;
+        user-select: none;
+    }
+    .detail-heading {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px 16px;
+        margin-bottom: 18px;
+    }
+    .badge-category {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
+    .product-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+        letter-spacing: -0.4px;
+        line-height: 1.15;
+    }
+    .price-tag {
+        font-size: 30px;
+        font-weight: 800;
+        color: #047857;
+        margin: 0;
+        letter-spacing: -0.4px;
+        white-space: nowrap;
+    }
+    .specs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 22px;
+    }
+    .spec-item {
+        background: #f8fafc;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid #eef2f6;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    .spec-label {
+        font-size: 10px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+        font-weight: 700;
+    }
+    .spec-value {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .spec-select {
+        font-weight: 700;
+        color: #0f172a;
+        border: 0;
+        background-color: transparent;
+        padding: 0;
+        padding-right: 22px;
+        font-size: 15px;
+        box-shadow: none;
+        background-position: right 0 center;
+        min-width: 0;
+    }
+    .spec-select:focus {
+        box-shadow: none;
+        border: 0;
+    }
+    .stone-block { margin-bottom: 20px; }
+    .stone-block-title {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: #0f172a;
+        margin-bottom: 10px;
+    }
+    .stone-table-wrap {
+        border: 1px solid #eef2f6;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+    }
+    .stone-clarity {
+        width: auto;
+        min-width: 84px;
+        font-weight: 600;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        background-color: #fff;
+        border-radius: 8px;
+    }
+    .detail-cta { display: grid; gap: 12px; }
+    .detail-order-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 12px;
+    }
+    .detail-field-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #334155;
+        margin-bottom: 6px;
+        display: block;
+    }
+    .qty-stepper {
+        display: flex;
+        align-items: center;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        height: 44px;
+    }
+    .qty-stepper button {
+        width: 40px;
+        height: 44px;
+        border: 0;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .qty-stepper input {
+        border: 0;
+        text-align: center;
+        font-weight: 700;
+        box-shadow: none;
+        height: 44px;
+    }
+    .qty-stepper input:focus { box-shadow: none; }
+    .detail-note {
+        border-radius: 12px;
+        border-color: #e2e8f0;
+        min-height: 44px;
+        resize: vertical;
+    }
+    .action-button {
+        padding: 14px 24px;
+        font-size: 15px;
+        font-weight: 700;
+        border-radius: 14px;
+        letter-spacing: 0.4px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-transform: none;
+    }
+    .action-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(15,23,42,0.12);
+    }
+    .detail-description {
+        margin-top: 16px;
+        padding: 14px 16px;
+        background: #f8fafc;
+        border: 1px solid #eef2f6;
+        border-radius: 14px;
+    }
+    .detail-description h6 {
+        font-size: 12px;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+    .related-carousel {
+        position: relative;
+        padding: 0 48px;
+    }
+    .related-carousel-track {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        padding: 6px 0 12px;
+    }
+    .related-carousel-track::-webkit-scrollbar { display: none; }
+    .related-carousel-item {
+        flex: 0 0 200px;
+        scroll-snap-align: start;
+    }
+    .related-carousel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        border: 1px solid #e2e8f0;
+        border-radius: 50%;
+        background: #fff;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 22px rgba(15,23,42,0.08);
+        z-index: 2;
+    }
+    .related-carousel-btn.prev { left: 0; }
+    .related-carousel-btn.next { right: 0; }
+
+    @@media (max-width: 991.98px) {
+        .product-detail-page { padding: 0 0 24px; }
+        .detail-back { padding: 4px 2px 10px; }
+        .product-detail-container {
+            border-radius: 16px;
+            box-shadow: none;
+            border: 0;
+            margin-bottom: 8px;
+        }
+        .detail-image-gallery {
+            padding: 0 0 8px;
+            border-right: 0 !important;
+        }
+        .gallery-sticky-wrapper { position: static; }
+        .detail-hero {
+            border-radius: 14px;
+            aspect-ratio: 1 / 1;
+            box-shadow: none;
+            border: 1px solid #eef2f6;
+        }
+        .thumbnail { width: 52px; height: 52px; }
+        .detail-info { padding: 8px 2px 8px; }
+        .detail-heading { margin-bottom: 12px; align-items: center; }
+        .product-title { font-size: 22px; }
+        .price-tag { font-size: 22px; }
+        .specs-grid { gap: 8px; margin-bottom: 16px; }
+        .spec-item { padding: 10px 12px; border-radius: 10px; }
+        .spec-value, .spec-select { font-size: 14px; }
+        .stone-table-wrap { border: 0; overflow: visible; background: transparent; }
+        .stone-table thead { display: none; }
+        .stone-table, .stone-table tbody, .stone-table tr, .stone-table td {
+            display: block;
+            width: 100%;
+        }
+        .stone-table tbody { display: grid; gap: 8px; }
+        .stone-table tr {
+            background: #f8fafc;
+            border: 1px solid #eef2f6;
+            border-radius: 12px;
+            padding: 10px 12px 8px;
+        }
+        .stone-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            text-align: right !important;
+            padding: 6px 0 !important;
+            border: 0;
+        }
+        .stone-table td::before {
+            content: attr(data-label);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            color: #64748b;
+            text-align: left;
+        }
+        .stone-table td .d-flex { justify-content: flex-end !important; }
+        .detail-order-row { grid-template-columns: 1fr; }
+        .detail-cta {
+            position: sticky;
+            bottom: 0;
+            z-index: 1035;
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(10px);
+            margin: 12px -12px 0;
+            padding: 10px 64px 14px 12px;
+            border-top: 1px solid #eef2f6;
+            box-shadow: 0 -10px 24px rgba(15,23,42,0.06);
+        }
+        .related-carousel-item .card-img-top,
+        .related-carousel-item .bg-light { height: 118px !important; }
+        .action-button { border-radius: 12px; padding: 13px 16px; font-size: 14px; }
+        .related-carousel { padding: 0 34px; }
+        .related-carousel-item { flex-basis: calc(50% - 8px); }
+        body:has(.product-detail-page) .whatsapp-float { bottom: 78px; }
+    }
+</style>
+
+<div class="product-detail-page">
+    <a href="/Home/Index" class="detail-back">
+        <i class="fas fa-arrow-left"></i> Kataloğa dön
+    </a>
+
+    <div class="product-detail-container row g-0">
+        <div class="col-lg-6 detail-image-gallery border-end">
+            <div class="gallery-sticky-wrapper">
+                @if (Model.Images.Count > 0)
+                {
+                    <div class="detail-hero img-magnifier-container" id="imageContainer" style="cursor:crosshair;">
+                        <img src="@Model.Images[0]" id="mainImage" class="w-100 h-100" style="object-fit: cover; transition: transform 0.1s ease-out; transform-origin: center center;" alt="@Model.Name" />
+                    </div>
+                    @if (Model.Images.Count > 1)
+                    {
+                        <div class="thumbnail-container">
+                            @foreach (var img in Model.Images)
+                            {
+                                <img src="@img" class="thumbnail" onclick="changeImage(this.src)" />
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="detail-hero d-flex align-items-center justify-content-center">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-image fa-3x mb-3"></i>
+                            <p class="mb-0">Resim yok</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-6 detail-info">
+            <div>
+                <span class="badge-category">
+                    @foreach (var categoryName in Model.CategoryNames ?? new List<string>())
+                    {
+                        <category-label name="@categoryName"></category-label>
+                    }
+                </span>
+                <div class="detail-heading">
+                    <h1 class="product-title">@Model.Code</h1>
+                    @if (isLoggedIn)
+                    {
+                        <div class="price-tag" id="productPriceDisplay"><i class="fas fa-spinner fa-spin" style="font-size:18px; color:#cbd5e1;"></i></div>
+                    }
+                </div>
+
+                <div class="specs-grid">
+                    <div class="spec-item">
+                        <span class="spec-label">Ağırlık</span>
+                        <span class="spec-value" id="productGramDisplay">@Model.Gram.ToString("N2") g</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Ayar</span>
+                        <select id="ayarSelect" onchange="recalculatePrice()" class="form-select spec-select">
+                            @if (ViewBag.Karats != null)
+                            {
+                                var defaultKarat = Model.ProductMetals?.FirstOrDefault()?.MetalPurityName ?? Model.Karat;
+                                foreach (var k in (IEnumerable<dynamic>)ViewBag.Karats)
+                                {
+                                    string milyemVal = (k.Milyem != null) ? k.Milyem.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0.585";
+                                    string densityVal = (k.Density != null) ? k.Density.ToString(System.Globalization.CultureInfo.InvariantCulture) : "13.4";
+                                    if (defaultKarat == k.Name) {
+                                        <option value="@k.Id" data-milyem="@milyemVal" data-density="@densityVal" selected data-default="true">@k.Name</option>
+                                    } else {
+                                        <option value="@k.Id" data-milyem="@milyemVal" data-density="@densityVal">@k.Name</option>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <option data-default="true" data-milyem="0.585" data-density="13.4">@(Model.ProductMetals?.FirstOrDefault()?.MetalPurityName ?? Model.Karat ?? "Belirtilmemiş")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Karat</span>
+                        <span class="spec-value">@Model.DiamondCarat.ToString("N2") ct</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Renk</span>
+                        <select id="renkSelect" class="form-select spec-select">
+                            @if (ViewBag.MetalTypes != null)
+                            {
+                                var defaultColor = Model.ProductMetals?.FirstOrDefault()?.MetalTypeName ?? Model.ColorName;
+                                foreach (var mt in (IEnumerable<dynamic>)ViewBag.MetalTypes)
+                                {
+                                    if (defaultColor == mt.Name) {
+                                        <option value="@mt.Id" selected>@mt.Name</option>
+                                    } else {
+                                        <option value="@mt.Id">@mt.Name</option>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <option>@(Model.ProductMetals?.FirstOrDefault()?.MetalTypeName ?? Model.ColorName ?? "Standart")</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                @if (Model.ProductStones != null && Model.ProductStones.Count > 0)
+                {
+                    <div class="stone-block">
+                        <h6 class="stone-block-title"><i class="fas fa-gem me-1"></i> Taş bilgileri</h6>
+                        <div class="stone-table-wrap">
+                            <table class="table table-borderless text-center align-middle mb-0 stone-table" style="font-size:14px;">
+                                <thead class="table-light border-bottom">
+                                    <tr>
+                                        <th class="py-3 text-secondary fw-bold">Berraklık</th>
+                                        <th class="py-3 text-secondary fw-bold">Taş türü</th>
+                                        <th class="py-3 text-secondary fw-bold">Renk</th>
+                                        <th class="py-3 text-secondary fw-bold">Adet</th>
+                                        <th class="py-3 text-secondary fw-bold">Toplam Kr.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var s in Model.ProductStones)
+                                    {
+                                        string stoneTypeName = "";
+                                        int? stoneTypeId = null;
+                                        if (ViewBag.Stones != null && ViewBag.StoneTypes != null) {
+                                            var stonesList = (IEnumerable<atasay_katalog.Models.StoneDto>)ViewBag.Stones;
+                                            var stoneTypesList = (IEnumerable<atasay_katalog.Core.Features.DefinitionFeature.Queries.StoneTypeDto>)ViewBag.StoneTypes;
+                                            
+                                            var st = stonesList.FirstOrDefault(x => x.Id == s.StoneId);
+                                            if (st != null) {
+                                                var stType = stoneTypesList.FirstOrDefault(t => t.Id == st.StoneTypeId);
+                                                if (stType != null) {
+                                                    stoneTypeName = stType.Name;
+                                                    stoneTypeId = stType.Id;
+                                                }
+                                            }
+                                        }
+
+                                        <tr class="stone-detail-row" data-stone-type-id="@stoneTypeId" data-color-id="@s.ColorId">
+                                            <td class="py-3" data-label="Berraklık">
+                                                <div class="d-flex justify-content-center">
+                                                    @if (stoneTypeName.Equals("PIRLANTA", StringComparison.OrdinalIgnoreCase) || stoneTypeName.Equals("PIRLANTA ", StringComparison.OrdinalIgnoreCase))
+                                                    {
+                                                        <select id="berraklikSelect_@s.Id" onchange="recalculatePrice()" class="stone-clarity form-select form-select-sm shadow-none">
+                                                            @if (ViewBag.Clarities != null)
+                                                            {
+                                                                foreach (var c in (IEnumerable<dynamic>)ViewBag.Clarities)
+                                                                {
+                                                                    if (s.ClarityId != null && c.Id == s.ClarityId)
+                                                                    {
+                                                                        <option value="@c.Id" selected>@c.Name</option>
+                                                                    }
+                                                                    else if (s.ClarityId == null && c.Name == "SI")
+                                                                    {
+                                                                        <option value="@c.Id" selected>@c.Name</option>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <option value="@c.Id">@c.Name</option>
+                                                                    }
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <option value="1" selected>SI</option>
+                                                                <option value="2">VS</option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="stone-clarity fw-bold text-dark">@(s.ClarityName ?? "-")</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td class="stone-type py-3 fw-medium text-dark" data-label="Taş türü">@(string.IsNullOrEmpty(stoneTypeName) ? "-" : stoneTypeName)</td>
+                                            <td class="stone-color py-3 fw-medium text-dark" data-label="Renk">@(s.ColorName ?? "-")</td>
+                                            <td class="stone-quantity py-3 fw-medium text-dark" data-label="Adet">@s.Quantity.ToString("N0")</td>
+                                            <td class="stone-carat py-3 fw-bold" data-label="Toplam Kr.">@s.TotalCarat.ToString("N2") ct</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+
+                <div class="detail-cta">
+                    @if (isLoggedIn)
+                    {
+                        <div class="detail-order-row">
+                            <div>
+                                <label for="catalogQuantity" class="detail-field-label">Adet</label>
+                                <div class="qty-stepper">
+                                    <button type="button" onclick="stepQuantity(-1)" aria-label="Azalt">−</button>
+                                    <input type="number" id="catalogQuantity" class="form-control" value="1" min="1" max="999" step="1" inputmode="numeric"
+                                           onkeydown="if (['-', '+', 'e', 'E', '.', ','].includes(event.key)) event.preventDefault();"
+                                           oninput="if (this.value !== '' && (!Number.isInteger(Number(this.value)) || Number(this.value) < 1)) this.value = 1;"
+                                           onblur="if (!Number.isInteger(Number(this.value)) || Number(this.value) < 1) this.value = 1;" />
+                                    <button type="button" onclick="stepQuantity(1)" aria-label="Artır">+</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="catalogNote" class="detail-field-label">Not</label>
+                                <textarea id="catalogNote" class="form-control detail-note" maxlength="500" rows="2" placeholder="Ürün için özel notunuz..."></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-dark action-button" id="addToCartBtn"
+                                onclick="addToCatalogFromDetail('@Model.Code', '@(Model.CategoryNames?.FirstOrDefault() ?? "")', '@mockPrice.ToString("N0") $', '@(Model.Images.Count > 0 ? Model.Images[0] : "")', '@Model.Gram.ToString("N2", System.Globalization.CultureInfo.InvariantCulture) g', @Model.Id, @(Model.CategoryIds?.FirstOrDefault() ?? 0))">
+                            <i class="fas fa-cart-plus"></i> <span class="notranslate" translate="no" data-cart-button-text>Sepete Ekle</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <a href="https://wa.me/@adminWhatsAppPhone?text=Merhaba, @Model.Code kodlu ürününüzün fiyat bilgisini öğrenebilir miyim?" target="_blank" class="btn btn-success action-button">
+                            <i class="fab fa-whatsapp"></i> Fiyat sor
+                        </a>
+                    }
+                </div>
+
+                <div class="detail-description">
+                    <h6 class="text-dark"><i class="fas fa-info-circle me-1"></i> Açıklama</h6>
+                    <p class="text-muted mb-0" style="line-height: 1.6; font-size:14px; white-space: pre-wrap;">
+                        @(string.IsNullOrEmpty(Model.Description) ? "Bu ürün için henüz bir açıklama eklenmemiştir." : Model.Description)
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Slider Section (Full Width at Bottom) -->
+        @if(ViewBag.RelatedProducts != null && ((IEnumerable<dynamic>)ViewBag.RelatedProducts).Any())
+        {
+            <div class="col-12 px-3 py-4 px-lg-5" style="border-top: 1px solid #f1f5f9; background: #fafaf9;">
+                <div class="container-fluid px-0">
+                    <h4 class="fw-bold mb-3 text-center" style="color: #1e293b; font-size: 18px;">Diğer ürünler</h4>
+                    <div class="related-carousel" id="relatedProductsCarousel">
+                        <button type="button" class="related-carousel-btn prev" data-related-direction="-1" aria-label="Önceki ürün">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="related-carousel-track">
+                            @foreach(var relProduct in (IEnumerable<dynamic>)ViewBag.RelatedProducts)
+                            {
+                                <div class="related-carousel-item">
+                                    <div class="card h-100 border-0 shadow-sm" style="border-radius: 12px; transition: transform 0.2s;">
+                                        <a href="/Home/Detail/@relProduct.Id" class="text-decoration-none">
+                                            @if(relProduct.Images != null && relProduct.Images.Count > 0) {
+                                                <img src="@relProduct.Images[0]" class="card-img-top" style="height: 180px; object-fit: cover; border-radius: 12px 12px 0 0;" alt="@relProduct.Name">
+                                            } else {
+                                                <div class="bg-light d-flex align-items-center justify-content-center" style="height: 180px; border-radius: 12px 12px 0 0;">
+                                                    <i class="fas fa-image text-muted fa-2x"></i>
+                                                </div>
+                                            }
+                                            <div class="card-body p-3 text-center">
+                                                <h6 class="card-title text-dark fw-bold mb-1 text-truncate" style="font-size: 15px;">@relProduct.Name</h6>
+                                                <p class="text-muted small mb-0">@relProduct.Code</p>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button type="button" class="related-carousel-btn next" data-related-direction="1" aria-label="Sonraki ürün">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+    const liveGoldPrice = @Model.LiveGoldPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const backendGoldPrice = @Model.LiveGoldPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const basePrice = @mockPrice.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const gram = @Model.Gram.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const productCode = '@Model.Code';
+    const productCategory = '@(Model.CategoryNames?.FirstOrDefault() ?? "")';
+    const productImage = '@(Model.Images.Count > 0 ? Model.Images[0] : "")';
+
+    document.addEventListener("DOMContentLoaded", function() {
+        recalculatePrice();
+        initRelatedProductsCarousel();
+    });
+
+
+
+    function initRelatedProductsCarousel() {
+        const carousel = document.getElementById('relatedProductsCarousel');
+        if (!carousel) return;
+
+        const track = carousel.querySelector('.related-carousel-track');
+        const items = carousel.querySelectorAll('.related-carousel-item');
+        const buttons = carousel.querySelectorAll('[data-related-direction]');
+        if (!track || items.length <= 1) return;
+
+        const getStep = () => {
+            const firstItem = items[0];
+            const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 20;
+            return firstItem.getBoundingClientRect().width + gap;
+        };
+
+        const moveCarousel = (direction = 1) => {
+            const maxScroll = track.scrollWidth - track.clientWidth;
+            if (maxScroll <= 0) return;
+
+            if (direction > 0 && track.scrollLeft >= maxScroll - 4) {
+                track.scrollTo({ left: 0, behavior: 'smooth' });
+                return;
+            }
+
+            if (direction < 0 && track.scrollLeft <= 4) {
+                track.scrollTo({ left: maxScroll, behavior: 'smooth' });
+                return;
+            }
+
+            track.scrollBy({ left: getStep() * direction, behavior: 'smooth' });
+        };
+
+        let autoTimer = window.setInterval(() => moveCarousel(1), 3000);
+        const pause = () => window.clearInterval(autoTimer);
+        const resume = () => {
+            window.clearInterval(autoTimer);
+            autoTimer = window.setInterval(() => moveCarousel(1), 3000);
+        };
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                pause();
+                moveCarousel(parseInt(this.dataset.relatedDirection, 10));
+                window.setTimeout(resume, 5000);
+            });
+        });
+
+        carousel.addEventListener('mouseenter', pause);
+        carousel.addEventListener('mouseleave', resume);
+        carousel.addEventListener('focusin', pause);
+        carousel.addEventListener('focusout', resume);
+        track.addEventListener('touchstart', pause, { passive: true });
+        track.addEventListener('touchend', resume);
+    }
+
+    function recalculatePrice() {
+        const selectElement = document.getElementById('ayarSelect');
+        if (!selectElement) return;
+
+        const defaultOption = selectElement.querySelector('option[data-default="true"]');
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        
+        if (!defaultOption || !selectedOption) return;
+
+        const defaultMilyem = parseFloat(defaultOption.getAttribute('data-milyem')) || 0.585;
+        const newMilyem = parseFloat(selectedOption.getAttribute('data-milyem')) || 0.585;
+
+        const defaultDensity = parseFloat(defaultOption.getAttribute('data-density')) || 13.4;
+        const newDensity = parseFloat(selectedOption.getAttribute('data-density')) || 13.4;
+        
+        // Calculate the new weight based on density difference
+        let currentGram = gram;
+        if (newDensity > 0 && defaultDensity > 0) {
+            currentGram = gram * (newDensity / defaultDensity);
+        }
+
+        // Update Gram display in UI
+        const gramDisplay = document.getElementById('productGramDisplay');
+        if (gramDisplay) {
+            gramDisplay.innerText = currentGram.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
+        }
+        
+        // We need a fallback just in case both LiveGoldPrice was 0 and API failed.
+        const hasPrice = liveGoldPrice > 0 ? liveGoldPrice : 150; 
+        
+        // 1. Veritabanındaki "CalculatedPrice"ın içindeki ESKİ kur ile olan altın maliyetini bul
+        const oldGoldCost = gram * defaultMilyem * backendGoldPrice;
+        
+        // 2. Taş, İşçilik vb. diğer sabit maliyetleri fiyattan ayrıştır
+        const fixedCosts = basePrice - oldGoldCost;
+        
+        // 3. YENİ çekilen anlık kur, YENİ gram ve YENİ milyem ile güncel altın maliyetini bul
+        const newGoldCost = currentGram * newMilyem * hasPrice;
+        
+        // 4. Yeni Fiyat = Sabit Maliyetler + Güncel Altın Maliyeti
+        const newPrice = fixedCosts + newGoldCost;
+        const displayedPrice = typeof window.applyPricingMode === 'function' ? window.applyPricingMode(newPrice) : newPrice;
+        
+        // Format as whole number, e.g. "949 $"
+        const formattedPrice = displayedPrice.toLocaleString('tr-TR', { maximumFractionDigits: 0 }) + ' $';
+        
+        // Update UI
+        const priceDisplay = document.getElementById('productPriceDisplay');
+        if (priceDisplay) {
+            priceDisplay.innerText = formattedPrice;
+        }
+        
+        // Update Add to Cart Button's onclick parameters to include the new calculated price and gram!
+        const addToCartBtn = document.getElementById('addToCartBtn');
+        if (addToCartBtn) {
+            const displayGramStr = currentGram.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
+            addToCartBtn.setAttribute('onclick', `addToCatalogFromDetail('${productCode}', '${productCategory}', '${formattedPrice}', '${productImage}', '${displayGramStr}', @Model.Id, @(Model.CategoryIds?.FirstOrDefault() ?? 0))`);
+        }
+    }
+
+    function stepQuantity(delta) {
+        const input = document.getElementById('catalogQuantity');
+        if (!input) return;
+        const next = (parseInt(input.value, 10) || 1) + delta;
+        input.value = Math.min(999, Math.max(1, next));
+    }
+
+    function changeImage(src) {
+        document.getElementById('mainImage').src = src;
+        
+        // Remove active class from all thumbnails
+        document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+        // Add active class to clicked
+        event.target.classList.add('active');
+    }
+
+    // Image Magnifier logic
+    document.addEventListener("DOMContentLoaded", function() {
+        const container = document.getElementById('imageContainer');
+        const img = document.getElementById('mainImage');
+
+        if(container && img && window.matchMedia('(pointer: fine)').matches) {
+            container.addEventListener('mousemove', function(e) {
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const xPercent = (x / rect.width) * 100;
+                const yPercent = (y / rect.height) * 100;
+                
+                img.style.transformOrigin = `${xPercent}% ${yPercent}%`;
+                img.style.transform = 'scale(2)';
+            });
+
+            container.addEventListener('mouseleave', function() {
+                img.style.transformOrigin = 'center center';
+                img.style.transform = 'scale(1)';
+            });
+        }
+    });
+
+    function addToCatalogFromDetail(code, category, price, image, gram, productId, categoryId) {
+        if(!image) {
+            document.getElementById('globalErrorTitle').innerText = 'Hata';
+            document.getElementById('globalErrorMessage').innerText = 'Bu ürünün resmi yok, eklenemez.';
+            document.querySelector('#globalErrorModal .fas').className = 'fas fa-exclamation-circle text-danger mb-3';
+            new bootstrap.Modal(document.getElementById('globalErrorModal')).show();
+            return;
+        }
+
+        if(typeof cart !== 'undefined') {
+            var quantityInput = document.getElementById('catalogQuantity');
+            var quantity = quantityInput ? parseInt(quantityInput.value, 10) : 1;
+            if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) {
+                quantityInput?.focus();
+                alert('Lütfen 1 ile 999 arasında geçerli bir adet giriniz.');
+                return;
+            }
+            var customerNote = (document.getElementById('catalogNote')?.value || '').trim().substring(0, 500);
+
+            // Get actual price, ayar, and renk dynamically
+            var priceDisplay = document.getElementById('productPriceDisplay');
+            var currentPrice = priceDisplay ? priceDisplay.innerText.trim() : price;
+            
+            var gramDisplay = document.getElementById('productGramDisplay');
+            var currentGram = gramDisplay ? gramDisplay.innerText.trim() : gram;
+            
+            var ayarSelect = document.getElementById('ayarSelect');
+            var ayar = ayarSelect && ayarSelect.options.length > 0 ? ayarSelect.options[ayarSelect.selectedIndex].text : '';
+            
+            var renkSelect = document.getElementById('renkSelect');
+            var renk = renkSelect && renkSelect.options.length > 0 ? renkSelect.options[renkSelect.selectedIndex].text : '';
+
+            var stones = Array.from(document.querySelectorAll('.stone-detail-row')).map(function(row) {
+                var clarityElement = row.querySelector('.stone-clarity');
+                var clarity = clarityElement && clarityElement.tagName === 'SELECT'
+                    ? clarityElement.options[clarityElement.selectedIndex].text.trim()
+                    : (clarityElement ? clarityElement.textContent.trim() : '-');
+                return {
+                    clarity: clarity,
+                    clarityId: clarityElement && clarityElement.tagName === 'SELECT' ? clarityElement.value : null,
+                    type: row.querySelector('.stone-type')?.textContent.trim() || '-',
+                    typeId: row.dataset.stoneTypeId || null,
+                    color: row.querySelector('.stone-color')?.textContent.trim() || '-',
+                    colorId: row.dataset.colorId || null,
+                    quantity: row.querySelector('.stone-quantity')?.textContent.trim() || '-',
+                    totalCarat: row.querySelector('.stone-carat')?.textContent.trim() || '-'
+                };
+            });
+            
+            if (typeof upsertCartItem !== 'function') {
+                alert("Katalog sistemi yüklenemedi.");
+                return;
+            }
+
+            upsertCartItem({
+                code: code,
+                image: image,
+                category: category,
+                price: currentPrice,
+                ayar: ayar,
+                renk: renk,
+                gram: currentGram,
+                stones: stones,
+                productId: productId,
+                categoryId: categoryId,
+                ayarId: ayarSelect ? ayarSelect.value : null,
+                renkId: renkSelect ? renkSelect.value : null,
+                quantity: quantity,
+                note: customerNote
+            });
+            
+            // Butonda görsel geri bildirim ver (modal yerine)
+            var btn = document.getElementById('addToCartBtn');
+            if(btn) {
+                var originalHtml = btn.innerHTML;
+                btn.classList.remove('btn-dark');
+                btn.classList.add('btn-success');
+                btn.innerHTML = '<i class="fas fa-check"></i> Eklendi';
+                setTimeout(function() {
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-dark');
+                    btn.innerHTML = originalHtml;
+                }, 1500);
+            }
+            
+            var offcanvasEl = document.getElementById('catalogOffcanvas');
+            if(offcanvasEl) {
+                var offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl) || new bootstrap.Offcanvas(offcanvasEl);
+                offcanvas.show();
+            }
+        } else {
+            alert("Katalog sistemi yüklenemedi.");
+        }
+    }
+</script>

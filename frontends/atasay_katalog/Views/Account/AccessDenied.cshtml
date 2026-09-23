@@ -1,0 +1,20 @@
+@{
+    Layout = null;
+    var homeUrl = ViewBag.HomeUrl as string ?? "/Home/Welcome";
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yetkisiz erişim - ATASAY</title>
+    <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;font-family:Inter,system-ui,sans-serif;">
+    <div style="max-width:420px;padding:32px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.08);text-align:center;">
+        <h1 style="font-size:22px;margin-bottom:10px;">Bu sayfaya erişim yok</h1>
+        <p style="color:#64748b;margin-bottom:24px;">Bu içeriğe hesabınızla erişilemiyor. Ana sayfaya dönerek ürünleri keşfetmeye devam edebilirsiniz.</p>
+        <a class="btn btn-primary" href="@homeUrl">Ana sayfaya dön</a>
+    </div>
+</body>
+</html>

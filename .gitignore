@@ -378,3 +378,7 @@ FodyWeavers.xsd
 
 # Product catalog images are deployed separately and must not be committed.
 /wwwroot/images/katalog/
+
+# .NET build outputs
+**/bin/
+**/obj/

@@ -54,9 +54,12 @@ jobs:
               set -e
 
               cd /opt/apps/naif_katalog
-              git fetch origin master
-              git checkout master
-              git pull --ff-only origin master
+              sudo -u deploy git fetch origin master
+              sudo -u deploy git checkout master
+              sudo -u deploy git pull --ff-only origin master
+
+
+              
 
               cd /opt/apps/deploy
 

@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <!-- Independently published customer frontends must not enter this app. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);frontends/**;artifacts/**</DefaultItemExcludes>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 

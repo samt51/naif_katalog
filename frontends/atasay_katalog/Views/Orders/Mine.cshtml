@@ -1,0 +1,86 @@
+@model List<atasay_katalog.Models.OrderSummary>
+@{
+    ViewData["Title"] = "Siparişlerim";
+    var currentPage = (int)(ViewBag.Page ?? 1);
+    var totalPages = (int)(ViewBag.TotalPages ?? 1);
+    var total = (int)(ViewBag.Total ?? 0);
+    var status = ViewBag.Status as string;
+}
+
+<div class="my-orders">
+    <div class="my-orders-hero">
+        <p class="my-orders-kicker">Hesabım</p>
+        <h1>Siparişlerim</h1>
+        <p>Verdiğiniz siparişler burada durur. Durum değişince bu ekrandan görünür.</p>
+    </div>
+
+    <div class="my-orders-tabs">
+        <a class="@(string.IsNullOrWhiteSpace(status) ? "active" : null)" href="/Orders/Mine">Tümü</a>
+        <a class="@(status == "Pending" ? "active" : null)" href="/Orders/Mine?status=Pending">Beklemede</a>
+        <a class="@(status == "Accepted" ? "active" : null)" href="/Orders/Mine?status=Accepted">Kabul</a>
+        <a class="@(status == "Cancelled" ? "active" : null)" href="/Orders/Mine?status=Cancelled">İptal</a>
+    </div>
+
+    @if (Model == null || Model.Count == 0)
+    {
+        <div class="my-orders-empty">
+            <strong>Henüz siparişiniz yok.</strong>
+            <p>Sepete ürün ekleyip Confirm and PDF ile sipariş oluşturabilirsiniz.</p>
+            <a href="/Home/Index" class="btn btn-dark rounded-pill px-4">Ürünlere git</a>
+        </div>
+    }
+    else
+    {
+        <div class="my-orders-list">
+            @foreach (var order in Model)
+            {
+                var orderedAt = order.CreatedUtc.ToLocalTime();
+                <article class="my-order-card">
+                    <div class="my-order-top">
+                        <div class="my-order-identity">
+                            @if (!string.IsNullOrWhiteSpace(order.PreviewImageUrl))
+                            {
+                                <img src="@order.PreviewImageUrl" alt="" class="my-order-thumb" />
+                            }
+                            else
+                            {
+                                <span class="my-order-thumb my-order-thumb-empty"><i class="fas fa-gem"></i></span>
+                            }
+                            <div>
+                                <div class="my-order-no">@order.OrderNumber</div>
+                                <div class="my-order-date">@orderedAt.ToString("dd.MM.yyyy HH:mm")</div>
+                            </div>
+                        </div>
+                        <span class="orders-status orders-status-@((order.Status ?? "Pending").ToLowerInvariant())">@OrderStatuses.Label(order.Status)</span>
+                    </div>
+                    <div class="my-order-meta">
+                        <span>@order.CompanyName</span>
+                        <span>@order.FirstName @order.LastName</span>
+                        <span>@order.ItemCount kalem · @order.TotalQuantity adet</span>
+                    </div>
+                    <div class="my-order-actions">
+                        <a href="/Orders/MineDetail/@order.Id" class="btn btn-dark btn-sm rounded-pill px-3">Detay</a>
+                        @if (order.HasPdf)
+                        {
+                            <a href="/Orders/Pdf/@order.Id" class="btn btn-outline-dark btn-sm rounded-pill px-3">PDF</a>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+        @if (totalPages > 1)
+        {
+            <nav class="my-orders-pager">
+                @if (currentPage > 1)
+                {
+                    <a href="@($"/Orders/Mine?page={currentPage - 1}&status={status}")">Önceki</a>
+                }
+                <span>@currentPage / @totalPages</span>
+                @if (currentPage < totalPages)
+                {
+                    <a href="@($"/Orders/Mine?page={currentPage + 1}&status={status}")">Sonraki</a>
+                }
+            </nav>
+        }
+    }
+</div>

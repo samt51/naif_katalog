@@ -1,0 +1,60 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Müşteri Girişi";
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#171715" />
+    <title>Müşteri Girişi | ATASAY</title>
+    <link rel="icon" href="~/images/brand/favicon.ico" />
+    <link rel="stylesheet" href="~/css/atasay.css" asp-append-version="true" />
+</head>
+<body class="atasay-login">
+    <main class="login-shell">
+        <section class="login-editorial" aria-label="Atasay koleksiyonları">
+            <img src="~/images/brand/editorial.jpg" width="3129" height="3017" alt="Atasay altın kolye, küpe ve bileklik koleksiyonu" fetchpriority="high" />
+            <div class="login-editorial-caption"><span>ATASAY DÜNYASINA HOŞ GELDİNİZ</span><h1>Işıltınızın<br /><em>imzası.</em></h1><p>Her detayda siz. Her anınızda Atasay.</p></div>
+            <span class="login-editorial-index">01 — ATASAY SEÇKİSİ</span>
+        </section>
+        <section class="login-panel" aria-labelledby="login-title">
+            <div class="login-topline"><span>MÜŞTERİ PORTALI</span><span>TR</span></div>
+            <div class="login-content">
+                <img class="login-logo" src="~/images/brand/logo.svg" width="210" height="63" alt="ATASAY" />
+                <div class="login-heading"><span class="atasay-eyebrow">SİZE ÖZEL BİR DÜNYA</span><h2 id="login-title">Hoş geldiniz.</h2><p>Atasay seçkisini keşfetmek ve siparişlerinizi<br class="desktop-break" /> yönetmek için hesabınıza giriş yapın.</p></div>
+                <form asp-controller="Account" asp-action="Login" method="post" class="atasay-login-form">
+                    <label for="email">E-posta adresi</label>
+                    <input id="email" name="email" type="email" placeholder="E-posta adresinizi girin" autocomplete="username" required maxlength="254" />
+                    <label for="password">Şifre</label>
+                    <div class="login-password"><input id="password" name="password" type="password" placeholder="Şifrenizi girin" autocomplete="current-password" required /><button type="button" id="password-toggle" aria-label="Şifreyi göster" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg></button></div>
+                    @if (ViewBag.Error != null)
+                    {
+                        <p class="login-error" role="alert">@ViewBag.Error</p>
+                    }
+                    <button class="atasay-button login-submit" type="submit"><span>GİRİŞ YAP</span><span aria-hidden="true">→</span></button>
+                </form>
+                <p class="login-help">Hesap ve giriş desteği için müşteri temsilcinizle iletişime geçebilirsiniz.</p>
+                <div class="login-signature"><span></span><span>ZAMANSIZ BİR IŞILTI</span><span></span></div>
+            </div>
+            <footer class="login-bottom"><span>© @DateTime.Now.Year ATASAY</span><span>b2bgifty.com</span></footer>
+        </section>
+    </main>
+    <script>
+        sessionStorage.removeItem('atasay_pricing_mode');
+        document.getElementById('password-toggle').addEventListener('click', function () {
+            const field = document.getElementById('password');
+            const visible = field.type === 'password';
+            field.type = visible ? 'text' : 'password';
+            this.setAttribute('aria-pressed', String(visible));
+            this.setAttribute('aria-label', visible ? 'Şifreyi gizle' : 'Şifreyi göster');
+        });
+        document.querySelector('form').addEventListener('submit', function () {
+            const button = this.querySelector('[type=submit]');
+            button.disabled = true;
+            button.querySelector('span').textContent = 'GİRİŞ YAPILIYOR…';
+        });
+    </script>
+</body>
+</html>

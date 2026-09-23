@@ -1,0 +1,55 @@
+@model atasay_katalog.Models.HomePageViewModel
+@{
+    ViewData["Title"] = "Atasay Dünyası";
+    ViewData["IsHomePage"] = true;
+}
+<section class="atasay-hero" aria-labelledby="hero-title">
+    <div class="atasay-hero-copy"><p class="atasay-eyebrow">ATASAY SEÇKİSİ</p><h1 id="hero-title">Her anınızda<br /><em>bir ışıltı.</em></h1><p>Kendinizi anlatmanın en zarif hali.<br />Atasay dünyasının özel tasarımlarını keşfedin.</p><a class="atasay-button" href="/Home/Index">KOLEKSİYONU KEŞFET <span aria-hidden="true">↗</span></a><span class="atasay-hero-caption">ZAMANSIZ TASARIMLAR. SİZE ÖZEL DETAYLAR.</span></div>
+    <div class="atasay-hero-visual"><img src="~/images/brand/editorial.jpg" width="3129" height="3017" alt="Atasay altın takı seçkisi" fetchpriority="high" /><span>ATASAY / İLHAM VEREN DETAYLAR</span></div>
+</section>
+<div class="atasay-intro-strip"><span>HER DETAYINDA ZARAFET</span><span aria-hidden="true">✧</span><span>HER ANINIZDA ATASAY</span><span aria-hidden="true">✧</span><span>SİZİN İÇİN SEÇİLDİ</span></div>
+<section class="atasay-section" id="new-arrivals" aria-labelledby="arrivals-title">
+    <div class="atasay-section-heading"><div><p class="atasay-eyebrow">YENİ BİR İLHAM</p><h2 id="arrivals-title">Yeni gelenler</h2></div><a class="atasay-text-link" href="/Home/Index?sortOrder=newest">TÜMÜNÜ KEŞFET ↗</a></div>
+    @if (Model.LoadFailed)
+    {
+        <p class="atasay-status" role="status">Ürünler şu anda yüklenemiyor. <a href="/Home/Welcome">Tekrar deneyin</a>.</p>
+    }
+    @if (Model.NewProducts.Count > 0)
+    {
+        <div class="atasay-products">
+            @foreach (var product in Model.NewProducts.Take(8))
+            {
+                <article class="atasay-product"><a href="@Url.Action("Detail", "Home", new { id = product.Id })"><div class="atasay-product-image">
+                    @if (product.Images?.FirstOrDefault() is string image)
+                    {
+                        <img src="@image" alt="@product.Name @product.Code" loading="lazy" decoding="async" />
+                    }
+                    else
+                    {
+                        <div class="atasay-placeholder"><img src="~/images/brand/logo.svg" alt="ATASAY" width="110" height="33" /><span>Görsel hazırlanıyor</span></div>
+                    }
+                    <span class="atasay-product-arrow" aria-hidden="true">↗</span>
+                </div><div class="atasay-product-info"><span>@(string.IsNullOrWhiteSpace(product.Name) ? product.Code : product.Name)</span><small>@product.Code</small><strong data-b2b-price="@product.CalculatedPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="notranslate" translate="no">@product.CalculatedPrice.ToString("N0") $</strong></div></a></article>
+            }
+        </div>
+    }
+    else if (!Model.LoadFailed)
+    {
+        <p class="atasay-status">Yeni ürünler eklendiğinde burada görebilirsiniz.</p>
+    }
+</section>
+<section class="atasay-editorial" aria-labelledby="editorial-title"><div class="atasay-editorial-image"><img src="~/images/brand/gold.jpg" alt="Atasay Piramide altın takı koleksiyonu" width="3129" height="3017" loading="lazy" /></div><div class="atasay-editorial-copy"><p class="atasay-eyebrow">ATASAY DÜNYASI</p><h2 id="editorial-title">Stilinize eşlik eden<br /><em>özel detaylar.</em></h2><p>Altının sıcaklığı, incelikli tasarımlarla buluşuyor.<br />Her gününüze kendinizden bir iz bırakın.</p><a class="atasay-text-link" href="/Home/Index">ÜRÜNLERİ İNCELEYİN ↗</a></div></section>
+<section class="atasay-section atasay-categories" id="categories" aria-labelledby="categories-title"><div class="atasay-section-heading"><div><p class="atasay-eyebrow">KENDİNİZE YAKIN OLANI BULUN</p><h2 id="categories-title">Işıltınızı keşfedin</h2></div><span class="atasay-muted">Kategorilere göz atın</span></div>
+    <div class="atasay-category-grid">
+        @foreach (var category in Model.Categories)
+        {
+            var image = category.ImageUrl ?? "/images/brand/category-gold.jpg";
+            <a class="atasay-category" href="@Url.Action("Index", "Home", new { categoryId = category.Id })"><div><img src="@image" asp-append-version="true" alt="@category.Name" width="768" height="768" loading="lazy" decoding="async" /></div><span><category-label name="@category.Name"></category-label> <span aria-hidden="true">↗</span></span></a>
+        }
+    </div>
+    @if (Model.Categories.Count == 0)
+    {
+        <p class="atasay-status">@(Model.LoadFailed ? "Kategoriler şu anda yüklenemiyor." : "Kategoriler eklendiğinde burada görebilirsiniz.")</p>
+    }
+</section>
+<section class="atasay-closing"><p class="atasay-eyebrow">ATASAY</p><h2>Bazı detaylar, <em>sizi anlatır.</em></h2><a class="atasay-button" href="/Home/Index">KENDİ SEÇKİNİZİ OLUŞTURUN <span aria-hidden="true">↗</span></a></section>

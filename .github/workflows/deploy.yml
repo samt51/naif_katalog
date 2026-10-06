@@ -60,6 +60,9 @@ jobs:
               git fetch origin master
               git checkout master
               git stash push -m "pre-deploy"
+              if [ -e .dockerignore ] && ! git ls-files --error-unmatch .dockerignore >/dev/null 2>&1; then
+                mv .dockerignore ".dockerignore.server-bak"
+              fi
               git pull --ff-only origin master
 
               cd /opt/apps/deploy

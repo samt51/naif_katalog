@@ -63,13 +63,13 @@ jobs:
               git pull --ff-only origin master
 
               cd /opt/apps/deploy
-              docker compose build web
-              docker compose up -d --no-deps web
+              docker compose build web || sudo -n docker compose build web
+              docker compose up -d --no-deps web || sudo -n docker compose up -d --no-deps web
 
               echo "Waiting for WEB..."
               sleep 15
 
-              docker compose ps web
+              docker compose ps web || sudo -n docker compose ps web
           EOF
 
       - name: Verify production

@@ -64,6 +64,16 @@ jobs:
                 mv .dockerignore ".dockerignore.server-bak"
               fi
               git pull --ff-only origin master
+              backup="$HOME/naif-untracked-backup"
+              mkdir -p "$backup"
+              git ls-files -o --exclude-standard | while IFS= read -r path; do
+                case "$path" in
+                  *.cs|*.cshtml)
+                    mkdir -p "$backup/$(dirname "$path")"
+                    mv "$path" "$backup/$path"
+                    ;;
+                esac
+              done
 
               cd /opt/apps/deploy
               docker compose build web || sudo -n docker compose build web

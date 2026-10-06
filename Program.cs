@@ -29,7 +29,9 @@ builder.Services.AddHttpClient<IApiService, ApiService>(client =>
 });
 
 builder.Services.AddMediatR(Assembly.GetExecutingAssembly());
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IOrderEmailService, OrderEmailService>();
+builder.Services.AddScoped<ICustomerPricingService, CustomerPricingService>();
 builder.Services.AddSingleton<naif_katalog.Services.Concrete.HomeContentStore>();
 builder.Services.AddSingleton<naif_katalog.Services.Abstract.IOrderStore, naif_katalog.Services.Concrete.OrderStore>();
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 30 * 1024 * 1024);

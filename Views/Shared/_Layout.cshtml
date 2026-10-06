@@ -1,4 +1,5 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@inject naif_katalog.Services.Abstract.ICustomerPricingService CustomerPricing
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -69,13 +70,31 @@
                             <img id="currentLangFlag" src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-1" style="border-radius:2px;">
                             <span id="currentLangText" class="d-none d-lg-inline notranslate" translate="no">EN</span>
                         </a>
+                        <script>
+                            (function () {
+                                var lang = 'en';
+                                try { lang = localStorage.getItem('naif_language') || 'en'; } catch (e) {}
+                                if (lang !== 'tr') return;
+                                var flag = document.getElementById('currentLangFlag');
+                                var text = document.getElementById('currentLangText');
+                                if (!flag || !text) return;
+                                flag.src = 'https://flagcdn.com/w20/tr.png';
+                                flag.alt = 'TR';
+                                text.textContent = 'TR';
+                            })();
+                        </script>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="min-width: 120px; z-index: 1050;">
-                            <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('tr')"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</a></li>
-                            <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('en')"><img src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-2" style="border-radius:2px;"> English</a></li>
+                            <li><button type="button" class="dropdown-item d-flex align-items-center" onclick="changeLanguage('tr')"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</button></li>
+                            <li><button type="button" class="dropdown-item d-flex align-items-center" onclick="changeLanguage('en')"><img src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-2" style="border-radius:2px;"> English</button></li>
                         </ul>
                     </div>
 
-                    <button type="button" class="customer-b2c-button notranslate" translate="no" id="b2cButton" aria-label="B2C" data-multiplier="@(User.Claims.FirstOrDefault(c => c.Type == "b2cMultiplier")?.Value ?? "1")">
+                    @{
+                        var customerPricing = User.Identity?.IsAuthenticated == true
+                            ? await CustomerPricing.GetAsync()
+                            : new naif_katalog.Services.Abstract.CustomerPricing();
+                    }
+                    <button type="button" class="customer-b2c-button notranslate" translate="no" id="b2cButton" aria-label="B2C" data-sales-multiplier="@customerPricing.SalesMultiplier.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-multiplier="@customerPricing.B2CMultiplier.ToString(System.Globalization.CultureInfo.InvariantCulture)">
                         <span class="customer-b2c-icon"><i class="fas fa-store"></i></span>
                         <span class="d-none d-lg-inline" id="pricingModeButtonText">B2C</span>
                     </button>
@@ -192,12 +211,12 @@
         </div></div>
     </div>
 
-    <div class="modal fade" id="b2bPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade notranslate" id="b2bPasswordModal" tabindex="-1" aria-hidden="true" translate="no">
         <div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow-lg">
-            <form id="b2bPasswordForm">@Html.AntiForgeryToken()
-                <div class="modal-header"><h5 class="modal-title"><i class="fas fa-lock me-2"></i>B2B Fiyatlarına Dön</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body"><label class="form-label">Giriş Şifreniz</label><input type="password" id="b2bPassword" class="form-control" autocomplete="current-password" required /><div id="b2bPasswordError" class="text-danger small mt-2 d-none"></div></div>
-                <div class="modal-footer border-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Vazgeç</button><button type="submit" class="btn btn-dark">Doğrula</button></div>
+            <form id="b2bPasswordForm" class="notranslate" translate="no">@Html.AntiForgeryToken()
+                <div class="modal-header"><h5 class="modal-title"><i class="fas fa-lock me-2"></i><span id="b2bPasswordTitle">B2B Fiyatlarına Dön</span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body"><label class="form-label" id="b2bPasswordLabel">Giriş Şifreniz</label><input type="password" id="b2bPassword" class="form-control" autocomplete="current-password" required /><div id="b2bPasswordError" class="text-danger small mt-2 d-none"></div></div>
+                <div class="modal-footer border-0"><button type="button" class="btn btn-light" data-bs-dismiss="modal" id="b2bPasswordCancel">Vazgeç</button><button type="submit" class="btn btn-dark" id="b2bPasswordSubmit">Doğrula</button></div>
             </form>
         </div></div>
     </div>
@@ -270,12 +289,21 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
+        function readMultiplier(value, minimum) {
+            const parsed = parseFloat(String(value ?? '').replace(',', '.'));
+            return Number.isFinite(parsed) && parsed >= minimum ? parsed : minimum;
+        }
+        const pricingButton = document.getElementById('b2cButton');
         window.naifPricingMode = sessionStorage.getItem('naif_pricing_mode') || 'b2b';
-        window.naifB2CMultiplier = Math.max(1, parseFloat(document.getElementById('b2cButton')?.dataset.multiplier || '1') || 1);
-        window.applyPricingMode = function(basePrice) { return window.naifPricingMode === 'b2c' ? basePrice * window.naifB2CMultiplier : basePrice; };
+        window.naifB2CMultiplier = readMultiplier(pricingButton?.dataset.multiplier, 1);
+        window.applyPricingMode = function(basePrice) {
+            const b2bPrice = Number(basePrice) || 0;
+            return window.naifPricingMode === 'b2c' ? b2bPrice * window.naifB2CMultiplier : b2bPrice;
+        };
         function refreshPricingModeUI() {
             const isB2C = window.naifPricingMode === 'b2c';
-            document.getElementById('pricingModeButtonText').textContent = isB2C ? 'B2B' : 'B2C';
+            const modeLabel = document.getElementById('pricingModeButtonText');
+            if (modeLabel) modeLabel.textContent = isB2C ? 'B2B' : 'B2C';
             document.querySelectorAll('[data-b2b-price]').forEach(el => {
                 const price = window.applyPricingMode(parseFloat(el.dataset.b2bPrice) || 0);
                 el.textContent = price.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' $';
@@ -284,19 +312,51 @@
         }
         document.getElementById('b2cButton')?.addEventListener('click', function() {
             if (window.naifPricingMode === 'b2b') {
-                window.naifPricingMode = 'b2c'; sessionStorage.setItem('naif_pricing_mode', 'b2c'); refreshPricingModeUI();
+                window.naifPricingMode = 'b2c';
+                sessionStorage.setItem('naif_pricing_mode', 'b2c');
+                refreshPricingModeUI();
             } else {
-                document.getElementById('b2bPasswordError').classList.add('d-none');
-                new bootstrap.Modal(document.getElementById('b2bPasswordModal')).show();
+                document.getElementById('b2bPasswordError')?.classList.add('d-none');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('b2bPasswordModal')).show();
             }
         });
-        document.getElementById('b2bPasswordForm')?.addEventListener('submit', async function(e) {
-            e.preventDefault(); const error = document.getElementById('b2bPasswordError');
-            const token = this.querySelector('input[name="__RequestVerificationToken"]').value;
-            const response = await fetch('/Account/VerifyCurrentPassword', { method:'POST', headers:{'Content-Type':'application/json','RequestVerificationToken':token}, body:JSON.stringify({password:document.getElementById('b2bPassword').value}) });
-            const result = await response.json();
-            if (!response.ok || !result.isSuccess) { error.textContent = result.message || 'Şifre hatalı.'; error.classList.remove('d-none'); return; }
-            window.naifPricingMode = 'b2b'; sessionStorage.setItem('naif_pricing_mode', 'b2b'); refreshPricingModeUI(); this.reset(); bootstrap.Modal.getInstance(document.getElementById('b2bPasswordModal'))?.hide();
+        document.addEventListener('submit', async function(e) {
+            const form = e.target;
+            if (!form || form.id !== 'b2bPasswordForm') return;
+            e.preventDefault();
+            const error = document.getElementById('b2bPasswordError');
+            const submitButton = document.getElementById('b2bPasswordSubmit');
+            const password = form.querySelector('#b2bPassword')?.value || '';
+            const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            if (submitButton) submitButton.disabled = true;
+            try {
+                const response = await fetch('/Account/VerifyCurrentPassword', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                    body: JSON.stringify({ password: password })
+                });
+                let result = {};
+                try { result = await response.json(); } catch (_) {}
+                if (!response.ok || !result.isSuccess) {
+                    if (error) {
+                        error.textContent = result.message || 'Şifre hatalı.';
+                        error.classList.remove('d-none');
+                    }
+                    return;
+                }
+                window.naifPricingMode = 'b2b';
+                sessionStorage.setItem('naif_pricing_mode', 'b2b');
+                refreshPricingModeUI();
+                form.reset();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('b2bPasswordModal')).hide();
+            } catch (_) {
+                if (error) {
+                    error.textContent = 'Doğrulama tamamlanamadı. Lütfen tekrar deneyin.';
+                    error.classList.remove('d-none');
+                }
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
         });
         document.addEventListener('DOMContentLoaded', refreshPricingModeUI);
     </script>
@@ -305,45 +365,98 @@
     <!-- Google Translate Setup -->
     <div id="google_translate_element" style="display:none;"></div>
     <script type="text/javascript">
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({pageLanguage: 'tr', includedLanguages: 'tr,en', autoDisplay: false}, 'google_translate_element');
-            applyDefaultEnglishLanguage();
+        function naifSavedLanguage() {
+            try {
+                var lang = localStorage.getItem('naif_language');
+                return lang === 'tr' || lang === 'en' ? lang : 'en';
+            } catch (e) {
+                return 'en';
+            }
         }
 
-        function applyDefaultEnglishLanguage() {
+        function naifWriteGoogTransCookie(value, expires) {
+            var hostname = location.hostname;
+            var domains = [''];
+            if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                domains.push(hostname, '.' + hostname);
+            }
+            domains.forEach(function(domain) {
+                document.cookie = 'googtrans=' + value + ';path=/;' + expires + (domain ? ';domain=' + domain : '');
+            });
+        }
+
+        function naifSyncTranslateCookie(lang) {
+            if (lang === 'en') {
+                naifWriteGoogTransCookie('/tr/en', 'expires=Thu, 01 Jan 2099 00:00:00 GMT');
+            } else {
+                naifWriteGoogTransCookie('', 'expires=Thu, 01 Jan 1970 00:00:00 GMT');
+            }
+        }
+
+        naifSyncTranslateCookie(naifSavedLanguage());
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'tr', includedLanguages: 'tr,en', autoDisplay: false}, 'google_translate_element');
+            applySavedLanguage();
+        }
+
+        function applySavedLanguage() {
+            var lang = naifSavedLanguage();
             var attempts = 0;
             var timer = setInterval(function() {
                 attempts++;
                 var selectField = document.querySelector('.goog-te-combo');
-                if (selectField && Array.from(selectField.options).some(function(option) { return option.value === 'en'; })) {
+                var ready = selectField && (lang === 'tr' || Array.from(selectField.options).some(function(option) { return option.value === lang; }));
+                if (ready) {
                     clearInterval(timer);
-                    changeLanguage('en');
+                    changeLanguage(lang);
                 } else if (attempts >= 20) {
                     clearInterval(timer);
+                    updateLanguageChrome(lang);
                 }
             }, 150);
         }
+
+        function updateLanguageChrome(lang) {
+            var isEnglish = lang === 'en';
+            var flag = document.getElementById('currentLangFlag');
+            var text = document.getElementById('currentLangText');
+            var cartButton = document.getElementById('catalogButtonText');
+            var cartTitle = document.getElementById('catalogPanelTitle');
+            if (flag) flag.src = isEnglish ? 'https://flagcdn.com/w20/us.png' : 'https://flagcdn.com/w20/tr.png';
+            if (flag) flag.alt = isEnglish ? 'EN' : 'TR';
+            if (text) text.innerText = isEnglish ? 'EN' : 'TR';
+            if (cartButton) cartButton.innerText = isEnglish ? 'My Cart' : 'Sepetim';
+            if (cartTitle) cartTitle.innerText = isEnglish ? 'My Cart' : 'Sepetim';
+            document.querySelectorAll('[data-cart-button-text]').forEach(function(el) {
+                el.textContent = isEnglish ? 'Add to cart' : 'Sepete Ekle';
+            });
+            var passwordTitle = document.getElementById('b2bPasswordTitle');
+            var passwordLabel = document.getElementById('b2bPasswordLabel');
+            var passwordCancel = document.getElementById('b2bPasswordCancel');
+            var passwordSubmit = document.getElementById('b2bPasswordSubmit');
+            if (passwordTitle) passwordTitle.textContent = isEnglish ? 'Return to B2B Pricing' : 'B2B Fiyatlarına Dön';
+            if (passwordLabel) passwordLabel.textContent = isEnglish ? 'Your login password' : 'Giriş Şifreniz';
+            if (passwordCancel) passwordCancel.textContent = isEnglish ? 'Cancel' : 'Vazgeç';
+            if (passwordSubmit) passwordSubmit.textContent = isEnglish ? 'Verify' : 'Doğrula';
+        }
         
         function changeLanguage(lang) {
+            if (lang !== 'tr' && lang !== 'en') lang = 'en';
+            try { localStorage.setItem('naif_language', lang); } catch (e) {}
+            naifSyncTranslateCookie(lang);
+
             var selectField = document.querySelector(".goog-te-combo");
-            if(selectField) {
-                selectField.value = lang;
-                selectField.dispatchEvent(new Event('change'));
+            if (selectField) {
+                var hasOption = Array.from(selectField.options).some(function(option) { return option.value === lang; });
+                var target = hasOption ? lang : (lang === 'tr' ? '' : lang);
+                if (selectField.value !== target) {
+                    selectField.value = target;
+                    selectField.dispatchEvent(new Event('change'));
+                }
             }
-            
-            if(lang == 'en') {
-                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/us.png';
-                document.getElementById('currentLangText').innerText = 'EN';
-                document.getElementById('catalogButtonText').innerText = 'My Cart';
-                document.getElementById('catalogPanelTitle').innerText = 'My Cart';
-                document.querySelectorAll('[data-cart-button-text]').forEach(function(el) { el.textContent = 'Add to cart'; });
-            } else {
-                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/tr.png';
-                document.getElementById('currentLangText').innerText = 'TR';
-                document.getElementById('catalogButtonText').innerText = 'Sepetim';
-                document.getElementById('catalogPanelTitle').innerText = 'Sepetim';
-                document.querySelectorAll('[data-cart-button-text]').forEach(function(el) { el.textContent = 'Sepete Ekle'; });
-            }
+
+            updateLanguageChrome(lang);
         }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>

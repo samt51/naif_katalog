@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using naif_katalog.Services.Abstract;
+using naif_katalog.Services.Concrete;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -115,7 +116,7 @@ namespace naif_katalog.Controllers
         public async Task<IActionResult> VerifyCurrentPassword([FromBody] VerifyPasswordRequest request)
         {
             if (User.Identity?.IsAuthenticated != true) return Unauthorized();
-            var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email || c.Type == "email")?.Value;
+            var email = CustomerPricingService.ReadEmail(User);
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(request?.Password))
                 return BadRequest(new { isSuccess = false, message = "Şifre gereklidir." });
             var response = await _apiService.PostAsync<object, string>("api/auth/login", new { Email = email, request.Password });

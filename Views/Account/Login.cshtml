@@ -224,8 +224,8 @@
                         <span id="currentLangText">TR</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="min-width: 120px;">
-                        <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('tr')"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</a></li>
-                        <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('en')"><img src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-2" style="border-radius:2px;"> English</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('tr'); return false;"><img src="https://flagcdn.com/w20/tr.png" alt="TR" width="20" class="me-2" style="border-radius:2px;"> Türkçe</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center" href="#" onclick="changeLanguage('en'); return false;"><img src="https://flagcdn.com/w20/us.png" alt="EN" width="20" class="me-2" style="border-radius:2px;"> English</a></li>
                     </ul>
                 </div>
             </div>
@@ -310,24 +310,86 @@
     <!-- Google Translate Setup -->
     <div id="google_translate_element" style="display:none;"></div>
     <script type="text/javascript">
+        function naifSavedLanguage() {
+            try {
+                var lang = localStorage.getItem('naif_language');
+                return lang === 'tr' || lang === 'en' ? lang : 'en';
+            } catch (e) {
+                return 'en';
+            }
+        }
+
+        function naifWriteGoogTransCookie(value, expires) {
+            var hostname = location.hostname;
+            var domains = [''];
+            if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                domains.push(hostname, '.' + hostname);
+            }
+            domains.forEach(function(domain) {
+                document.cookie = 'googtrans=' + value + ';path=/;' + expires + (domain ? ';domain=' + domain : '');
+            });
+        }
+
+        function naifSyncTranslateCookie(lang) {
+            if (lang === 'en') {
+                naifWriteGoogTransCookie('/tr/en', 'expires=Thu, 01 Jan 2099 00:00:00 GMT');
+            } else {
+                naifWriteGoogTransCookie('', 'expires=Thu, 01 Jan 1970 00:00:00 GMT');
+            }
+        }
+
+        function updateLanguageChrome(lang) {
+            var isEnglish = lang === 'en';
+            var flag = document.getElementById('currentLangFlag');
+            var text = document.getElementById('currentLangText');
+            if (flag) {
+                flag.src = isEnglish ? 'https://flagcdn.com/w20/us.png' : 'https://flagcdn.com/w20/tr.png';
+                flag.alt = isEnglish ? 'EN' : 'TR';
+            }
+            if (text) text.innerText = isEnglish ? 'EN' : 'TR';
+        }
+
+        naifSyncTranslateCookie(naifSavedLanguage());
+        updateLanguageChrome(naifSavedLanguage());
+
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({pageLanguage: 'tr', includedLanguages: 'tr,en', autoDisplay: false}, 'google_translate_element');
+            applySavedLanguage();
+        }
+
+        function applySavedLanguage() {
+            var lang = naifSavedLanguage();
+            var attempts = 0;
+            var timer = setInterval(function() {
+                attempts++;
+                var selectField = document.querySelector('.goog-te-combo');
+                var ready = selectField && (lang === 'tr' || Array.from(selectField.options).some(function(option) { return option.value === lang; }));
+                if (ready) {
+                    clearInterval(timer);
+                    changeLanguage(lang);
+                } else if (attempts >= 20) {
+                    clearInterval(timer);
+                    updateLanguageChrome(lang);
+                }
+            }, 150);
         }
         
         function changeLanguage(lang) {
+            if (lang !== 'tr' && lang !== 'en') lang = 'en';
+            try { localStorage.setItem('naif_language', lang); } catch (e) {}
+            naifSyncTranslateCookie(lang);
+
             var selectField = document.querySelector(".goog-te-combo");
-            if(selectField) {
-                selectField.value = lang;
-                selectField.dispatchEvent(new Event('change'));
+            if (selectField) {
+                var hasOption = Array.from(selectField.options).some(function(option) { return option.value === lang; });
+                var target = hasOption ? lang : (lang === 'tr' ? '' : lang);
+                if (selectField.value !== target) {
+                    selectField.value = target;
+                    selectField.dispatchEvent(new Event('change'));
+                }
             }
-            
-            if(lang == 'en') {
-                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/us.png';
-                document.getElementById('currentLangText').innerText = 'EN';
-            } else {
-                document.getElementById('currentLangFlag').src = 'https://flagcdn.com/w20/tr.png';
-                document.getElementById('currentLangText').innerText = 'TR';
-            }
+
+            updateLanguageChrome(lang);
         }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>

@@ -59,6 +59,7 @@ jobs:
               cd /opt/apps/naif_katalog
               git fetch origin master
               git checkout master
+              git stash push -m "pre-deploy"
               git pull --ff-only origin master
 
               cd /opt/apps/deploy
